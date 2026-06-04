@@ -1,0 +1,30 @@
+name: jianxi_reader
+description: "A quiet mobile reader for Markdown and HTML documents."
+publish_to: 'none'
+
+version: 1.0.0+2
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  file_picker: 10.3.8
+  flutter_smooth_markdown: ^0.7.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  provider: ^6.1.5+1
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.1
+  webview_flutter: ^4.13.1
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
