@@ -383,10 +383,10 @@ class ClickableLinkBuilder extends MarkdownWidgetBuilder {
   TextSpan? _extractSpan(Widget? widget) {
     if (widget == null) return null;
     if (widget is Text) {
-      return widget.textSpan ?? TextSpan(text: widget.data);
+      return (widget.textSpan as TextSpan?) ?? TextSpan(text: widget.data);
     }
     if (widget is RichText) {
-      return widget.text;
+      return widget.text as TextSpan?;
     }
     if (widget is SelectableText) {
       return widget.textSpan ?? TextSpan(text: widget.data);
