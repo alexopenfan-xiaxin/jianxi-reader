@@ -63,15 +63,15 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.0.0+2` (versionName = 1.0.0, versionCode = 2)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=2`
+- `pubspec.yaml`: `1.0.1+3` (versionName = 1.0.1, versionCode = 3)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=3`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
 - Auth: Personal Access Token (via remote URL or GitHub API)
-- Tag: `v1.0.0` → Release with APK asset
+- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-release.apk`)
 
 ## Key Decisions
 - Removed key from IndexedStack (Bug 1: dynamic key destroyed tab state)
