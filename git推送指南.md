@@ -94,23 +94,28 @@ git push origin v1.0.0
 
 ### 8. 创建 GitHub Release（通过 API）
 
-```bash
-# 创建 Release
-$token = "你的token"
-$header = @{ Authorization = "Bearer $token"; Accept = "application/vnd.github+json" }
-$body = @{
-    tag_name = "v1.0.0"
-    name = "v1.0.0"
-    body = "版本日志内容"
-} | ConvertTo-Json
-$release = Invoke-RestMethod -Uri "https://api.github.com/repos/用户名/仓库名/releases" `
-    -Method Post -Headers $header -Body $body -ContentType "application/json"
+创建 Release 时，如果版本日志包含中文，需要确保 UTF-8 编码正确：
 
-# 上传 APK
+```bash
+# 1. 将 JSON 写入文件（UTF-8 编码）
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$bytes = $utf8.GetBytes('{"tag_name":"v1.0.0","name":"v1.0.0","body":"APP 的第一个版本"}')
+[System.IO.File]::WriteAllBytes("$env:TEMP\release.json", $bytes)
+
+# 2. 创建 Release（用 curl 的 --data-binary 发送原样字节）
+curl.exe -s -X POST "https://api.github.com/repos/用户名/仓库名/releases" ^
+  -H "Authorization: Bearer 你的token" ^
+  -H "Accept: application/vnd.github+json" ^
+  -H "Content-Type: application/json; charset=utf-8" ^
+  --data-binary "@$env:TEMP\release.json"
+
+# 3. 上传 APK
 $apk = [System.IO.File]::ReadAllBytes("build\app\outputs\flutter-apk\app-arm64-v8a-release.apk")
-Invoke-RestMethod -Uri "https://uploads.github.com/repos/用户名/仓库名/releases/$($release.id)/assets?name=app-arm64-v8a-release.apk" `
-    -Method Post -Headers $header -Body $apk
+Invoke-RestMethod -Uri "https://uploads.github.com/repos/用户名/仓库名/releases/$releaseId/assets?name=app-arm64-v8a-release.apk" `
+    -Method Post -Headers @{ Authorization = "Bearer 你的token" } -Body $apk -ContentType "application/vnd.android.package-archive"
 ```
+
+**注意**：PowerShell 的 `Invoke-RestMethod` + `ConvertTo-Json` 会破坏中文字符编码。必须使用 `curl.exe --data-binary` + 手动编码的 UTF-8 JSON 文件来发送中文内容。
 
 ## 注意事项
 

@@ -2,6 +2,12 @@
 
 一个纯粹简洁的移动端 Markdown / HTML 阅读器。
 
+<p align="center">
+  <a href="https://github.com/alexopenfan-xiaxin/jianxi-reader/releases/latest">
+    <img src="https://img.shields.io/github/v/release/alexopenfan-xiaxin/jianxi-reader?label=下载&color=2196F3" alt="下载">
+  </a>
+</p>
+
 没有广告，没有后台同步，没有账号体系。打开即读，读完即走。所有文档停留在本地，不联网、不追踪、不打扰。
 
 ## 诞生背景
