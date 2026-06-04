@@ -5,6 +5,14 @@
 
 没有广告，没有后台同步，没有账号体系。打开即读，读完即走。所有文档停留在本地，不联网、不追踪、不打扰。
 
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/alexopenfan-xiaxin/jianxi-reader?style=flat-square&labelColor=ffffff&color=007AFF" alt="最新版本" />
+  <img src="https://img.shields.io/badge/Android-5.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 5.0+" />
+  <img src="https://img.shields.io/badge/Flutter-3.32-40D0FD?style=flat-square&logo=flutter&logoColor=white" alt="Flutter" />
+  <img src="https://img.shields.io/badge/License-MIT-FF3B30?style=flat-square" alt="MIT" />
+  <img src="https://img.shields.io/github/stars/alexopenfan-xiaxin/jianxi-reader?style=flat-square&color=FF9500&labelColor=ffffff" alt="Stars" />
+</p>
+
 ## 诞生背景
 
 现在由于codex和claude code的流行，我们有了在移动端远程控制的需求，日常工作中积累了大量的 Markdown 笔记和技术文档，手机上看：`没法用，浏览器要翻目录，笔记 APP 太重。简兮阅读器的目标只有一个——把手机变成一个干净的文档浏览器。
