@@ -49,40 +49,44 @@ class _LibraryPageState extends State<LibraryPage>
               _staggerController.status == AnimationStatus.dismissed) {
             _staggerController.forward();
           }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              112,
-            ),
-            children: [
-              _Header(controller: controller),
-              if (controller.errorMessage != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                _ErrorBanner(message: controller.errorMessage!),
-              ],
-              const SizedBox(height: AppSpacing.lg),
-              _LibraryTools(controller: controller),
-              const SizedBox(height: AppSpacing.lg),
-              if (controller.isLoading)
-                const _LoadingState()
-              else if (controller.allDocuments.isEmpty)
-                const _EmptyState()
-              else if (controller.documents.isEmpty)
-                const _NoResultsState()
-              else
-                ...controller.documents.asMap().entries.map(
-                  (entry) => _StaggeredFadeIn(
-                    index: entry.key,
-                    controller: _staggerController,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _DocumentTile(document: entry.value),
+          return GestureDetector(
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            behavior: HitTestBehavior.translucent,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                112,
+              ),
+              children: [
+                _Header(controller: controller),
+                if (controller.errorMessage != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _ErrorBanner(message: controller.errorMessage!),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                _LibraryTools(controller: controller),
+                const SizedBox(height: AppSpacing.lg),
+                if (controller.isLoading)
+                  const _LoadingState()
+                else if (controller.allDocuments.isEmpty)
+                  const _EmptyState()
+                else if (controller.documents.isEmpty)
+                  const _NoResultsState()
+                else
+                  ...controller.documents.asMap().entries.map(
+                    (entry) => _StaggeredFadeIn(
+                      index: entry.key,
+                      controller: _staggerController,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _DocumentTile(document: entry.value),
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           );
         },
       ),
