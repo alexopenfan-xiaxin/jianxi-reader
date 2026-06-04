@@ -83,3 +83,5 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - `badCertificateCallback` added because update server uses untrusted SSL certificate
 - `INTERNET` permission added to main `AndroidManifest.xml` (debug has it, release didn't)
 - APK ~10MB ARM64
+- `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (default `LinkBuilder` wraps a `GestureDetector` in `WidgetSpan` which loses taps to `SelectionArea`; custom builder returns a `Text.rich` with `TapGestureRecognizer` on the span)
+- "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths

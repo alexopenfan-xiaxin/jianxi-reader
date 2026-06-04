@@ -548,17 +548,16 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
               icon: const Icon(Icons.more_horiz_rounded),
               onSelected: (action) => _handleAction(context, action),
               itemBuilder: (context) {
-                final items = <PopupMenuEntry<_DocumentMenuAction>>[];
-                if (!widget.document.isReferenced) {
-                  items.add(const PopupMenuItem(
+                final items = <PopupMenuEntry<_DocumentMenuAction>>[
+                  const PopupMenuItem(
                     value: _DocumentMenuAction.rename,
                     child: Text('重命名'),
-                  ));
-                }
-                items.add(const PopupMenuItem(
-                  value: _DocumentMenuAction.remove,
-                  child: Text('移出'),
-                ));
+                  ),
+                  const PopupMenuItem(
+                    value: _DocumentMenuAction.remove,
+                    child: Text('移出'),
+                  ),
+                ];
                 return items;
               },
             ),
