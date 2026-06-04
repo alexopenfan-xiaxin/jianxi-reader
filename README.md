@@ -42,6 +42,15 @@
 
 安装 APK 时可能需要允许"安装未知来源应用"。
 
+##截图
+<!--可在此插入海报或截图-->
+<!--![海报](assets/poster.png)
+-->
+<p align="center">
+十
+<img src="assets/poster .png” alt="简兮
+阅读器”width="720">d/>+
+
 ## 技术栈
 
 | 层级 | 选型 |
