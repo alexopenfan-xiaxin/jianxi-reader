@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
@@ -332,6 +333,65 @@ class SubscriptBuilder extends MarkdownWidgetBuilder {
       ),
       textScaler: const TextScaler.linear(1),
     );
+  }
+}
+
+// ── Link Builder (clickable + styled) ─────────────────────────────────────
+
+class ClickableLinkBuilder extends MarkdownWidgetBuilder {
+  const ClickableLinkBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => node is LinkNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final linkNode = node as LinkNode;
+    final linkStyle = (styleSheet.linkStyle ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.underline,
+      color: AppColors.primary,
+    );
+
+    final inner = context.inlineRenderer?.call(linkNode.children, linkStyle);
+    final innerSpan = _extractSpan(inner) ??
+        TextSpan(
+          text: linkNode.children
+              .whereType<TextNode>()
+              .map((n) => n.content)
+              .join(),
+          style: linkStyle,
+        );
+
+    final tapSpan = TextSpan(
+      text: innerSpan.text,
+      style: innerSpan.style ?? linkStyle,
+      children: innerSpan.children,
+      recognizer: TapGestureRecognizer()
+        ..onTap = () => context.onTapLink?.call(linkNode.url),
+    );
+
+    return Text.rich(
+      TextSpan(children: [tapSpan]),
+      style: linkStyle,
+    );
+  }
+
+  TextSpan? _extractSpan(Widget? widget) {
+    if (widget == null) return null;
+    if (widget is Text) {
+      return widget.textSpan ?? TextSpan(text: widget.data);
+    }
+    if (widget is RichText) {
+      return widget.text;
+    }
+    if (widget is SelectableText) {
+      return widget.textSpan ?? TextSpan(text: widget.data);
+    }
+    return null;
   }
 }
 
@@ -885,7 +945,8 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
         enableSyntaxHighlighting: true,
       ))
       ..register('mermaid', const MermaidBuilder())
-      ..register('mindmap', const MindmapBuilder());
+      ..register('mindmap', const MindmapBuilder())
+      ..register('link', const ClickableLinkBuilder());
 
     return SingleChildScrollView(
       controller: widget.scrollController,
