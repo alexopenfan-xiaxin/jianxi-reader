@@ -63,7 +63,7 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.0.1+3` (versionName = 1.0.1, versionCode = 3)
+- `pubspec.yaml`: `1.0.2+3` (versionName = 1.0.2, versionCode = 3)
 - Update check URL: `https://alexxia.5imh.xyz/update/?request&local=3`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
@@ -85,3 +85,5 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - APK ~10MB ARM64
 - `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (default `LinkBuilder` wraps a `GestureDetector` in `WidgetSpan` which loses taps to `SelectionArea`; custom builder returns a `Text.rich` with `TapGestureRecognizer` on the span)
 - "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
+- `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
+- Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
