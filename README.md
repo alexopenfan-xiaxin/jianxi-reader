@@ -42,6 +42,10 @@
 
 安装 APK 时可能需要允许"安装未知来源应用"。
 
+## 应用实机
+
+![简兮阅读器](assets/poster.png)
+
 ## 技术栈
 
 | 层级 | 选型 |
@@ -62,9 +66,9 @@ flutter pub get
 flutter build apk --release --target-platform android-arm64 --split-per-abi
 ```
 
-APK 输出：`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
+APK 输出：build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 
-## 项目结构
+项目结构
 
 ```
 lib/
@@ -87,6 +91,6 @@ lib/
 └── AGENTS.md                     # AI 辅助开发指南
 ```
 
-## 许可
+许可
 
 MIT
