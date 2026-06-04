@@ -37,4 +37,8 @@ google-services.json
 
 # Flutter generated.flutter-plugins.flutter-plugins-dependencies.packages.pub-cache/
 .flutter-plugins*.metadata
-# Windows ephemeralwindows/flutter/ephemeral/
+# Windows ephemeral
+windows/flutter/ephemeral/
+
+# Local dev guide (contains token)
+git推送指南.md

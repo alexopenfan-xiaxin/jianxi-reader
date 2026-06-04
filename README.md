@@ -36,11 +36,16 @@
 | 📊 **阅读进度** | 顶部进度条显示当前阅读位置 |
 | 🔄 **检查更新** | 自动检测新版本，一键跳转下载 |
 
-## 截图
+## 下载与安装
 
-<p align="center">
-  <img src="assets/poster.png" alt="简兮阅读器" width="720">
-</p>
+| 项目 | 说明 |
+| --- | --- |
+| 最新版本 | [GitHub Releases](https://github.com/alexopenfan-xiaxin/jianxi-reader/releases/latest) |
+| 系统要求 | Android 5.0+ / API 21+ |
+| 推荐系统 | Android 12+，可获得更完整的体验 |
+| CPU 架构 | ARM64（v8a），64 位设备 |
+
+安装 APK 时可能需要允许"安装未知来源应用"。
 
 ## 技术栈
 
