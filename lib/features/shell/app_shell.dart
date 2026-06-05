@@ -62,7 +62,10 @@ class _FloatingBottomNav extends StatelessWidget {
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
       ),
       child: Align(
         alignment: Alignment.bottomCenter,

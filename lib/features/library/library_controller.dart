@@ -57,7 +57,7 @@ class LibraryController extends ChangeNotifier {
     try {
       _allDocuments = await documentService.scanLibrary();
     } catch (error) {
-      _errorMessage = '读取沙盒文档失败：$error';
+      _errorMessage = '读取文档库失败：$error';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -134,8 +134,8 @@ class LibraryController extends ChangeNotifier {
     return switch (_sortMode) {
       LibrarySortMode.modified => right.modifiedAt.compareTo(left.modifiedAt),
       LibrarySortMode.name => left.name.toLowerCase().compareTo(
-        right.name.toLowerCase(),
-      ),
+            right.name.toLowerCase(),
+          ),
     };
   }
 }

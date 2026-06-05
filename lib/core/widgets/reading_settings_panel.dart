@@ -13,6 +13,14 @@ class ReadingSettingsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettingsController>();
     final palette = context.palette;
+    final readingPalette = settings.readingPalette(
+      defaultBackground: palette.parchment,
+      defaultForeground: palette.ink,
+      defaultMuted: palette.muted,
+      defaultSurface: palette.card,
+      defaultBorder: palette.hairline,
+      defaultLink: AppColors.primary,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -21,24 +29,62 @@ class ReadingSettingsPanel extends StatelessWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: EdgeInsets.symmetric(
+              horizontal: settings.readingHorizontalPaddingValue,
+              vertical: AppSpacing.md,
+            ),
             decoration: BoxDecoration(
-              color: palette.card,
+              color: readingPalette.background,
               borderRadius: BorderRadius.circular(AppRadii.lg),
-              border: Border.all(color: palette.hairline),
+              border: Border.all(color: readingPalette.border),
             ),
             child: Text(
-              '简兮阅读器\n这是一段阅读预览文本，展示了当前的字体大小和行距效果。',
+              '简兮阅读器\n这是一段阅读预览文本，用来查看当前主题、字号、行距和页边距。',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontSize: settings.readingFontSizeValue,
-                height: settings.readingLineHeightValue,
-                color: palette.ink,
-              ),
+                    fontSize: settings.readingFontSizeValue,
+                    height: settings.readingLineHeightValue,
+                    color: readingPalette.foreground,
+                    letterSpacing: 0,
+                  ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        Text('字号', style: Theme.of(context).textTheme.titleMedium),
+        _SettingLabel(text: '阅读主题'),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<ReadingTheme>(
+          segments: ReadingTheme.values
+              .map(
+                (theme) => ButtonSegment(
+                  value: theme,
+                  label: Text(theme.label),
+                ),
+              )
+              .toList(),
+          selected: {settings.readingTheme},
+          onSelectionChanged: (selection) {
+            settings.setReadingTheme(selection.first);
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SettingLabel(text: '页边距'),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<ReadingMargin>(
+          segments: ReadingMargin.values
+              .map(
+                (margin) => ButtonSegment(
+                  value: margin,
+                  label: Text(margin.label),
+                ),
+              )
+              .toList(),
+          selected: {settings.readingMargin},
+          onSelectionChanged: (selection) {
+            settings.setReadingMargin(selection.first);
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SettingLabel(text: '字号'),
         const SizedBox(height: AppSpacing.sm),
         SegmentedButton<ReadingFontSize>(
           segments: ReadingFontSize.values
@@ -55,7 +101,7 @@ class ReadingSettingsPanel extends StatelessWidget {
           },
         ),
         const SizedBox(height: AppSpacing.lg),
-        Text('行距', style: Theme.of(context).textTheme.titleMedium),
+        _SettingLabel(text: '行距'),
         const SizedBox(height: AppSpacing.sm),
         SegmentedButton<ReadingLineHeight>(
           segments: ReadingLineHeight.values
@@ -73,5 +119,16 @@ class ReadingSettingsPanel extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _SettingLabel extends StatelessWidget {
+  const _SettingLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: Theme.of(context).textTheme.titleMedium);
   }
 }

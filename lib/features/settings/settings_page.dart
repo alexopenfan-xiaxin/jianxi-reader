@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -18,7 +19,10 @@ class SettingsPage extends StatelessWidget {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 112,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          112,
         ),
         children: const [
           _SettingsHeader(),
@@ -38,6 +42,7 @@ class SettingsPage extends StatelessWidget {
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.text});
+
   final String text;
 
   @override
@@ -51,9 +56,9 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: context.palette.muted,
-          letterSpacing: 0.5,
-        ),
+              color: context.palette.muted,
+              letterSpacing: 0.5,
+            ),
       ),
     );
   }
@@ -71,11 +76,11 @@ class _SettingsHeader extends StatelessWidget {
         Text('设置', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '阅读方式、显示偏好和应用信息。',
+          '阅读方式、显示偏好和应用信息集中管理。',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: palette.muted,
-            letterSpacing: 0,
-          ),
+                color: palette.muted,
+                letterSpacing: 0,
+              ),
         ),
       ],
     );
@@ -93,26 +98,18 @@ class _ThemeSettingsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-                child: const Icon(Icons.palette_outlined, size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text('外观', style: Theme.of(context).textTheme.titleLarge),
-            ],
+          _CardTitle(
+            icon: Icons.palette_outlined,
+            title: '外观',
+            subtitle: '跟随系统，或手动选择浅色/深色界面。',
           ),
           const SizedBox(height: AppSpacing.md),
           DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: context.palette.hairline.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: context.palette.hairline.withValues(alpha: 0.3),
+              ),
             ),
             child: SegmentedButton<ThemeMode>(
               segments: const [
@@ -152,26 +149,64 @@ class _ReadingSettingsCard extends StatelessWidget {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-                child: const Icon(Icons.text_fields_rounded, size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text('阅读', style: Theme.of(context).textTheme.titleLarge),
-            ],
+        children: const [
+          _CardTitle(
+            icon: Icons.text_fields_rounded,
+            title: '阅读',
+            subtitle: '阅读主题、页边距、字号和行距只影响阅读内容。',
           ),
-          const SizedBox(height: AppSpacing.md),
-          const ReadingSettingsPanel(showPreview: false),
+          SizedBox(height: AppSpacing.md),
+          ReadingSettingsPanel(showPreview: true),
         ],
       ),
+    );
+  }
+}
+
+class _CardTitle extends StatelessWidget {
+  const _CardTitle({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
+          ),
+          child: Icon(icon, size: 18, color: AppColors.primary),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: palette.muted,
+                      letterSpacing: 0,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -184,17 +219,32 @@ class _AboutCard extends StatefulWidget {
 }
 
 class _AboutCardState extends State<_AboutCard> {
+  static const _channel = MethodChannel('com.jianxi.reader/apk_install');
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=20';
+
   bool _isChecking = false;
+  PackageInfo? _packageInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() => _packageInfo = info);
+      }
+    }).catchError((_) {
+      // Keep the about card usable if package metadata is unavailable.
+    });
+  }
 
   Future<void> _checkForUpdate() async {
     setState(() => _isChecking = true);
     try {
       final client = HttpClient()
-        ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        ..badCertificateCallback =
+            (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
-      final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=13'),
-      );
+      final request = await client.getUrl(Uri.parse(_updateUrl));
       final response = await request.close();
 
       if (response.statusCode == HttpStatus.noContent) {
@@ -205,7 +255,6 @@ class _AboutCardState extends State<_AboutCard> {
         }
       } else if (response.statusCode == HttpStatus.ok) {
         if (!mounted) return;
-        if (!context.mounted) return;
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -226,25 +275,23 @@ class _AboutCardState extends State<_AboutCard> {
         if (confirmed == true) {
           await _downloadAndInstall();
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('检查更新失败：${response.statusCode}')),
-          );
-        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('检查更新失败：${response.statusCode}')),
+        );
       }
-    } catch (e) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('检查更新失败：$e')),
+          SnackBar(content: Text('检查更新失败：$error')),
         );
       }
     } finally {
-      setState(() => _isChecking = false);
+      if (mounted) {
+        setState(() => _isChecking = false);
+      }
     }
   }
-
-  static const _channel = MethodChannel('com.jianxi.reader/apk_install');
 
   Future<void> _downloadAndInstall() async {
     if (!mounted) return;
@@ -267,9 +314,7 @@ class _AboutCardState extends State<_AboutCard> {
                 LinearProgressIndicator(value: value),
                 const SizedBox(height: 16),
                 Text(
-                  value >= 1.0
-                      ? '下载完成'
-                      : '${(value * 100).toStringAsFixed(0)}%',
+                  value >= 1.0 ? '下载完成' : '${(value * 100).toStringAsFixed(0)}%',
                   style: Theme.of(ctx).textTheme.bodyMedium,
                 ),
               ],
@@ -281,11 +326,10 @@ class _AboutCardState extends State<_AboutCard> {
 
     try {
       final client = HttpClient()
-        ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        ..badCertificateCallback =
+            (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
-      final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=13'),
-      );
+      final request = await client.getUrl(Uri.parse(_updateUrl));
       final response = await request.close();
       final total = response.contentLength ?? 0;
       final file = File(filePath);
@@ -301,11 +345,11 @@ class _AboutCardState extends State<_AboutCard> {
       }
       await sink.close();
       client.close(force: true);
-    } catch (e) {
+    } catch (error) {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('下载失败：$e')),
+          SnackBar(content: Text('下载失败：$error')),
         );
       }
       return;
@@ -317,7 +361,9 @@ class _AboutCardState extends State<_AboutCard> {
 
     if (!mounted) return;
     if (Platform.isAndroid) {
-      final canInstall = await _channel.invokeMethod<bool>('canRequestPackageInstalls') ?? false;
+      final canInstall =
+          await _channel.invokeMethod<bool>('canRequestPackageInstalls') ??
+              false;
       if (!canInstall) {
         final open = await showDialog<bool>(
           context: context,
@@ -338,7 +384,6 @@ class _AboutCardState extends State<_AboutCard> {
         );
         if (open == true) {
           await _channel.invokeMethod('openInstallSettings');
-          return;
         }
         return;
       }
@@ -349,36 +394,34 @@ class _AboutCardState extends State<_AboutCard> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final versionLabel = _packageInfo == null
+        ? '版本信息读取中'
+        : '版本 ${_packageInfo!.version} (${_packageInfo!.buildNumber})';
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-                child: const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text('关于应用', style: Theme.of(context).textTheme.titleLarge),
-            ],
+          const _CardTitle(
+            icon: Icons.info_outline,
+            title: '关于应用',
+            subtitle: '版本信息、支持格式和应用更新。',
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(AppRadii.md),
                 ),
-                child: const Icon(Icons.auto_stories_rounded, color: AppColors.primary, size: 24),
+                child: const Icon(
+                  Icons.auto_stories_rounded,
+                  color: AppColors.primary,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -388,19 +431,19 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.1.4 (12)',
+                      versionLabel,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: palette.muted,
-                        letterSpacing: 0,
-                      ),
+                            color: palette.muted,
+                            letterSpacing: 0,
+                          ),
                     ),
                     Text(
                       '支持 Markdown 与 HTML',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: palette.muted,
-                        letterSpacing: 0,
-                        fontSize: 13,
-                      ),
+                            color: palette.muted,
+                            letterSpacing: 0,
+                            fontSize: 13,
+                          ),
                     ),
                   ],
                 ),

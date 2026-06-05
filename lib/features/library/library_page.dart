@@ -76,15 +76,16 @@ class _LibraryPageState extends State<LibraryPage>
                   const _NoResultsState()
                 else
                   ...controller.documents.asMap().entries.map(
-                    (entry) => _StaggeredFadeIn(
-                      index: entry.key,
-                      controller: _staggerController,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _DocumentTile(document: entry.value),
+                        (entry) => _StaggeredFadeIn(
+                          index: entry.key,
+                          controller: _staggerController,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: _DocumentTile(document: entry.value),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
               ],
             ),
           );
@@ -95,15 +96,15 @@ class _LibraryPageState extends State<LibraryPage>
 }
 
 class _StaggeredFadeIn extends StatelessWidget {
-  final int index;
-  final AnimationController controller;
-  final Widget child;
-
   const _StaggeredFadeIn({
     required this.index,
     required this.controller,
     required this.child,
   });
+
+  final int index;
+  final AnimationController controller;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +133,8 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final documentCount = controller.allDocuments.length;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,10 +145,13 @@ class _Header extends StatelessWidget {
               Text('简兮', style: Theme.of(context).textTheme.headlineLarge),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                '安静地管理和阅读你的 Markdown 与 HTML 文档。',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: context.palette.muted),
+                documentCount == 0
+                    ? '导入 Markdown 或 HTML，开始一段安静的阅读。'
+                    : '共 $documentCount 个文档，继续阅读或快速检索。',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: palette.muted,
+                      letterSpacing: 0,
+                    ),
               ),
             ],
           ),
@@ -177,25 +183,7 @@ class _Header extends StatelessWidget {
     if (!context.mounted || document == null) {
       return;
     }
-    await Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ReaderPage(document: document),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
+    await _openReader(context, document);
     if (context.mounted) {
       await controller.loadDocuments();
     }
@@ -246,6 +234,7 @@ class _LibraryToolsState extends State<_LibraryTools> {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -280,28 +269,37 @@ class _LibraryToolsState extends State<_LibraryTools> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withValues(alpha: 0.3)),
+        Row(
+          children: [
+            Text(
+              '排序',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: palette.muted,
+                    letterSpacing: 0,
+                  ),
             ),
-            child: SegmentedButton<LibrarySortMode>(
-              segments: LibrarySortMode.values
-                  .map(
-                    (sortMode) => ButtonSegment(
-                      value: sortMode,
-                      label: Text(sortMode.label),
-                    ),
-                  )
-                  .toList(),
-              selected: {widget.controller.sortMode},
-              onSelectionChanged: (selection) {
-                widget.controller.updateSortMode(selection.first);
-              },
+            const SizedBox(width: AppSpacing.sm),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: Border.all(color: palette.hairline.withValues(alpha: 0.3)),
+              ),
+              child: SegmentedButton<LibrarySortMode>(
+                segments: LibrarySortMode.values
+                    .map(
+                      (sortMode) => ButtonSegment(
+                        value: sortMode,
+                        label: Text(sortMode.label),
+                      ),
+                    )
+                    .toList(),
+                selected: {widget.controller.sortMode},
+                onSelectionChanged: (selection) {
+                  widget.controller.updateSortMode(selection.first);
+                },
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -320,7 +318,7 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline_rounded, color: AppColors.error),
+          const Icon(Icons.error_outline_rounded, color: AppColors.error),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
@@ -376,13 +374,13 @@ class _EmptyState extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Text(
-                '点击右上角的 + 按钮导入文档。\n应用会记住文件位置并在原位读取。',
+                '导入后会记住文件位置；重新进入阅读页时会读取原文件的最新内容。',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: palette.muted,
-                  height: 1.55,
-                  letterSpacing: 0,
-                ),
+                      color: palette.muted,
+                      height: 1.55,
+                      letterSpacing: 0,
+                    ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -406,25 +404,7 @@ class _EmptyState extends StatelessWidget {
   ) async {
     final document = await controller.importExternalDocument();
     if (!context.mounted || document == null) return;
-    await Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ReaderPage(document: document),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
+    await _openReader(context, document);
     if (context.mounted) {
       await controller.loadDocuments();
     }
@@ -457,10 +437,11 @@ class _NoResultsState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text('没有匹配的文档',
+            Text(
+              '没有匹配的文档',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: palette.muted,
-              ),
+                    color: palette.muted,
+                  ),
             ),
           ],
         ),
@@ -478,7 +459,8 @@ class _DocumentTile extends StatefulWidget {
   State<_DocumentTile> createState() => _DocumentTileState();
 }
 
-class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderStateMixin {
+class _DocumentTileState extends State<_DocumentTile>
+    with SingleTickerProviderStateMixin {
   late AnimationController _hoverController;
   late Animation<double> _hoverAnim;
 
@@ -502,6 +484,7 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return AnimatedBuilder(
       animation: _hoverAnim,
       builder: (context, child) => Transform.scale(
@@ -510,6 +493,7 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
       ),
       child: AppCard(
         onTap: () => _openDocument(context),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
             _TypeBadge(document: widget.document),
@@ -523,8 +507,11 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
                       if (widget.document.isReferenced)
                         Padding(
                           padding: const EdgeInsets.only(right: AppSpacing.xxs),
-                          child: Icon(Icons.link_rounded, size: 14,
-                            color: context.palette.muted),
+                          child: Icon(
+                            Icons.link_rounded,
+                            size: 14,
+                            color: palette.muted,
+                          ),
                         ),
                       Flexible(
                         child: Text(
@@ -540,8 +527,9 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
                   Text(
                     _documentSummary(widget.document),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: context.palette.muted,
-                    ),
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
                   ),
                 ],
               ),
@@ -552,17 +540,16 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
               icon: const Icon(Icons.more_horiz_rounded),
               onSelected: (action) => _handleAction(context, action),
               itemBuilder: (context) {
-                final items = <PopupMenuEntry<_DocumentMenuAction>>[
-                  const PopupMenuItem(
+                return const <PopupMenuEntry<_DocumentMenuAction>>[
+                  PopupMenuItem(
                     value: _DocumentMenuAction.rename,
                     child: Text('重命名'),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: _DocumentMenuAction.remove,
                     child: Text('移出'),
                   ),
                 ];
-                return items;
               },
             ),
           ],
@@ -574,25 +561,7 @@ class _DocumentTileState extends State<_DocumentTile> with SingleTickerProviderS
   Future<void> _openDocument(BuildContext context) async {
     FocusManager.instance.primaryFocus?.unfocus();
     final controller = context.read<LibraryController>();
-    await Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ReaderPage(document: widget.document),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
+    await _openReader(context, widget.document);
     if (context.mounted) {
       await controller.loadDocuments();
     }
@@ -639,6 +608,28 @@ class _TypeBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _openReader(BuildContext context, DocumentEntry document) {
+  return Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          ReaderPage(document: document),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.3, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          )),
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+  );
 }
 
 String _documentSummary(DocumentEntry document) {

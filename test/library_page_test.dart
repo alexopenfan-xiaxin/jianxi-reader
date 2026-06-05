@@ -4,6 +4,7 @@ import 'package:jianxi_reader/app.dart';
 import 'package:jianxi_reader/core/document_file_service.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
 import 'package:jianxi_reader/features/library/document_entry.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeDocumentService implements DocumentLibraryService {
@@ -50,6 +51,13 @@ class FakeDocumentService implements DocumentLibraryService {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: '简兮阅读器',
+      packageName: 'com.jianxi.reader',
+      version: '1.2.0',
+      buildNumber: '20',
+      buildSignature: '',
+    );
   });
 
   testWidgets('shows the empty library state', (tester) async {
@@ -122,7 +130,7 @@ void main() {
     expect(find.byKey(const ValueKey('empty_library')), findsOneWidget);
   });
 
-  testWidgets('shows settings page theme choices', (tester) async {
+  testWidgets('shows settings page reading and theme choices', (tester) async {
     await tester.pumpWidget(
       JianxiReaderApp(documentService: FakeDocumentService([])),
     );
@@ -135,6 +143,8 @@ void main() {
     expect(find.text('系统'), findsOneWidget);
     expect(find.text('浅色'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
+    expect(find.text('阅读主题'), findsOneWidget);
+    expect(find.text('版本 1.2.0 (20)'), findsOneWidget);
   });
 }
 

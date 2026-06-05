@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+
+import '../../core/app_settings_controller.dart';
+
 class HtmlStyler {
   const HtmlStyler._();
 
@@ -7,12 +11,21 @@ class HtmlStyler {
     String rawHtml, {
     required double fontSize,
     required double lineHeight,
-    required bool isDark,
+    required ReadingPalette readingPalette,
+    required double horizontalPadding,
     double topPadding = 0,
   }) {
-    final colors = isDark ? _darkColors : _lightColors;
-
     final topPaddingPx = topPadding.toStringAsFixed(1);
+    final horizontalPaddingPx = horizontalPadding.toStringAsFixed(1);
+    final ink = _cssColor(readingPalette.foreground);
+    final muted = _cssColor(readingPalette.muted);
+    final canvas = _cssColor(readingPalette.surface);
+    final parchment = _cssColor(readingPalette.background);
+    final hairline = _cssColor(readingPalette.border);
+    final primary = _cssColor(readingPalette.link);
+    final codeBackground = _cssColor(readingPalette.codeBackground);
+    final colorScheme =
+        readingPalette.background.computeLuminance() < 0.5 ? 'dark' : 'light';
 
     return '''
 <!doctype html>
@@ -22,13 +35,14 @@ class HtmlStyler {
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
   <style>
     :root {
-      color-scheme: ${isDark ? 'dark' : 'light'};
-      --primary: #0066cc;
-      --ink: ${colors.ink};
-      --muted: ${colors.muted};
-      --canvas: ${colors.canvas};
-      --parchment: ${colors.parchment};
-      --hairline: ${colors.hairline};
+      color-scheme: $colorScheme;
+      --primary: $primary;
+      --ink: $ink;
+      --muted: $muted;
+      --canvas: $canvas;
+      --parchment: $parchment;
+      --hairline: $hairline;
+      --code-bg: $codeBackground;
       --radius-sm: 8px;
       --radius-md: 11px;
       --radius-lg: 18px;
@@ -53,7 +67,7 @@ class HtmlStyler {
     .reader-shell {
       width: min(100%, 760px);
       margin: 0 auto;
-      padding: ${topPaddingPx}px 20px 48px;
+      padding: ${topPaddingPx}px ${horizontalPaddingPx}px 48px;
       background: var(--parchment);
     }
     h1, h2, h3, h4, h5, h6 {
@@ -84,7 +98,7 @@ class HtmlStyler {
     pre {
       overflow-x: auto !important;
       padding: 16px !important;
-      background: var(--canvas) !important;
+      background: var(--code-bg) !important;
       border: 1px solid var(--hairline) !important;
       border-radius: var(--radius-md) !important;
       box-shadow: none !important;
@@ -92,7 +106,7 @@ class HtmlStyler {
     code, kbd, samp {
       font-family: "SF Mono", "Cascadia Code", Consolas, monospace !important;
       font-size: 0.92em !important;
-      background: var(--canvas) !important;
+      background: var(--code-bg) !important;
       border-radius: var(--radius-sm) !important;
       padding: 0.12em 0.35em !important;
     }
@@ -163,36 +177,9 @@ class HtmlStyler {
   static String escapedTitle(String title) {
     return const HtmlEscape().convert(title);
   }
+
+  static String _cssColor(Color color) {
+    final rgb = color.toARGB32() & 0x00FFFFFF;
+    return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+  }
 }
-
-class _HtmlColors {
-  const _HtmlColors({
-    required this.ink,
-    required this.muted,
-    required this.canvas,
-    required this.parchment,
-    required this.hairline,
-  });
-
-  final String ink;
-  final String muted;
-  final String canvas;
-  final String parchment;
-  final String hairline;
-}
-
-const _lightColors = _HtmlColors(
-  ink: '#1d1d1f',
-  muted: '#7a7a7a',
-  canvas: '#ffffff',
-  parchment: '#f5f5f7',
-  hairline: '#e0e0e0',
-);
-
-const _darkColors = _HtmlColors(
-  ink: '#ffffff',
-  muted: '#cccccc',
-  canvas: '#272729',
-  parchment: '#000000',
-  hairline: '#3a3a3c',
-);

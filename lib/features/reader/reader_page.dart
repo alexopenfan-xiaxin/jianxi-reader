@@ -55,27 +55,37 @@ class _ReaderPageState extends State<ReaderPage> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final showGlass = _scrollOffset > 20;
     final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight;
     final progress = _maxScrollExtent > 0
         ? (_scrollOffset / _maxScrollExtent).clamp(0.0, 1.0)
         : 0.0;
+    final settings = context.watch<AppSettingsController>();
+    final readingPalette = settings.readingPalette(
+      defaultBackground: palette.parchment,
+      defaultForeground: palette.ink,
+      defaultMuted: palette.muted,
+      defaultSurface: palette.card,
+      defaultBorder: palette.hairline,
+      defaultLink: AppColors.primary,
+    );
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      backgroundColor: readingPalette.background,
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: showGlass ? Colors.transparent : palette.parchment,
+        backgroundColor:
+            showGlass ? Colors.transparent : readingPalette.background,
+        foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
         flexibleSpace: showGlass
             ? ClipRRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                   child: Container(
-                    color: (isDark ? const Color(0xFF000000) : const Color(0xFFF5F5F7))
-                        .withValues(alpha: 0.80),
+                    color: readingPalette.background.withValues(alpha: 0.80),
                   ),
                 ),
               )
@@ -95,18 +105,16 @@ class _ReaderPageState extends State<ReaderPage> {
             tooltip: '文档操作',
             onSelected: _handleAction,
             itemBuilder: (context) {
-              final items = <PopupMenuEntry<_ReaderMenuAction>>[];
-              if (!_document.isReferenced) {
-                items.add(const PopupMenuItem(
+              return const <PopupMenuEntry<_ReaderMenuAction>>[
+                PopupMenuItem(
                   value: _ReaderMenuAction.rename,
                   child: Text('重命名'),
-                ));
-              }
-              items.add(const PopupMenuItem(
-                value: _ReaderMenuAction.remove,
-                child: Text('移出'),
-              ));
-              return items;
+                ),
+                PopupMenuItem(
+                  value: _ReaderMenuAction.remove,
+                  child: Text('移出'),
+                ),
+              ];
             },
           ),
         ],
@@ -117,18 +125,22 @@ class _ReaderPageState extends State<ReaderPage> {
             LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.transparent,
-              color: AppColors.primary,
+              color: AppColors.primary.withValues(alpha: 0.75),
               minHeight: 2,
             ),
           Expanded(
-            child: _buildBody(topPadding),
+            child: _buildBody(topPadding, settings, readingPalette),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBody(double topPadding) {
+  Widget _buildBody(
+    double topPadding,
+    AppSettingsController settings,
+    ReadingPalette readingPalette,
+  ) {
     if (_isPreparingDocument) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -149,6 +161,8 @@ class _ReaderPageState extends State<ReaderPage> {
         document: _document,
         scrollController: _scrollController,
         topPadding: topPadding,
+        settings: settings,
+        readingPalette: readingPalette,
       ),
     );
   }
@@ -194,11 +208,15 @@ class _ReaderPageState extends State<ReaderPage> {
 class _ReaderContent extends StatelessWidget {
   const _ReaderContent({
     required this.document,
+    required this.settings,
+    required this.readingPalette,
     this.scrollController,
     this.topPadding = 0,
   });
 
   final DocumentEntry document;
+  final AppSettingsController settings;
+  final ReadingPalette readingPalette;
   final ScrollController? scrollController;
   final double topPadding;
 
@@ -209,24 +227,24 @@ class _ReaderContent extends StatelessWidget {
       return const _ReaderError(message: '文档不存在或已被移出。');
     }
 
-    final settings = context.watch<AppSettingsController>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return switch (document.type) {
       DocumentType.markdown => MarkdownViewer(
-        file: file,
-        fontSize: settings.readingFontSizeValue,
-        lineHeight: settings.readingLineHeightValue,
-        scrollController: scrollController,
-        topPadding: topPadding,
-      ),
+          file: file,
+          fontSize: settings.readingFontSizeValue,
+          lineHeight: settings.readingLineHeightValue,
+          readingPalette: readingPalette,
+          horizontalPadding: settings.readingHorizontalPaddingValue,
+          scrollController: scrollController,
+          topPadding: topPadding,
+        ),
       DocumentType.html => HtmlDocumentView(
-        file: file,
-        fontSize: settings.readingFontSizeValue,
-        lineHeight: settings.readingLineHeightValue,
-        isDark: isDark,
-        topPadding: topPadding,
-      ),
+          file: file,
+          fontSize: settings.readingFontSizeValue,
+          lineHeight: settings.readingLineHeightValue,
+          readingPalette: readingPalette,
+          horizontalPadding: settings.readingHorizontalPaddingValue,
+          topPadding: topPadding,
+        ),
     };
   }
 }
@@ -253,9 +271,9 @@ void showReadingDisplaySheet(BuildContext context) {
     showDragHandle: true,
     isScrollControlled: true,
     builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.45,
-      minChildSize: 0.35,
-      maxChildSize: 0.65,
+      initialChildSize: 0.62,
+      minChildSize: 0.42,
+      maxChildSize: 0.82,
       expand: false,
       builder: (context, scrollController) => _ReadingDisplaySheet(
         scrollController: scrollController,
@@ -265,9 +283,9 @@ void showReadingDisplaySheet(BuildContext context) {
 }
 
 class _ReadingDisplaySheet extends StatelessWidget {
-  final ScrollController? scrollController;
-
   const _ReadingDisplaySheet({this.scrollController});
+
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +304,7 @@ class _ReadingDisplaySheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 32,
@@ -294,10 +313,33 @@ class _ReadingDisplaySheet extends StatelessWidget {
                       color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(AppRadii.sm),
                     ),
-                    child: const Icon(Icons.text_fields_rounded, size: 18, color: AppColors.primary),
+                    child: const Icon(
+                      Icons.text_fields_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  Text('阅读显示', style: Theme.of(context).textTheme.titleLarge),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '阅读显示',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          '这些设置只影响阅读内容，不改变应用整体主题。',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: context.palette.muted,
+                                    letterSpacing: 0,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),

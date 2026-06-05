@@ -6,6 +6,7 @@ import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/emoji_service.dart';
 
@@ -1315,6 +1316,8 @@ class MarkdownViewer extends StatefulWidget {
   final File file;
   final double fontSize;
   final double lineHeight;
+  final ReadingPalette readingPalette;
+  final double horizontalPadding;
   final ScrollController? scrollController;
   final double topPadding;
 
@@ -1322,6 +1325,8 @@ class MarkdownViewer extends StatefulWidget {
     required this.file,
     required this.fontSize,
     required this.lineHeight,
+    required this.readingPalette,
+    required this.horizontalPadding,
     this.scrollController,
     this.topPadding = 0,
     super.key,
@@ -1422,13 +1427,13 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       );
     }
 
-    final palette = context.palette;
     final textTheme = Theme.of(context).textTheme;
     final brightness = Theme.of(context).brightness;
     final bodyStyle = (textTheme.bodyLarge ?? const TextStyle()).copyWith(
-      color: palette.ink,
+      color: widget.readingPalette.foreground,
       fontSize: widget.fontSize,
       height: widget.lineHeight,
+      letterSpacing: 0,
     );
 
     final base = brightness == Brightness.dark
@@ -1439,26 +1444,36 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       textStyle: bodyStyle,
       h1Style: textTheme.headlineLarge?.copyWith(
         fontSize: widget.fontSize + 16,
-        color: palette.ink,
+        color: widget.readingPalette.foreground,
+        letterSpacing: 0,
       ),
       h2Style: textTheme.headlineLarge?.copyWith(
         fontSize: widget.fontSize + 10,
-        color: palette.ink,
+        color: widget.readingPalette.foreground,
+        letterSpacing: 0,
       ),
       h3Style: textTheme.titleLarge?.copyWith(
         fontSize: widget.fontSize + 5,
-        color: palette.ink,
+        color: widget.readingPalette.foreground,
+        letterSpacing: 0,
       ),
       h4Style: textTheme.titleMedium?.copyWith(
         fontSize: widget.fontSize + 2,
-        color: palette.ink,
+        color: widget.readingPalette.foreground,
+        letterSpacing: 0,
       ),
-      h5Style: textTheme.titleMedium?.copyWith(color: palette.ink),
-      h6Style: textTheme.titleMedium?.copyWith(color: palette.muted),
+      h5Style: textTheme.titleMedium?.copyWith(
+        color: widget.readingPalette.foreground,
+        letterSpacing: 0,
+      ),
+      h6Style: textTheme.titleMedium?.copyWith(
+        color: widget.readingPalette.muted,
+        letterSpacing: 0,
+      ),
       paragraphStyle: bodyStyle,
-      blockquoteStyle: bodyStyle.copyWith(color: palette.muted),
+      blockquoteStyle: bodyStyle.copyWith(color: widget.readingPalette.muted),
       blockquoteDecoration: BoxDecoration(
-        color: palette.card,
+        color: widget.readingPalette.surface,
         borderRadius: BorderRadius.circular(AppRadii.md),
         border: const Border(
           left: BorderSide(color: AppColors.primary, width: 4),
@@ -1466,25 +1481,26 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ),
       blockquotePadding: const EdgeInsets.all(AppSpacing.md),
       inlineCodeStyle: TextStyle(
-        color: palette.ink,
-        backgroundColor:
-            brightness == Brightness.dark ? palette.card : const Color(0xFFE8E8ED),
+        color: widget.readingPalette.foreground,
+        backgroundColor: widget.readingPalette.codeBackground,
         fontFamily: 'monospace',
         fontSize: 15,
         height: 1.45,
       ),
       codeBlockDecoration: BoxDecoration(
-        color: palette.card,
+        color: widget.readingPalette.codeBackground,
         borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: palette.hairline),
+        border: Border.all(color: widget.readingPalette.border),
       ),
       codeBlockPadding: const EdgeInsets.all(AppSpacing.md),
-      tableBorder: TableBorder.all(color: palette.hairline),
-      tableHeaderStyle: textTheme.titleMedium ?? const TextStyle(),
+      tableBorder: TableBorder.all(color: widget.readingPalette.border),
+      tableHeaderStyle: (textTheme.titleMedium ?? const TextStyle()).copyWith(
+        color: widget.readingPalette.foreground,
+      ),
       tableCellStyle: bodyStyle.copyWith(fontSize: 15),
-      horizontalRuleColor: palette.hairline,
+      horizontalRuleColor: widget.readingPalette.border,
       horizontalRuleThickness: 1,
-      linkStyle: bodyStyle.copyWith(color: AppColors.primary),
+      linkStyle: bodyStyle.copyWith(color: widget.readingPalette.link),
       listBulletStyle: bodyStyle,
     );
 
@@ -1513,25 +1529,28 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..register('image', const TappableImageBuilder())
       ..register('emoji', const EmojiBuilder());
 
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        widget.topPadding + AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.xxl + kBottomNavigationBarHeight,
-      ),
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: SmoothMarkdown(
-        data: _data!,
-        styleSheet: styleSheet,
-        useEnhancedComponents: false,
-        selectable: true,
-        plugins: plugins,
-        builderRegistry: builders,
-        onTapLink: (url) => _handleLinkTap(context, url),
-        onTapImage: (url, alt, title) =>
-            _showImagePreview(context, url, alt, title),
+    return ColoredBox(
+      color: widget.readingPalette.background,
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        padding: EdgeInsets.fromLTRB(
+          widget.horizontalPadding,
+          widget.topPadding + AppSpacing.md,
+          widget.horizontalPadding,
+          AppSpacing.xxl + kBottomNavigationBarHeight,
+        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SmoothMarkdown(
+          data: _data!,
+          styleSheet: styleSheet,
+          useEnhancedComponents: false,
+          selectable: true,
+          plugins: plugins,
+          builderRegistry: builders,
+          onTapLink: (url) => _handleLinkTap(context, url),
+          onTapImage: (url, alt, title) =>
+              _showImagePreview(context, url, alt, title),
+        ),
       ),
     );
   }
