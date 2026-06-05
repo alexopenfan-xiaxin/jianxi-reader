@@ -598,21 +598,21 @@ class _SyntaxHighlightCodeBlockWidgetState
   @override
   void initState() {
     super.initState();
-    _initOnce();
-  }
-
-  void _initOnce() {
     if (_initialized) {
       _ready = true;
       return;
     }
-    _initFuture ??= () async {
-      await Highlighter.initialize(_supportedLanguages);
-      _lightTheme = await HighlighterTheme.loadLightTheme();
-      _darkTheme = await HighlighterTheme.loadDarkTheme();
-      _initialized = true;
+    _initFuture ??= _doInitialize();
+    _initFuture!.then((_) {
       if (mounted) setState(() => _ready = true);
-    }();
+    });
+  }
+
+  static Future<void> _doInitialize() async {
+    await Highlighter.initialize(_supportedLanguages);
+    _lightTheme = await HighlighterTheme.loadLightTheme();
+    _darkTheme = await HighlighterTheme.loadDarkTheme();
+    _initialized = true;
   }
 
   @override
