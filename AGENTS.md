@@ -20,6 +20,7 @@ lib/
 ├── app.dart                     # MultiProvider: AppSettingsController + LibraryController
 ├── core/
 │   ├── design_tokens.dart       # Colors, spacing, radii, fontFamily, theme data
+│   ├── emoji_service.dart        # Loads gemoji DB into Map<String,String> via rootBundle
 │   ├── file_rules.dart          # DocumentType, extension validation, baseName validation
 │   ├── document_file_service.dart  # DocumentLibraryService interface + DocumentFileService impl
 │   ├── app_settings_controller.dart  # ThemeMode, ReadingFontSize, ReadingLineHeight
@@ -63,15 +64,16 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.1.3+10` (versionName = 1.1.3, versionCode = 10)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=10`
+- `pubspec.yaml`: `1.1.4+11` (versionName = 1.1.4, versionCode = 11)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=11`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
+- **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
 - Auth: Personal Access Token (via remote URL or GitHub API)
-- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`), `v1.1.3` (asset `app-arm64-v8a-release.apk`)
+- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`), `v1.1.3` (asset `app-arm64-v8a-release.apk`), `v1.1.4` (asset `app-arm64-v8a-release.apk`)
 
 ## Systematic Bug-Fixing Methodology
 
@@ -150,3 +152,5 @@ import 'dart:io';
 - `_supportedLanguages` must only contain languages with grammar files in `syntax_highlight-<version>/grammars/`; verify by checking `%PUB_CACHE%` — including a missing language causes `Highlighter.initialize()` to throw and silently disable ALL highlighting
 - `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
 - `_initFailed` static flag + orange ⚠ `Tooltip` icon on code blocks so developers can visually identify when initialization silently failed
+- Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
+- `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`

@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/design_tokens.dart';
+import '../../core/emoji_service.dart';
 
 // ── Underline Plugin (++text++) ───────────────────────────────────────────
 
@@ -1226,12 +1227,16 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   String? _data;
   String? _error;
   DateTime? _lastModified;
+  Map<String, String> _emojiMap = const {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadFile();
+    EmojiService.load().then((map) {
+      if (mounted) setState(() => _emojiMap = map);
+    });
   }
 
   @override
@@ -1371,7 +1376,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..registerInline(const SuperscriptPlugin())
       ..registerInline(const SubscriptPlugin())
       ..registerInline(const BareUrlPlugin())
-      ..registerInline(const EmojiPlugin())
+      ..registerInline(EmojiPlugin(customEmojis: _emojiMap.isNotEmpty ? _emojiMap : null))
       ..registerBlock(const MermaidPlugin())
       ..registerBlock(const MindmapPlugin());
 

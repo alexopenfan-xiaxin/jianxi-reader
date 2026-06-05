@@ -388,7 +388,7 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.1.2 (9)',
+                      '版本 1.1.4 (11)',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,
