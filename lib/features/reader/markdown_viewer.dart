@@ -1201,6 +1201,114 @@ String _preprocessMarkdown(String raw) {
   return processed;
 }
 
+// ── Scroll-safe Mermaid Builder ──────────────────────────────────────────
+
+class ScrollSafeMermaidBuilder extends MarkdownWidgetBuilder {
+  const ScrollSafeMermaidBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => node is MermaidDiagramNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    if (node is! MermaidDiagramNode) return const SizedBox.shrink();
+    return _MermaidScrollBlocker(node: node, styleSheet: styleSheet);
+  }
+}
+
+class _MermaidScrollBlocker extends StatefulWidget {
+  final MermaidDiagramNode node;
+  final MarkdownStyleSheet styleSheet;
+
+  const _MermaidScrollBlocker({
+    required this.node,
+    required this.styleSheet,
+  });
+
+  @override
+  State<_MermaidScrollBlocker> createState() => _MermaidScrollBlockerState();
+}
+
+class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
+  final TransformationController _transformCtrl = TransformationController();
+  final GlobalKey _diagramKey = GlobalKey();
+  double? _diagramHeight;
+
+  MermaidStyle get _style {
+    final bgColor = widget.styleSheet.codeBlockDecoration?.color;
+    final isDark = bgColor != null && bgColor.computeLuminance() < 0.5;
+    return isDark ? MermaidStyle.dark() : const MermaidStyle();
+  }
+
+  void _measureDiagram() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final renderBox = _diagramKey.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null && mounted) {
+        final newHeight = renderBox.size.height;
+        if (_diagramHeight != newHeight) {
+          setState(() => _diagramHeight = newHeight);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _transformCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final diagram = MermaidDiagram(
+      key: _diagramHeight == null ? _diagramKey : null,
+      code: widget.node.code,
+      style: _style,
+    );
+
+    if (_diagramHeight == null) {
+      _measureDiagram();
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Color(_style.backgroundColor),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: diagram,
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      height: _diagramHeight,
+      decoration: BoxDecoration(
+        color: Color(_style.backgroundColor),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {},
+        child: InteractiveViewer(
+          transformationController: _transformCtrl,
+          minScale: 0.5,
+          maxScale: 3.0,
+          boundaryMargin: const EdgeInsets.all(double.infinity),
+          constrained: false,
+          child: diagram,
+        ),
+      ),
+    );
+  }
+}
+
 // ── Markdown Viewer Widget ───────────────────────────────────────────────
 
 class MarkdownViewer extends StatefulWidget {
@@ -1228,6 +1336,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   String? _error;
   DateTime? _lastModified;
   Map<String, String> _emojiMap = const {};
+  Timer? _fileWatchTimer;
 
   @override
   void initState() {
@@ -1237,10 +1346,15 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
     EmojiService.load().then((map) {
       if (mounted) setState(() => _emojiMap = map);
     });
+    _fileWatchTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _checkFileChanged(),
+    );
   }
 
   @override
   void dispose() {
+    _fileWatchTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -1264,11 +1378,15 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
 
   void _checkFileChanged() {
     try {
+      if (!widget.file.existsSync()) return;
       final modified = widget.file.lastModifiedSync();
       if (_lastModified != null && modified.isAfter(_lastModified!)) {
+        debugPrint('[MarkdownViewer] file changed, reloading (${widget.file.path})');
         _loadFile();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[MarkdownViewer] checkFileChanged error: $e');
+    }
   }
 
   Future<void> _loadFile() async {
@@ -1389,7 +1507,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
         showCopyButton: true,
         showLanguageTag: true,
       ))
-      ..register('mermaid', const MermaidBuilder())
+      ..register('mermaid', const ScrollSafeMermaidBuilder())
       ..register('mindmap', const MindmapBuilder())
       ..register('link', const ClickableLinkBuilder())
       ..register('image', const TappableImageBuilder())
