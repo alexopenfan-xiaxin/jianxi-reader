@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
@@ -406,42 +405,90 @@ class ClickableLinkBuilder extends MarkdownWidgetBuilder {
       color: AppColors.primary,
     );
 
-    final inner = context.inlineRenderer?.call(linkNode.children, linkStyle);
-    final innerSpan = _extractSpan(inner) ??
-        TextSpan(
-          text: linkNode.children
-              .whereType<TextNode>()
-              .map((n) => n.content)
-              .join(),
-          style: linkStyle,
-        );
+    final text = linkNode.children
+        .whereType<TextNode>()
+        .map((n) => n.content)
+        .join();
 
-    final tapSpan = TextSpan(
-      text: innerSpan.text,
-      style: innerSpan.style ?? linkStyle,
-      children: innerSpan.children,
-      recognizer: TapGestureRecognizer()
-        ..onTap = () => context.onTapLink?.call(linkNode.url),
-    );
-
-    return Text.rich(
-      TextSpan(children: [tapSpan]),
-      style: linkStyle,
+    return Semantics(
+      link: true,
+      label: linkNode.title ?? linkNode.url,
+      child: GestureDetector(
+        onTap: () => context.onTapLink?.call(linkNode.url),
+        behavior: HitTestBehavior.opaque,
+        child: Text(text, style: linkStyle),
+      ),
     );
   }
+}
 
-  TextSpan? _extractSpan(Widget? widget) {
-    if (widget == null) return null;
-    if (widget is Text) {
-      return (widget.textSpan as TextSpan?) ?? TextSpan(text: widget.data);
+// ── Image Builder (tappable + preview) ────────────────────────────────────
+
+class TappableImageBuilder extends MarkdownWidgetBuilder {
+  const TappableImageBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => node is ImageNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final imageNode = node as ImageNode;
+    final isSvg = imageNode.url.toLowerCase().endsWith('.svg');
+    final isNetwork = imageNode.url.startsWith('http://') ||
+        imageNode.url.startsWith('https://');
+
+    Widget imageWidget;
+    if (isNetwork) {
+      imageWidget = Image.network(
+        imageNode.url,
+        errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.error),
+      );
+    } else {
+      imageWidget = Image.asset(
+        imageNode.url,
+        errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.broken_image),
+      );
     }
-    if (widget is RichText) {
-      return widget.text as TextSpan?;
-    }
-    if (widget is SelectableText) {
-      return widget.textSpan ?? TextSpan(text: widget.data);
-    }
-    return null;
+
+    final caption = imageNode.alt.isNotEmpty
+        ? imageNode.alt
+        : (imageNode.title ?? '');
+
+    return Semantics(
+      image: true,
+      label: caption.isNotEmpty ? caption : 'Image',
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.onTapImage?.call(
+          imageNode.url,
+          imageNode.alt,
+          imageNode.title,
+        ),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            imageWidget,
+            if (caption.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  caption,
+                  style: (styleSheet.paragraphStyle ?? const TextStyle()).copyWith(
+                    fontSize: 12,
+                    color: AppColors.bodyMuted,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -997,7 +1044,8 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       ))
       ..register('mermaid', const MermaidBuilder())
       ..register('mindmap', const MindmapBuilder())
-      ..register('link', const ClickableLinkBuilder());
+      ..register('link', const ClickableLinkBuilder())
+      ..register('image', const TappableImageBuilder());
 
     return SingleChildScrollView(
       controller: widget.scrollController,

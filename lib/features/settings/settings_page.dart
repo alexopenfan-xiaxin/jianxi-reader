@@ -192,7 +192,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=3'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=4'),
       );
       final response = await request.close();
 
@@ -203,7 +203,7 @@ class _AboutCardState extends State<_AboutCard> {
           );
         }
       } else if (response.statusCode == HttpStatus.ok) {
-        final url = 'https://alexxia.5imh.xyz/update/?request&local=3';
+        final url = 'https://alexxia.5imh.xyz/update/?request&local=4';
         if (mounted) {
           if (!context.mounted) return;
           final confirmed = await showDialog<bool>(
@@ -287,7 +287,7 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.0.2 · 支持 Markdown 与 HTML',
+                      '版本 1.0.3 · 支持 Markdown 与 HTML',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,

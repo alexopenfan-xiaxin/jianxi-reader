@@ -63,8 +63,8 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.0.2+3` (versionName = 1.0.2, versionCode = 3)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=3`
+- `pubspec.yaml`: `1.0.3+4` (versionName = 1.0.3, versionCode = 4)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=4`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 
@@ -83,7 +83,8 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - `badCertificateCallback` added because update server uses untrusted SSL certificate
 - `INTERNET` permission added to main `AndroidManifest.xml` (debug has it, release didn't)
 - APK ~10MB ARM64
-- `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (default `LinkBuilder` wraps a `GestureDetector` in `WidgetSpan` which loses taps to `SelectionArea`; custom builder returns a `Text.rich` with `TapGestureRecognizer` on the span)
+- `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (wraps a `Text` in `GestureDetector` with `HitTestBehavior.opaque`; the package's `renderInline` keeps non-text widgets as a `WidgetSpan`, so the `GestureDetector` survives the unwrap step that strips a plain `Text`)
+- `TappableImageBuilder` registered as the 'image' builder (wraps `Image.network`/`Image.asset` in `GestureDetector` with `HitTestBehavior.opaque`; the package's inline renderer keeps it as a `WidgetSpan`, so the tap is captured even when the image is inline within a paragraph and `selectable: true` would otherwise route the gesture to the `SelectionArea`)
 - "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
 - `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
 - Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
