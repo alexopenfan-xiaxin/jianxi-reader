@@ -581,6 +581,7 @@ class _SyntaxHighlightCodeBlockWidget extends StatefulWidget {
 class _SyntaxHighlightCodeBlockWidgetState
     extends State<_SyntaxHighlightCodeBlockWidget> {
   static bool _initialized = false;
+  static bool _initFailed = false;
   static Future<void>? _initFuture;
   static HighlighterTheme? _lightTheme;
   static HighlighterTheme? _darkTheme;
@@ -589,10 +590,13 @@ class _SyntaxHighlightCodeBlockWidgetState
   bool _copied = false;
   Timer? _copyResetTimer;
 
-  static const _supportedLanguages = [
+  /// Only languages that have actual grammar files in syntax_highlight 0.5.0.
+  /// If a grammar is missing, Highlighter.initialize() throws and kills ALL
+  /// highlighting.  Keep this list in sync with the package's grammars/ dir.
+  static final List<String> _supportedLanguages = [
     'dart', 'python', 'javascript', 'typescript', 'java', 'kotlin',
-    'swift', 'rust', 'go', 'cpp', 'c', 'ruby', 'php', 'shell',
-    'sql', 'yaml', 'json', 'html', 'css', 'xml',
+    'swift', 'rust', 'go', 'sql', 'yaml', 'json', 'html', 'css',
+    // Not available in 0.5.0: cpp, c, ruby, php, shell, xml
   ];
 
   @override
@@ -602,21 +606,31 @@ class _SyntaxHighlightCodeBlockWidgetState
       _highlightReady = true;
       return;
     }
-    _initFuture ??= _doInitialize();
-    _initFuture!.then((_) {
+    _initFuture ??= _doInitialize().then((ok) {
+      if (!ok) {
+        debugPrint('[SyntaxHighlight] init failed — falling back to plain code');
+      }
       if (mounted) setState(() => _highlightReady = true);
     });
   }
 
-  static Future<void> _doInitialize() async {
+  /// Returns true if initialization succeeded.
+  static Future<bool> _doInitialize() async {
     try {
       await Highlighter.initialize(_supportedLanguages);
       _lightTheme = await HighlighterTheme.loadLightTheme();
       _darkTheme = await HighlighterTheme.loadDarkTheme();
-    } catch (_) {
-      // fall through — themes remain null, plain code will be shown
+      debugPrint('[SyntaxHighlight] init OK (${_supportedLanguages.length} grammars)');
+      _initialized = true;
+      _initFailed = false;
+      return true;
+    } catch (e) {
+      debugPrint('[SyntaxHighlight] init error: $e');
+      // themes remain null → plain code fallback
+      _initialized = true;
+      _initFailed = true;
+      return false;
     }
-    _initialized = true;
   }
 
   @override
@@ -641,14 +655,13 @@ class _SyntaxHighlightCodeBlockWidgetState
   Widget _buildCodeContent(BuildContext context, HighlighterTheme? theme) {
     if (theme != null && _canHighlight) {
       try {
-        final highlighter = Highlighter(
-          language: widget.language!.toLowerCase(),
-          theme: theme,
-        );
+        final lang = widget.language!.toLowerCase();
+        final highlighter = Highlighter(language: lang, theme: theme);
         final highlighted = highlighter.highlight(widget.code);
         if (widget.selectable) return Text.rich(highlighted);
         return RichText(text: highlighted);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[SyntaxHighlight] highlight error (lang=${widget.language}, code=${widget.code.length} chars): $e');
         // fall through to plain code
       }
     }
@@ -699,27 +712,44 @@ class _SyntaxHighlightCodeBlockWidgetState
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (widget.showLanguageTag && widget.language != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      widget.language!.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                        letterSpacing: 0.5,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          widget.language!.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (_initFailed && _canHighlight)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Tooltip(
+                            message: 'Highlight failed — check debug log',
+                            child: Icon(
+                              Icons.error_outline,
+                              size: 14,
+                              color: Colors.orange.shade400,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 if (widget.showLanguageTag && widget.language != null)
                   const SizedBox(width: 8),
