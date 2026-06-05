@@ -30,6 +30,8 @@ class _ReaderPageState extends State<ReaderPage> {
   final _scrollController = ScrollController();
   double _scrollOffset = 0;
   double _maxScrollExtent = 0;
+  bool _isPreparingDocument = true;
+  String? _prepareError;
 
   @override
   void initState() {
@@ -41,11 +43,7 @@ class _ReaderPageState extends State<ReaderPage> {
         _maxScrollExtent = _scrollController.position.maxScrollExtent;
       });
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<LibraryController>().markDocumentOpened(_document);
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDocument());
   }
 
   @override
@@ -123,23 +121,58 @@ class _ReaderPageState extends State<ReaderPage> {
               minHeight: 2,
             ),
           Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollUpdateNotification) {
-                  setState(() {});
-                }
-                return false;
-              },
-              child: _ReaderContent(
-                document: _document,
-                scrollController: _scrollController,
-                topPadding: topPadding,
-              ),
-            ),
+            child: _buildBody(topPadding),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildBody(double topPadding) {
+    if (_isPreparingDocument) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (_prepareError != null) {
+      return _ReaderError(message: _prepareError!);
+    }
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification) {
+          setState(() {});
+        }
+        return false;
+      },
+      child: _ReaderContent(
+        document: _document,
+        scrollController: _scrollController,
+        topPadding: topPadding,
+      ),
+    );
+  }
+
+  Future<void> _prepareDocument() async {
+    try {
+      final controller = context.read<LibraryController>();
+      final refreshed = await controller.refreshDocument(_document);
+      await controller.markDocumentOpened(refreshed);
+      if (mounted) {
+        setState(() {
+          _document = refreshed;
+          _prepareError = null;
+          _isPreparingDocument = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _prepareError = '璇诲彇鏂囨。澶辫触锛?error';
+          _isPreparingDocument = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleAction(_ReaderMenuAction action) async {

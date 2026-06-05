@@ -193,7 +193,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=12'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=13'),
       );
       final response = await request.close();
 
@@ -284,7 +284,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=12'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=13'),
       );
       final response = await request.close();
       final total = response.contentLength ?? 0;

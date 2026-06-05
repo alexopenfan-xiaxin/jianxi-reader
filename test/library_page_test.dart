@@ -18,6 +18,9 @@ class FakeDocumentService implements DocumentLibraryService {
   Future<List<DocumentEntry>> scanLibrary() async => List.of(_documents);
 
   @override
+  Future<DocumentEntry> refreshDocument(DocumentEntry document) async => document;
+
+  @override
   Future<DocumentEntry> renameDocument(
     DocumentEntry document,
     String baseName,

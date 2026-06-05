@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +15,8 @@ abstract class DocumentLibraryService {
 
   Future<DocumentEntry?> pickAndImportDocument();
 
+  Future<DocumentEntry> refreshDocument(DocumentEntry document);
+
   Future<DocumentEntry> renameDocument(DocumentEntry document, String baseName);
 
   Future<void> removeDocument(DocumentEntry document);
@@ -24,8 +28,11 @@ class DocumentFileService implements DocumentLibraryService {
   const DocumentFileService();
 
   static const libraryFolderName = 'documents';
+  static const _documentAccessChannel =
+      MethodChannel('com.jianxi.reader/document_access');
   static const _recentOpenedPrefix = 'document.recentOpened.';
   static const _referencedPathsKey = 'referenced.paths';
+  static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
 
   @override
   Future<List<DocumentEntry>> scanLibrary() async {
@@ -52,13 +59,15 @@ class DocumentFileService implements DocumentLibraryService {
     final referencedPaths =
         preferences.getStringList(_referencedPathsKey) ?? [];
     for (final path in referencedPaths) {
-      final file = File(path);
+      final refreshedPath =
+          await _refreshReferencedMirror(preferences, path) ?? path;
+      final file = File(refreshedPath);
       if (!file.existsSync()) continue;
-      if (!DocumentFileRules.isSupportedPath(path)) continue;
+      if (!DocumentFileRules.isSupportedPath(refreshedPath)) continue;
       entries.add(
         await DocumentEntry.fromFile(
           file,
-          recentOpenedAt: _recentOpenedAt(preferences, path),
+          recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
           isReferenced: true,
         ),
       );
@@ -69,6 +78,17 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<DocumentEntry?> pickAndImportDocument() async {
+    if (Platform.isAndroid) {
+      try {
+        final androidDocument = await _pickAndroidReferencedDocument();
+        return androidDocument;
+      } on MissingPluginException {
+        debugPrint(
+          '[DocumentFileService] Android document picker channel unavailable',
+        );
+      }
+    }
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['md', 'markdown', 'html', 'htm'],
@@ -101,6 +121,24 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     return DocumentEntry.fromFile(source, isReferenced: true);
+  }
+
+  @override
+  Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
+    final preferences = await SharedPreferences.getInstance();
+    final refreshedPath = document.isReferenced
+        ? await _refreshReferencedMirror(preferences, document.path)
+        : document.path;
+    final path = refreshedPath ?? document.path;
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw FileSystemException('鏂囨。涓嶅瓨鍦ㄦ垨宸茶绉诲嚭', path);
+    }
+    return DocumentEntry.fromFile(
+      file,
+      recentOpenedAt: _recentOpenedAt(preferences, path),
+      isReferenced: document.isReferenced,
+    );
   }
 
   Future<Directory> ensureLibraryDirectory() async {
@@ -144,6 +182,11 @@ class DocumentFileService implements DocumentLibraryService {
     await _moveDocumentMetadata(preferences, document.path, renamedFile.path);
     if (document.isReferenced) {
       await _updateReferencedPath(preferences, document.path, renamedFile.path);
+      await _moveReferencedSourceUri(
+        preferences,
+        document.path,
+        renamedFile.path,
+      );
     }
     return DocumentEntry.fromFile(
       renamedFile,
@@ -173,6 +216,16 @@ class DocumentFileService implements DocumentLibraryService {
       final paths = preferences.getStringList(_referencedPathsKey) ?? [];
       paths.remove(document.path);
       await preferences.setStringList(_referencedPathsKey, paths);
+      final sourceUri = preferences.getString(
+        _referencedSourceUriKey(document.path),
+      );
+      await preferences.remove(_referencedSourceUriKey(document.path));
+      if (sourceUri != null) {
+        final mirror = File(document.path);
+        if (mirror.existsSync()) {
+          await mirror.delete();
+        }
+      }
     } else {
       final file = File(document.path);
       if (file.existsSync()) {
@@ -204,6 +257,10 @@ class DocumentFileService implements DocumentLibraryService {
     return '$_recentOpenedPrefix$path';
   }
 
+  static String _referencedSourceUriKey(String path) {
+    return '$_referencedSourceUriPrefix$path';
+  }
+
   static Future<void> _clearDocumentMetadata(
     SharedPreferences preferences,
     String path,
@@ -220,6 +277,75 @@ class DocumentFileService implements DocumentLibraryService {
     await _clearDocumentMetadata(preferences, oldPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
+    }
+  }
+
+  static Future<void> _moveReferencedSourceUri(
+    SharedPreferences preferences,
+    String oldPath,
+    String newPath,
+  ) async {
+    final sourceUri = preferences.getString(_referencedSourceUriKey(oldPath));
+    await preferences.remove(_referencedSourceUriKey(oldPath));
+    if (sourceUri != null) {
+      await preferences.setString(_referencedSourceUriKey(newPath), sourceUri);
+    }
+  }
+
+  Future<DocumentEntry?> _pickAndroidReferencedDocument() async {
+    final picked = await _documentAccessChannel.invokeMapMethod<String, Object?>(
+      'pickDocument',
+    );
+    if (picked == null) {
+      return null;
+    }
+
+    final path = picked['path'] as String?;
+    final sourceUri = picked['uri'] as String?;
+    if (path == null || path.isEmpty || sourceUri == null || sourceUri.isEmpty) {
+      throw const FileSystemException('绯荤粺鏂囦欢閫夋嫨鍣ㄦ病鏈夎繑鍥炲彲璇诲彇鐨勮矾寰?);
+    }
+    if (!DocumentFileRules.isSupportedPath(path)) {
+      final pickedFile = File(path);
+      if (pickedFile.existsSync()) {
+        await pickedFile.delete();
+      }
+      throw FileSystemException('浠呮敮鎸?Markdown 鍜?HTML 鏂囨。', path);
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    final paths = preferences.getStringList(_referencedPathsKey) ?? [];
+    if (!paths.contains(path)) {
+      paths.add(path);
+      await preferences.setStringList(_referencedPathsKey, paths);
+    }
+    await preferences.setString(_referencedSourceUriKey(path), sourceUri);
+
+    return DocumentEntry.fromFile(File(path), isReferenced: true);
+  }
+
+  Future<String?> _refreshReferencedMirror(
+    SharedPreferences preferences,
+    String path,
+  ) async {
+    final sourceUri = preferences.getString(_referencedSourceUriKey(path));
+    if (sourceUri == null || sourceUri.isEmpty) {
+      return path;
+    }
+    try {
+      final refreshed = await _documentAccessChannel
+          .invokeMapMethod<String, Object?>(
+        'refreshDocument',
+        {'uri': sourceUri, 'path': path},
+      );
+      return refreshed?['path'] as String? ?? path;
+    } on MissingPluginException {
+      return path;
+    } catch (error) {
+      debugPrint(
+        '[DocumentFileService] refresh referenced document failed: $error',
+      );
+      return File(path).existsSync() ? path : null;
     }
   }
 }

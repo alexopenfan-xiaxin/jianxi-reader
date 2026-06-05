@@ -100,6 +100,14 @@ class LibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
+    final refreshed = await documentService.refreshDocument(document);
+    _allDocuments = await documentService.scanLibrary();
+    _errorMessage = null;
+    notifyListeners();
+    return refreshed;
+  }
+
   Future<void> markDocumentOpened(DocumentEntry document) async {
     await documentService.markDocumentOpened(document);
     _allDocuments = await documentService.scanLibrary();
