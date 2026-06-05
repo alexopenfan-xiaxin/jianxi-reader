@@ -1,8 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
@@ -203,29 +204,27 @@ class _AboutCardState extends State<_AboutCard> {
           );
         }
       } else if (response.statusCode == HttpStatus.ok) {
-        final url = 'https://alexxia.5imh.xyz/update/?request&local=5';
-        if (mounted) {
-          if (!context.mounted) return;
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('发现新版本'),
-              content: const Text('有新版本可用，是否前往下载？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('取消'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('下载'),
-                ),
-              ],
-            ),
-          );
-          if (confirmed == true) {
-            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-          }
+        if (!mounted) return;
+        if (!context.mounted) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('发现新版本'),
+            content: const Text('有新版本可用，是否下载更新？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('更新'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await _downloadAndInstall();
         }
       } else {
         if (mounted) {
@@ -241,8 +240,65 @@ class _AboutCardState extends State<_AboutCard> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isChecking = false);
+      setState(() => _isChecking = false);
     }
+  }
+
+  Future<void> _downloadAndInstall() async {
+    if (!mounted) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final filePath = '${dir.path}/jianxi_reader.apk';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('下载更新'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const LinearProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                '正在下载...',
+                style: Theme.of(ctx).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final client = HttpClient()
+        ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      client.userAgent = 'JianxiReader/1.0';
+      final request = await client.getUrl(
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=5'),
+      );
+      final response = await request.close();
+      final file = File(filePath);
+      await file.writeAsBytes(await response.fold<List<int>>(
+        <int>[],
+        (prev, chunk) => prev..addAll(chunk),
+      ));
+      client.close(force: true);
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('下载失败：$e')),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+    await OpenFile.open(filePath);
   }
 
   @override
@@ -287,7 +343,7 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.0.4 · 支持 Markdown 与 HTML',
+                      '版本 1.0.5 · 支持 Markdown 与 HTML',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,

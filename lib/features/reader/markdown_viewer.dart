@@ -6,25 +6,6 @@ import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/design_tokens.dart';
 
-// ── Inline Code Builder ────────────────────────────────────────────────────
-
-class InlineCodeBuilder extends MarkdownWidgetBuilder {
-  const InlineCodeBuilder();
-
-  @override
-  bool canBuild(MarkdownNode node) => node is InlineCodeNode;
-
-  @override
-  Widget build(
-    MarkdownNode node,
-    MarkdownStyleSheet styleSheet,
-    MarkdownRenderContext context,
-  ) {
-    final code = (node as InlineCodeNode).code;
-    return Text(code, style: styleSheet.inlineCodeStyle);
-  }
-}
-
 // ── Underline Plugin (++text++) ───────────────────────────────────────────
 
 class UnderlineNode extends MarkdownNode {
@@ -1089,7 +1070,6 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       ..registerBlock(const MindmapPlugin());
 
     final builders = BuilderRegistry()
-      ..register('code', const InlineCodeBuilder())
       ..register('underline', const UnderlineBuilder())
       ..register('highlight', const HighlightBuilder())
       ..register('superscript', const SuperscriptBuilder())
@@ -1116,7 +1096,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       child: SmoothMarkdown(
         data: _data!,
         styleSheet: styleSheet,
-        useEnhancedComponents: false,
+        useEnhancedComponents: true,
         selectable: true,
         plugins: plugins,
         builderRegistry: builders,
