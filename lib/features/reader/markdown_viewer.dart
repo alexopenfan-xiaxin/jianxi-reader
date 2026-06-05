@@ -585,6 +585,7 @@ class _SyntaxHighlightCodeBlockWidgetState
   static HighlighterTheme? _lightTheme;
   static HighlighterTheme? _darkTheme;
 
+  bool _ready = false;
   bool _copied = false;
   Timer? _copyResetTimer;
 
@@ -594,17 +595,24 @@ class _SyntaxHighlightCodeBlockWidgetState
     'sql', 'yaml', 'json', 'html', 'css', 'xml',
   ];
 
-  static Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    _initFuture ??= _doInitialize();
-    await _initFuture;
+  @override
+  void initState() {
+    super.initState();
+    _initOnce();
   }
 
-  static Future<void> _doInitialize() async {
-    await Highlighter.initialize(_supportedLanguages);
-    _lightTheme = await HighlighterTheme.loadLightTheme();
-    _darkTheme = await HighlighterTheme.loadDarkTheme();
-    _initialized = true;
+  void _initOnce() {
+    if (_initialized) {
+      _ready = true;
+      return;
+    }
+    _initFuture ??= () async {
+      await Highlighter.initialize(_supportedLanguages);
+      _lightTheme = await HighlighterTheme.loadLightTheme();
+      _darkTheme = await HighlighterTheme.loadDarkTheme();
+      _initialized = true;
+      if (mounted) setState(() => _ready = true);
+    }();
   }
 
   @override
@@ -652,113 +660,106 @@ class _SyntaxHighlightCodeBlockWidgetState
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
 
-    return FutureBuilder<void>(
-      future: _ensureInitialized(),
-      builder: (context, snapshot) {
-        final isInitializing = snapshot.connectionState != ConnectionState.done;
-
-        return Container(
-          decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
-            boxShadow: null,
+    return Container(
+      decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
+        boxShadow: null,
+      ),
+      child: Stack(
+        children: [
+          Container(
+            padding: widget.styleSheet.codeBlockPadding,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: !_ready
+                  ? const SizedBox(
+                      height: 24,
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  : _buildCodeContent(
+                      context,
+                      brightness == Brightness.dark ? _darkTheme! : _lightTheme!,
+                    ),
+            ),
           ),
-          child: Stack(
-            children: [
-              Container(
-                padding: widget.styleSheet.codeBlockPadding,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: isInitializing
-                      ? const SizedBox(
-                          height: 24,
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        )
-                      : _buildCodeContent(
-                          context,
-                          brightness == Brightness.dark ? _darkTheme! : _lightTheme!,
-                        ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.showLanguageTag && widget.language != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.showLanguageTag && widget.language != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      widget.language!.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                if (widget.showLanguageTag && widget.language != null)
+                  const SizedBox(width: 8),
+                if (widget.showCopyButton)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _copyToClipboard,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withValues(alpha: 0.3),
+                          color: _copied
+                              ? Colors.green.withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          widget.language!.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    if (widget.showLanguageTag && widget.language != null)
-                      const SizedBox(width: 8),
-                    if (widget.showCopyButton)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(4),
-                          onTap: _copyToClipboard,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _copied ? Icons.check : Icons.content_copy,
+                              size: 16,
                               color: _copied
-                                  ? Colors.green.withValues(alpha: 0.2)
-                                  : Colors.grey.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
+                                  ? Colors.green[700]
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _copied ? Icons.check : Icons.content_copy,
-                                  size: 16,
-                                  color: _copied
-                                      ? Colors.green[700]
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
+                            if (_copied) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                'Copied!',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                if (_copied) ...[
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Copied!',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                  ],
-                ),
-              ),
-            ],
+                    ),
+                  ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
