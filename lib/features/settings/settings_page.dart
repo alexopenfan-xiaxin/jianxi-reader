@@ -193,7 +193,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=5'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=7'),
       );
       final response = await request.close();
 
@@ -248,6 +248,7 @@ class _AboutCardState extends State<_AboutCard> {
     if (!mounted) return;
     final dir = await getApplicationDocumentsDirectory();
     final filePath = '${dir.path}/jianxi_reader.apk';
+    final progress = ValueNotifier<double>(0.0);
 
     showDialog(
       context: context,
@@ -256,16 +257,21 @@ class _AboutCardState extends State<_AboutCard> {
         title: const Text('下载更新'),
         content: SizedBox(
           width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const LinearProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                '正在下载...',
-                style: Theme.of(ctx).textTheme.bodyMedium,
-              ),
-            ],
+          child: ValueListenableBuilder<double>(
+            valueListenable: progress,
+            builder: (ctx, value, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(value: value),
+                const SizedBox(height: 16),
+                Text(
+                  value >= 1.0
+                      ? '下载完成'
+                      : '${(value * 100).toStringAsFixed(0)}%',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -276,14 +282,22 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=5'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=7'),
       );
       final response = await request.close();
+      final total = response.contentLength ?? 0;
       final file = File(filePath);
-      await file.writeAsBytes(await response.fold<List<int>>(
-        <int>[],
-        (prev, chunk) => prev..addAll(chunk),
-      ));
+      final sink = file.openWrite();
+      var received = 0;
+
+      await for (final chunk in response) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (total > 0) {
+          progress.value = received / total;
+        }
+      }
+      await sink.close();
       client.close(force: true);
     } catch (e) {
       if (mounted) {
@@ -343,7 +357,7 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.0.5 · 支持 Markdown 与 HTML',
+                      '版本 1.1.0 · 支持 Markdown 与 HTML',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,

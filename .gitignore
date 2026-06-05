@@ -33,7 +33,8 @@ google-services.json
 # Android Profiling
 *.hprof
 
-# Flutter build cache.dart_tool/
+# Flutter build cache
+.dart_tool/
 
 # Flutter generated.flutter-plugins.flutter-plugins-dependencies.packages.pub-cache/
 .flutter-plugins*.metadata
