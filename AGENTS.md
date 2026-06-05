@@ -63,15 +63,69 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.1.0+7` (versionName = 1.1.0, versionCode = 7)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=7`
+- `pubspec.yaml`: `1.1.3+10` (versionName = 1.1.3, versionCode = 10)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=10`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
 - Auth: Personal Access Token (via remote URL or GitHub API)
-- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`)
+- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`), `v1.1.3` (asset `app-arm64-v8a-release.apk`)
+
+## Systematic Bug-Fixing Methodology
+
+When facing an opaque bug, follow this process:
+
+### 1. Reproduce & Isolate
+- Identify the exact minimal reproduction case (e.g. a markdown file with one code block)
+- Confirm the bug is **not** caused by test project errors (ignore pre-existing test failures in `test/`)
+
+### 2. Trace the Execution Path
+- Read the relevant source files end-to-end; don't skip `catch (_) {}` blocks
+- For package-sourced failures, read the package source at `%PUB_CACHE%/hosted/pub.dev/<package>-<version>/lib/src/`
+
+### 3. Add Diagnostic Logging
+Use `debugPrint('[Tag] ...')` at each stage:
+- Entry point / guard condition
+- Before and after every `await` / async call
+- Inside every `catch` block — silent catches are always suspicious
+
+### 4. Add Visual Error Indicators
+When a widget silently degrades (e.g. falls back from highlighted to plain text),
+add a subtle on-screen indicator (tooltip + icon) so the failure is visible on device.
+
+### 5. Write an Offline Verification Script
+For package-level issues that don't require Flutter's `rootBundle`, write a
+standalone `dart run` script that tests the package API directly:
+```dart
+import 'dart:convert';
+import 'dart:io';
+// Read JSON files from %PUB_CACHE%, parse, verify structure
+```
+
+### 6. Check Package Internals Against Usage
+- Does the package have the assets/resources we assume? (check `pubspec.yaml` assets section)
+- Does the version we depend on actually have the API surface we call?
+- For `rootBundle.loadString(assetPath)`: verify the file exists in the package's asset directory
+
+### 7. Fix Iteratively
+1. Fix the **root cause** (remove invalid language entries → init succeeds)
+2. Add **defensive code** (null-safe fallbacks) so future failures never produce
+   silent invisible output
+3. Verify with `flutter analyze` — only target zero new issues
+
+### Concrete Example: Syntax Highlighting Dead
+1. Symptom: code blocks display plain text, no error shown
+2. Traced `_doInitialize` → `catch (_) {}` swallowed exception
+3. Added `debugPrint` → saw `FlutterError: asset not found`
+4. Read `syntax_highlight` source → `initialize()` loads
+   `packages/syntax_highlight/grammars/$language.json` via `rootBundle`
+5. Checked `%PUB_CACHE%/syntax_highlight-0.5.0/grammars/` → `cpp.json`, `c.json`,
+   `ruby.json`, etc. don't exist
+6. Wrote offline script → confirmed 6 of 20 listed languages have no grammar file
+7. Fix: removed the 6 missing entries from `_supportedLanguages`; added logging;
+   added orange ⚠ icon when init fails
 
 ## Key Decisions
 - Removed key from IndexedStack (Bug 1: dynamic key destroyed tab state)
@@ -93,3 +147,6 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
 - `_normalizeListIndent` removed; `flutter_smooth_markdown` handles nested ordered lists natively
 - `syntax_highlight: ^0.5.0` added to `pubspec.yaml`
+- `_supportedLanguages` must only contain languages with grammar files in `syntax_highlight-<version>/grammars/`; verify by checking `%PUB_CACHE%` — including a missing language causes `Highlighter.initialize()` to throw and silently disable ALL highlighting
+- `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
+- `_initFailed` static flag + orange ⚠ `Tooltip` icon on code blocks so developers can visually identify when initialization silently failed
