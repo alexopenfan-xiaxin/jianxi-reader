@@ -132,7 +132,7 @@ class DocumentFileService implements DocumentLibraryService {
     final path = refreshedPath ?? document.path;
     final file = File(path);
     if (!file.existsSync()) {
-      throw FileSystemException('鏂囨。涓嶅瓨鍦ㄦ垨宸茶绉诲嚭', path);
+      throw FileSystemException('文档不存在或已被移出', path);
     }
     return DocumentEntry.fromFile(
       file,
@@ -303,14 +303,14 @@ class DocumentFileService implements DocumentLibraryService {
     final path = picked['path'] as String?;
     final sourceUri = picked['uri'] as String?;
     if (path == null || path.isEmpty || sourceUri == null || sourceUri.isEmpty) {
-      throw const FileSystemException('绯荤粺鏂囦欢閫夋嫨鍣ㄦ病鏈夎繑鍥炲彲璇诲彇鐨勮矾寰?);
+      throw const FileSystemException('系统文件选择器没有返回可读取的路径');
     }
     if (!DocumentFileRules.isSupportedPath(path)) {
       final pickedFile = File(path);
       if (pickedFile.existsSync()) {
         await pickedFile.delete();
       }
-      throw FileSystemException('浠呮敮鎸?Markdown 鍜?HTML 鏂囨。', path);
+      throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
     }
 
     final preferences = await SharedPreferences.getInstance();
