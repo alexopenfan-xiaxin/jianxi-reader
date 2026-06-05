@@ -6,6 +6,24 @@ import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/design_tokens.dart';
 
+// ── Inline Code Builder ────────────────────────────────────────────────────
+
+class InlineCodeBuilder extends MarkdownWidgetBuilder {
+  const InlineCodeBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => true;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    return Text(node.textContent, style: styleSheet.inlineCodeStyle);
+  }
+}
+
 // ── Underline Plugin (++text++) ───────────────────────────────────────────
 
 class UnderlineNode extends MarkdownNode {
@@ -880,7 +898,44 @@ String _preprocessMarkdown(String raw) {
     },
   );
 
+  // 5. Convert <u>text</u> to ++text++ for underline rendering
+  processed = processed.replaceAllMapped(
+    RegExp(r'<u>(.*?)</u>', caseSensitive: false, dotAll: true),
+    (match) => '++${match.group(1)}++',
+  );
+
+  // 6. Normalize ordered list sub-item indentation (2-3 spaces -> 4 spaces)
+  processed = _normalizeListIndent(processed);
+
   return processed;
+}
+
+String _normalizeListIndent(String markdown) {
+  final lines = markdown.split('\n');
+  final result = <String>[];
+  final orderedItem = RegExp(r'^\d+\.\s');
+  final listItem = RegExp(r'^(\d+\.\s|[-*+]\s)');
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    final trimmed = line.trimLeft();
+    if (trimmed.isEmpty) { result.add(line); continue; }
+
+    final indent = line.length - trimmed.length;
+    if (indent > 0 && indent < 4 && orderedItem.hasMatch(trimmed)) {
+      for (var j = i - 1; j >= 0; j--) {
+        final prev = result[j].trimLeft();
+        if (prev.isEmpty) continue;
+        if (listItem.hasMatch(prev)) {
+          line = '    ' + trimmed;
+        }
+        break;
+      }
+    }
+    result.add(line);
+  }
+
+  return result.join('\n');
 }
 
 // ── Markdown Viewer Widget ───────────────────────────────────────────────
@@ -1033,6 +1088,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       ..registerBlock(const MindmapPlugin());
 
     final builders = BuilderRegistry()
+      ..register('code', const InlineCodeBuilder())
       ..register('underline', const UnderlineBuilder())
       ..register('highlight', const HighlightBuilder())
       ..register('superscript', const SuperscriptBuilder())
