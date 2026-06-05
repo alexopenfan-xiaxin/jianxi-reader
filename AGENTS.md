@@ -64,8 +64,8 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.1.4+13` (versionName = 1.1.4, versionCode = 13)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=13`
+- `pubspec.yaml`: `1.1.5+14` (versionName = 1.1.5, versionCode = 14)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=14`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)

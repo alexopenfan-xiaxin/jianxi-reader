@@ -168,7 +168,7 @@ class _ReaderPageState extends State<ReaderPage> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _prepareError = '璇诲彇鏂囨。澶辫触锛?error';
+          _prepareError = '读取文档失败：$error';
           _isPreparingDocument = false;
         });
       }
