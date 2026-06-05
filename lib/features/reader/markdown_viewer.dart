@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
+import 'package:flutter_highlight/themes/github.dart' show githubTheme;
+import 'package:flutter_highlight/themes/vs2015.dart' show vs2015Theme;
+import 'package:highlight/highlight.dart' show highlight, Node;
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/design_tokens.dart';
 
@@ -491,6 +494,75 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
     );
   }
 }
+
+// ── Highlight Code Block Builder ───────────────────────────────────────────
+
+class HighlightCodeBlockBuilder extends MarkdownWidgetBuilder {
+  const HighlightCodeBlockBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => node is CodeBlockNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final block = node as CodeBlockNode;
+    final code = block.code;
+    final lang = block.language;
+
+    final theme = context.selectable
+        ? _codeDarkTheme
+        : _codeLightTheme;
+
+    List<TextSpan> spans;
+    if (lang != null) {
+      final result = highlight.parse(code, language: lang);
+      spans = _convertHighlight(result.nodes ?? [], theme);
+    } else {
+      spans = [TextSpan(text: code)];
+    }
+
+    final textSpan = TextSpan(
+      style: styleSheet.codeBlockStyle,
+      children: spans,
+    );
+
+    return Container(
+      decoration: styleSheet.codeBlockDecoration,
+      padding: styleSheet.codeBlockPadding,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Text.rich(textSpan),
+      ),
+    );
+  }
+
+  List<TextSpan> _convertHighlight(
+    List<Node> nodes,
+    Map<String, TextStyle> theme,
+  ) {
+    final spans = <TextSpan>[];
+    for (final n in nodes) {
+      if (n.value != null) {
+        spans.add(
+          n.className == null
+              ? TextSpan(text: n.value)
+              : TextSpan(text: n.value, style: theme[n.className]),
+        );
+      }
+      if (n.children != null) {
+        spans.addAll(_convertHighlight(n.children!, theme));
+      }
+    }
+    return spans;
+  }
+}
+
+Map<String, TextStyle> _codeDarkTheme = vs2015Theme;
+Map<String, TextStyle> _codeLightTheme = githubTheme;
 
 // ── Mindmap Plugin (```mindmap) ──────────────────────────────────────────
 
@@ -1074,11 +1146,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       ..register('highlight', const HighlightBuilder())
       ..register('superscript', const SuperscriptBuilder())
       ..register('subscript', const SubscriptBuilder())
-      ..register('code_block', const EnhancedCodeBlockBuilder(
-        showCopyButton: true,
-        showLanguageTag: true,
-        enableSyntaxHighlighting: true,
-      ))
+      ..register('code_block', const HighlightCodeBlockBuilder())
       ..register('mermaid', const MermaidBuilder())
       ..register('mindmap', const MindmapBuilder())
       ..register('link', const ClickableLinkBuilder())
