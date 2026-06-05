@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:syntax_highlight/syntax_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/design_tokens.dart';
 
@@ -334,7 +336,6 @@ class SubscriptPlugin extends InlineParserPlugin {
   @override
   bool canParse(String text, int index) {
     if (index + 1 >= text.length) return false;
-    // Single ~ (not ~~) to avoid conflict with strikethrough
     return text[index] == '~' && text[index + 1] != '~';
   }
 
@@ -422,7 +423,7 @@ class ClickableLinkBuilder extends MarkdownWidgetBuilder {
   }
 }
 
-// ── Image Builder (tappable + preview) ────────────────────────────────────
+// ── Image Builder (tappable + preview + SVG support) ──────────────────────
 
 class TappableImageBuilder extends MarkdownWidgetBuilder {
   const TappableImageBuilder();
@@ -442,7 +443,18 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
         imageNode.url.startsWith('https://');
 
     Widget imageWidget;
-    if (isNetwork) {
+    if (isSvg) {
+      imageWidget = isNetwork
+          ? SvgPicture.network(
+              imageNode.url,
+              placeholderBuilder: (_) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : SvgPicture.asset(
+              imageNode.url,
+            );
+    } else if (isNetwork) {
       imageWidget = Image.network(
         imageNode.url,
         errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.error),
@@ -488,6 +500,265 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Emoji Builder (renders :emoji: shortcodes) ────────────────────────────
+
+class EmojiBuilder extends MarkdownWidgetBuilder {
+  const EmojiBuilder();
+
+  @override
+  bool canBuild(MarkdownNode node) => node is EmojiNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final emojiNode = node as EmojiNode;
+    final baseStyle = styleSheet.textStyle ?? const TextStyle();
+    return Text(emojiNode.emoji, style: baseStyle);
+  }
+}
+
+// ── Syntax Highlight Code Block Builder (via syntax_highlight) ─────────────
+
+class SyntaxHighlightCodeBlockBuilder extends MarkdownWidgetBuilder {
+  const SyntaxHighlightCodeBlockBuilder({
+    this.showCopyButton = true,
+    this.showLanguageTag = true,
+  });
+
+  final bool showCopyButton;
+  final bool showLanguageTag;
+
+  @override
+  bool canBuild(MarkdownNode node) => node is CodeBlockNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final codeBlockNode = node as CodeBlockNode;
+    return _SyntaxHighlightCodeBlockWidget(
+      code: codeBlockNode.code,
+      language: codeBlockNode.language,
+      styleSheet: styleSheet,
+      showCopyButton: showCopyButton,
+      showLanguageTag: showLanguageTag,
+      selectable: context.selectable,
+    );
+  }
+}
+
+class _SyntaxHighlightCodeBlockWidget extends StatefulWidget {
+  const _SyntaxHighlightCodeBlockWidget({
+    required this.code,
+    required this.language,
+    required this.styleSheet,
+    required this.showCopyButton,
+    required this.showLanguageTag,
+    this.selectable = false,
+  });
+
+  final String code;
+  final String? language;
+  final MarkdownStyleSheet styleSheet;
+  final bool showCopyButton;
+  final bool showLanguageTag;
+  final bool selectable;
+
+  @override
+  State<_SyntaxHighlightCodeBlockWidget> createState() =>
+      _SyntaxHighlightCodeBlockWidgetState();
+}
+
+class _SyntaxHighlightCodeBlockWidgetState
+    extends State<_SyntaxHighlightCodeBlockWidget> {
+  static bool _initialized = false;
+  static Future<void>? _initFuture;
+  static HighlighterTheme? _lightTheme;
+  static HighlighterTheme? _darkTheme;
+
+  bool _copied = false;
+  Timer? _copyResetTimer;
+
+  static const _supportedLanguages = [
+    'dart', 'python', 'javascript', 'typescript', 'java', 'kotlin',
+    'swift', 'rust', 'go', 'cpp', 'c', 'ruby', 'php', 'shell',
+    'sql', 'yaml', 'json', 'html', 'css', 'xml',
+  ];
+
+  static Future<void> _ensureInitialized() async {
+    if (_initialized) return;
+    _initFuture ??= _doInitialize();
+    await _initFuture;
+  }
+
+  static Future<void> _doInitialize() async {
+    await Highlighter.initialize(_supportedLanguages);
+    _lightTheme = await HighlighterTheme.loadLightTheme();
+    _darkTheme = await HighlighterTheme.loadDarkTheme();
+    _initialized = true;
+  }
+
+  @override
+  void dispose() {
+    _copyResetTimer?.cancel();
+    super.dispose();
+  }
+
+  bool get _canHighlight =>
+      widget.language != null &&
+      _supportedLanguages.contains(widget.language!.toLowerCase());
+
+  Widget _buildCodeContent(BuildContext context, HighlighterTheme theme) {
+    if (_canHighlight) {
+      final highlighter = Highlighter(
+        language: widget.language!.toLowerCase(),
+        theme: theme,
+      );
+      final highlighted = highlighter.highlight(widget.code);
+
+      if (widget.selectable) {
+        return Text.rich(highlighted);
+      }
+      return RichText(text: highlighted);
+    }
+
+    if (widget.selectable) {
+      return Text.rich(
+        TextSpan(text: widget.code, style: widget.styleSheet.codeBlockStyle),
+      );
+    }
+    return Text(widget.code, style: widget.styleSheet.codeBlockStyle);
+  }
+
+  Future<void> _copyToClipboard() async {
+    await Clipboard.setData(ClipboardData(text: widget.code));
+    setState(() => _copied = true);
+    _copyResetTimer?.cancel();
+    _copyResetTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+
+    return FutureBuilder<void>(
+      future: _ensureInitialized(),
+      builder: (context, snapshot) {
+        final isInitializing = snapshot.connectionState != ConnectionState.done;
+
+        return Container(
+          decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
+            boxShadow: null,
+          ),
+          child: Stack(
+            children: [
+              Container(
+                padding: widget.styleSheet.codeBlockPadding,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: isInitializing
+                      ? const SizedBox(
+                          height: 24,
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        )
+                      : _buildCodeContent(
+                          context,
+                          brightness == Brightness.dark ? _darkTheme! : _lightTheme!,
+                        ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.showLanguageTag && widget.language != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          widget.language!.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    if (widget.showLanguageTag && widget.language != null)
+                      const SizedBox(width: 8),
+                    if (widget.showCopyButton)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(4),
+                          onTap: _copyToClipboard,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: _copied
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _copied ? Icons.check : Icons.content_copy,
+                                  size: 16,
+                                  color: _copied
+                                      ? Colors.green[700]
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                ),
+                                if (_copied) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Copied!',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -682,7 +953,6 @@ class _MindmapTree extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (tree.isRoot && tree.children.isEmpty) {
@@ -701,7 +971,6 @@ class _MindmapTree extends StatelessWidget {
   }
 
   Widget _buildNode(BuildContext context, _MindmapNodeData node, bool isDark, int depth) {
-    final palette = context.palette;
     final hasChildren = node.children.isNotEmpty;
 
     return Padding(
@@ -886,38 +1155,7 @@ String _preprocessMarkdown(String raw) {
     (match) => '++${match.group(1)}++',
   );
 
-  // 6. Normalize ordered list sub-item indentation (2-3 spaces -> 4 spaces)
-  processed = _normalizeListIndent(processed);
-
   return processed;
-}
-
-String _normalizeListIndent(String markdown) {
-  final lines = markdown.split('\n');
-  final result = <String>[];
-  final orderedItem = RegExp(r'^\d+\.\s');
-  final listItem = RegExp(r'^(\d+\.\s|[-*+]\s)');
-
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    final trimmed = line.trimLeft();
-    if (trimmed.isEmpty) { result.add(line); continue; }
-
-    final indent = line.length - trimmed.length;
-    if (indent > 0 && indent < 4 && orderedItem.hasMatch(trimmed)) {
-      for (var j = i - 1; j >= 0; j--) {
-        final prev = result[j].trimLeft();
-        if (prev.isEmpty) continue;
-        if (listItem.hasMatch(prev)) {
-          line = '    ' + trimmed;
-        }
-        break;
-      }
-    }
-    result.add(line);
-  }
-
-  return result.join('\n');
 }
 
 // ── Markdown Viewer Widget ───────────────────────────────────────────────
@@ -1091,6 +1329,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..registerInline(const SuperscriptPlugin())
       ..registerInline(const SubscriptPlugin())
       ..registerInline(const BareUrlPlugin())
+      ..registerInline(const EmojiPlugin())
       ..registerBlock(const MermaidPlugin())
       ..registerBlock(const MindmapPlugin());
 
@@ -1099,15 +1338,15 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..register('highlight', const HighlightBuilder())
       ..register('superscript', const SuperscriptBuilder())
       ..register('subscript', const SubscriptBuilder())
-      ..register('code_block', const EnhancedCodeBlockBuilder(
+      ..register('code_block', const SyntaxHighlightCodeBlockBuilder(
         showCopyButton: true,
         showLanguageTag: true,
-        enableSyntaxHighlighting: true,
       ))
       ..register('mermaid', const MermaidBuilder())
       ..register('mindmap', const MindmapBuilder())
       ..register('link', const ClickableLinkBuilder())
-      ..register('image', const TappableImageBuilder());
+      ..register('image', const TappableImageBuilder())
+      ..register('emoji', const EmojiBuilder());
 
     return SingleChildScrollView(
       controller: widget.scrollController,
@@ -1121,7 +1360,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       child: SmoothMarkdown(
         data: _data!,
         styleSheet: styleSheet,
-        useEnhancedComponents: true,
+        useEnhancedComponents: false,
         selectable: true,
         plugins: plugins,
         builderRegistry: builders,

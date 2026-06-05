@@ -88,3 +88,8 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
 - `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
 - Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
+- Code highlighting uses `syntax_highlight` (serverpod) via custom `SyntaxHighlightCodeBlockBuilder`, replacing the built-in `EnhancedCodeBlockBuilder` (which used `flutter_highlight`/`highlight`); `useEnhancedComponents: false` since we register all builders manually
+- `flutter_svg` used in `TappableImageBuilder` to render SVG images (both network and asset) via `SvgPicture.network`/`SvgPicture.asset`
+- `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
+- `_normalizeListIndent` removed; `flutter_smooth_markdown` handles nested ordered lists natively
+- `syntax_highlight: ^0.5.0` added to `pubspec.yaml`
