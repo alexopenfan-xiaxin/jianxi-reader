@@ -12,7 +12,7 @@ class InlineCodeBuilder extends MarkdownWidgetBuilder {
   const InlineCodeBuilder();
 
   @override
-  bool canBuild(MarkdownNode node) => true;
+  bool canBuild(MarkdownNode node) => node is InlineCodeNode;
 
   @override
   Widget build(
@@ -20,7 +20,8 @@ class InlineCodeBuilder extends MarkdownWidgetBuilder {
     MarkdownStyleSheet styleSheet,
     MarkdownRenderContext context,
   ) {
-    return Text(node.textContent, style: styleSheet.inlineCodeStyle);
+    final code = (node as InlineCodeNode).code;
+    return Text(code, style: styleSheet.inlineCodeStyle);
   }
 }
 
