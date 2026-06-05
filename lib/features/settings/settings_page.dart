@@ -193,7 +193,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=7'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=8'),
       );
       final response = await request.close();
 
@@ -282,7 +282,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=7'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=8'),
       );
       final response = await request.close();
       final total = response.contentLength ?? 0;
@@ -357,7 +357,7 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.1.0 · 支持 Markdown 与 HTML',
+                      '版本 1.1.1 · 支持 Markdown 与 HTML',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,
