@@ -613,10 +613,10 @@ class _SyntaxHighlightCodeBlockWidgetState
       await Highlighter.initialize(_supportedLanguages);
       _lightTheme = await HighlighterTheme.loadLightTheme();
       _darkTheme = await HighlighterTheme.loadDarkTheme();
-      _initialized = true;
     } catch (_) {
-      _initialized = true;
+      // fall through — themes remain null, plain code will be shown
     }
+    _initialized = true;
   }
 
   @override
@@ -629,30 +629,38 @@ class _SyntaxHighlightCodeBlockWidgetState
       widget.language != null &&
       _supportedLanguages.contains(widget.language!.toLowerCase());
 
-  Widget _buildCodeContent(BuildContext context, HighlighterTheme theme) {
-    if (_canHighlight) {
-      final highlighter = Highlighter(
-        language: widget.language!.toLowerCase(),
-        theme: theme,
-      );
-      final highlighted = highlighter.highlight(widget.code);
+  TextStyle _codeTextStyle() {
+    final bgColor = widget.styleSheet.codeBlockDecoration?.color;
+    final isDarkBg = bgColor != null && bgColor.computeLuminance() < 0.5;
+    return (widget.styleSheet.codeBlockStyle ?? const TextStyle()).copyWith(
+      color: widget.styleSheet.codeBlockStyle?.color ??
+          (isDarkBg ? const Color(0xFFE0E0E0) : const Color(0xFF1E1E1E)),
+    );
+  }
 
-      if (widget.selectable) {
-        return Text.rich(highlighted);
+  Widget _buildCodeContent(BuildContext context, HighlighterTheme? theme) {
+    if (theme != null && _canHighlight) {
+      try {
+        final highlighter = Highlighter(
+          language: widget.language!.toLowerCase(),
+          theme: theme,
+        );
+        final highlighted = highlighter.highlight(widget.code);
+        if (widget.selectable) return Text.rich(highlighted);
+        return RichText(text: highlighted);
+      } catch (_) {
+        // fall through to plain code
       }
-      return RichText(text: highlighted);
     }
-
     return _buildPlainCode();
   }
 
   Widget _buildPlainCode() {
+    final style = _codeTextStyle();
     if (widget.selectable) {
-      return Text.rich(
-        TextSpan(text: widget.code, style: widget.styleSheet.codeBlockStyle),
-      );
+      return Text.rich(TextSpan(text: widget.code, style: style));
     }
-    return Text(widget.code, style: widget.styleSheet.codeBlockStyle);
+    return Text(widget.code, style: style);
   }
 
   Future<void> _copyToClipboard() async {
@@ -667,6 +675,7 @@ class _SyntaxHighlightCodeBlockWidgetState
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final theme = brightness == Brightness.dark ? _darkTheme : _lightTheme;
 
     return Container(
       decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
@@ -679,10 +688,7 @@ class _SyntaxHighlightCodeBlockWidgetState
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: _highlightReady
-                  ? _buildCodeContent(
-                      context,
-                      brightness == Brightness.dark ? _darkTheme! : _lightTheme!,
-                    )
+                  ? _buildCodeContent(context, theme)
                   : _buildPlainCode(),
             ),
           ),
