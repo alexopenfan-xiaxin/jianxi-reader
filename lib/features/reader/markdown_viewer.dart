@@ -585,7 +585,7 @@ class _SyntaxHighlightCodeBlockWidgetState
   static HighlighterTheme? _lightTheme;
   static HighlighterTheme? _darkTheme;
 
-  bool _ready = false;
+  bool _highlightReady = false;
   bool _copied = false;
   Timer? _copyResetTimer;
 
@@ -599,20 +599,24 @@ class _SyntaxHighlightCodeBlockWidgetState
   void initState() {
     super.initState();
     if (_initialized) {
-      _ready = true;
+      _highlightReady = true;
       return;
     }
     _initFuture ??= _doInitialize();
     _initFuture!.then((_) {
-      if (mounted) setState(() => _ready = true);
+      if (mounted) setState(() => _highlightReady = true);
     });
   }
 
   static Future<void> _doInitialize() async {
-    await Highlighter.initialize(_supportedLanguages);
-    _lightTheme = await HighlighterTheme.loadLightTheme();
-    _darkTheme = await HighlighterTheme.loadDarkTheme();
-    _initialized = true;
+    try {
+      await Highlighter.initialize(_supportedLanguages);
+      _lightTheme = await HighlighterTheme.loadLightTheme();
+      _darkTheme = await HighlighterTheme.loadDarkTheme();
+      _initialized = true;
+    } catch (_) {
+      _initialized = true;
+    }
   }
 
   @override
@@ -639,6 +643,10 @@ class _SyntaxHighlightCodeBlockWidgetState
       return RichText(text: highlighted);
     }
 
+    return _buildPlainCode();
+  }
+
+  Widget _buildPlainCode() {
     if (widget.selectable) {
       return Text.rich(
         TextSpan(text: widget.code, style: widget.styleSheet.codeBlockStyle),
@@ -670,15 +678,12 @@ class _SyntaxHighlightCodeBlockWidgetState
             padding: widget.styleSheet.codeBlockPadding,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: !_ready
-                  ? const SizedBox(
-                      height: 24,
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    )
-                  : _buildCodeContent(
+              child: _highlightReady
+                  ? _buildCodeContent(
                       context,
                       brightness == Brightness.dark ? _darkTheme! : _lightTheme!,
-                    ),
+                    )
+                  : _buildPlainCode(),
             ),
           ),
           Positioned(
