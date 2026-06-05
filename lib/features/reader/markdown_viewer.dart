@@ -942,14 +942,29 @@ class MarkdownViewer extends StatefulWidget {
   State<MarkdownViewer> createState() => _MarkdownViewerState();
 }
 
-class _MarkdownViewerState extends State<MarkdownViewer> {
+class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObserver {
   String? _data;
   String? _error;
+  DateTime? _lastModified;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadFile();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkFileChanged();
+    }
   }
 
   @override
@@ -962,6 +977,15 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
     }
   }
 
+  void _checkFileChanged() {
+    try {
+      final modified = widget.file.lastModifiedSync();
+      if (_lastModified != null && modified.isAfter(_lastModified!)) {
+        _loadFile();
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadFile() async {
     try {
       final raw = await widget.file.readAsString();
@@ -971,6 +995,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
           _error = null;
         });
       }
+      _lastModified = await widget.file.lastModified();
     } catch (e) {
       if (mounted) {
         setState(() => _error = '读取 Markdown 失败：$e');
@@ -1096,7 +1121,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
       child: SmoothMarkdown(
         data: _data!,
         styleSheet: styleSheet,
-        useEnhancedComponents: false,
+        useEnhancedComponents: true,
         selectable: true,
         plugins: plugins,
         builderRegistry: builders,

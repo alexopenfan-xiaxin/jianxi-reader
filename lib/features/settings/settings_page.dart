@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -193,7 +193,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=8'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=9'),
       );
       final response = await request.close();
 
@@ -244,6 +244,8 @@ class _AboutCardState extends State<_AboutCard> {
     }
   }
 
+  static const _channel = MethodChannel('com.jianxi.reader/apk_install');
+
   Future<void> _downloadAndInstall() async {
     if (!mounted) return;
     final dir = await getApplicationDocumentsDirectory();
@@ -282,7 +284,7 @@ class _AboutCardState extends State<_AboutCard> {
         ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(
-        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=8'),
+        Uri.parse('https://alexxia.5imh.xyz/update/?request&local=9'),
       );
       final response = await request.close();
       final total = response.contentLength ?? 0;
@@ -312,7 +314,36 @@ class _AboutCardState extends State<_AboutCard> {
     if (mounted) {
       Navigator.of(context).pop();
     }
-    await OpenFile.open(filePath);
+
+    if (!mounted) return;
+    if (Platform.isAndroid) {
+      final canInstall = await _channel.invokeMethod<bool>('canRequestPackageInstalls') ?? false;
+      if (!canInstall) {
+        final open = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('安装权限'),
+            content: const Text('安装更新需要开启「安装未知应用」权限。是否前往设置？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('去设置'),
+              ),
+            ],
+          ),
+        );
+        if (open == true) {
+          await _channel.invokeMethod('openInstallSettings');
+          return;
+        }
+        return;
+      }
+    }
+    await _channel.invokeMethod('installApk', {'path': filePath});
   }
 
   @override
@@ -357,10 +388,18 @@ class _AboutCardState extends State<_AboutCard> {
                     Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '版本 1.1.1 · 支持 Markdown 与 HTML',
+                      '版本 1.1.2 (9)',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: palette.muted,
                         letterSpacing: 0,
+                      ),
+                    ),
+                    Text(
+                      '支持 Markdown 与 HTML',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: palette.muted,
+                        letterSpacing: 0,
+                        fontSize: 13,
                       ),
                     ),
                   ],
