@@ -137,6 +137,7 @@ class AppSettingsController extends ChangeNotifier {
     required Color defaultBorder,
     required Color defaultLink,
   }) {
+    final useDarkReadingVariant = defaultBackground.computeLuminance() < 0.5;
     switch (_readingTheme) {
       case ReadingTheme.defaultTheme:
         return ReadingPalette(
@@ -149,23 +150,45 @@ class AppSettingsController extends ChangeNotifier {
           codeBackground: defaultSurface,
         );
       case ReadingTheme.paper:
+        if (useDarkReadingVariant) {
+          return const ReadingPalette(
+            background: Color(0xFF211A14),
+            foreground: Color(0xFFEAD8C3),
+            muted: Color(0xFFC2A88F),
+            surface: Color(0xFF2B2118),
+            border: Color(0xFF4A3828),
+            link: Color(0xFF8CC8FF),
+            codeBackground: Color(0xFF322619),
+          );
+        }
         return const ReadingPalette(
           background: Color(0xFFF8F1E6),
           foreground: Color(0xFF4E3A2C),
           muted: Color(0xFF7C6756),
           surface: Color(0xFFFFFAF2),
           border: Color(0xFFE6D8C4),
-          link: Color(0xFF0A65B7),
+          link: Color(0xFF075FA8),
           codeBackground: Color(0xFFF0E2CF),
         );
       case ReadingTheme.eyeCare:
+        if (useDarkReadingVariant) {
+          return const ReadingPalette(
+            background: Color(0xFF14211A),
+            foreground: Color(0xFFDDEBDD),
+            muted: Color(0xFFA8BDAF),
+            surface: Color(0xFF1B2B22),
+            border: Color(0xFF33483B),
+            link: Color(0xFF8EE3C0),
+            codeBackground: Color(0xFF203529),
+          );
+        }
         return const ReadingPalette(
           background: Color(0xFFEFF6EE),
           foreground: Color(0xFF263B2E),
           muted: Color(0xFF5F7468),
           surface: Color(0xFFF7FBF6),
           border: Color(0xFFD5E4D7),
-          link: Color(0xFF126C57),
+          link: Color(0xFF0E6D55),
           codeBackground: Color(0xFFE2EDE1),
         );
     }

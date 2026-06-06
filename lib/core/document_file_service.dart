@@ -91,7 +91,7 @@ class DocumentFileService implements DocumentLibraryService {
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['md', 'markdown', 'html', 'htm'],
+      allowedExtensions: const ['md', 'html'],
       allowMultiple: false,
       withData: false,
     );

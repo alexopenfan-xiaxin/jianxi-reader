@@ -520,7 +520,10 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=60';
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=70';
+  static final _communityUrl = Uri.parse(
+    'https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%3D%3D',
+  );
   static final _repositoryUrl = Uri.parse(
     'https://github.com/alexopenfan-xiaxin/jianxi-reader',
   );
@@ -694,14 +697,11 @@ class _AboutPageState extends State<AboutPage> {
     await _channel.invokeMethod('installApk', {'path': filePath});
   }
 
-  Future<void> _openRepository() async {
-    final launched = await launchUrl(
-      _repositoryUrl,
-      mode: LaunchMode.externalApplication,
-    );
+  Future<void> _openExternalLink(Uri uri, String failureMessage) async {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法打开开源地址')),
+        SnackBar(content: Text(failureMessage)),
       );
     }
   }
@@ -782,20 +782,20 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  InkWell(
-                    onTap: _openRepository,
-                    borderRadius: BorderRadius.circular(AppRadii.sm),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
+                  _AboutLink(
+                    text: '点击加入QQ交流群',
+                    onTap: () => _openExternalLink(
+                      _communityUrl,
+                      '无法打开 QQ 交流群链接',
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  _AboutLink(
+                    text:
                         '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.primary,
-                              letterSpacing: 0,
-                              decoration: TextDecoration.underline,
-                              decorationColor: AppColors.primary,
-                            ),
-                      ),
+                    onTap: () => _openExternalLink(
+                      _repositoryUrl,
+                      '无法打开开源地址',
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
@@ -828,8 +828,8 @@ class _AboutPageState extends State<AboutPage> {
                       onPressed: _isChecking ? null : _checkForUpdate,
                       icon: _isChecking
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: 18,
+                              height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.refresh_rounded),
@@ -840,6 +840,33 @@ class _AboutPageState extends State<AboutPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AboutLink extends StatelessWidget {
+  const _AboutLink({required this.text, required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.primary,
+                letterSpacing: 0,
+                decoration: TextDecoration.underline,
+                decorationColor: AppColors.primary,
+              ),
         ),
       ),
     );

@@ -13,6 +13,10 @@
   <img src="https://img.shields.io/github/stars/alexopenfan-xiaxin/jianxi-reader?style=flat-square&color=FF9500&labelColor=ffffff" alt="Stars" />
 </p>
 
+## QQ交流群
+
+[点击加入QQ交流群](https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%3D%3D)
+
 ## 诞生背景
 
 现在由于codex和claude code的流行，我们有了在移动端远程控制的需求，日常工作中积累了大量的 Markdown 笔记和技术文档，手机上看：`没法用，浏览器要翻目录，笔记 APP 太重。简兮阅读器的目标只有一个——把手机变成一个干净的文档浏览器。
