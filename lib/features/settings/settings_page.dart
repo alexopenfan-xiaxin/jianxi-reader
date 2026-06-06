@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -520,7 +521,9 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=70';
+  static const _updateUrl =
+      'https://alexxia.5imh.xyz/update/index.php?request&local=80';
+  static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%3D%3D',
   );
@@ -545,27 +548,28 @@ class _AboutPageState extends State<AboutPage> {
 
   Future<void> _checkForUpdate() async {
     setState(() => _isChecking = true);
+    final client = _createUpdateClient();
     try {
-      final client = HttpClient()
-        ..badCertificateCallback =
-            (X509Certificate cert, String host, int port) => true;
-      client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(Uri.parse(_updateUrl));
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        '$_apkContentType, application/json',
+      );
       final response = await request.close();
 
-      if (response.statusCode == HttpStatus.noContent) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已是最新版本')),
-          );
-        }
-      } else if (response.statusCode == HttpStatus.ok) {
+      if (response.statusCode == HttpStatus.ok && _isApkResponse(response)) {
+        final newVersion = response.headers.value('x-apk-version');
+        client.close(force: true);
         if (!mounted) return;
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('发现新版本'),
-            content: const Text('有新版本可用，是否下载更新？'),
+            content: Text(
+              newVersion == null || newVersion.isEmpty
+                  ? '有新版本可用，是否下载更新？'
+                  : '发现构建版本 $newVersion，是否下载更新？',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -581,9 +585,20 @@ class _AboutPageState extends State<AboutPage> {
         if (confirmed == true) {
           await _downloadAndInstall();
         }
-      } else if (mounted) {
+        return;
+      }
+
+      final message = await _readUpdateMessage(response);
+      if (!mounted) return;
+      if (response.statusCode == HttpStatus.ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('检查更新失败：${response.statusCode}')),
+          SnackBar(content: Text(message ?? '已是最新版本')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message ?? '检查更新失败：${response.statusCode}'),
+          ),
         );
       }
     } catch (error) {
@@ -593,6 +608,7 @@ class _AboutPageState extends State<AboutPage> {
         );
       }
     } finally {
+      client.close(force: true);
       if (mounted) {
         setState(() => _isChecking = false);
       }
@@ -604,6 +620,7 @@ class _AboutPageState extends State<AboutPage> {
     final dir = await getApplicationDocumentsDirectory();
     final filePath = '${dir.path}/jianxi_reader.apk';
     final progress = ValueNotifier<double>(0.0);
+    final client = _createUpdateClient();
 
     showDialog(
       context: context,
@@ -631,12 +648,23 @@ class _AboutPageState extends State<AboutPage> {
     );
 
     try {
-      final client = HttpClient()
-        ..badCertificateCallback =
-            (X509Certificate cert, String host, int port) => true;
-      client.userAgent = 'JianxiReader/1.0';
       final request = await client.getUrl(Uri.parse(_updateUrl));
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        '$_apkContentType, application/json',
+      );
       final response = await request.close();
+      if (response.statusCode != HttpStatus.ok || !_isApkResponse(response)) {
+        final message = await _readUpdateMessage(response);
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message ?? '没有可下载的新版本')),
+          );
+        }
+        return;
+      }
+
       final total = response.contentLength ?? 0;
       final file = File(filePath);
       final sink = file.openWrite();
@@ -650,7 +678,6 @@ class _AboutPageState extends State<AboutPage> {
         }
       }
       await sink.close();
-      client.close(force: true);
     } catch (error) {
       if (mounted) {
         Navigator.of(context).pop();
@@ -659,6 +686,9 @@ class _AboutPageState extends State<AboutPage> {
         );
       }
       return;
+    } finally {
+      client.close(force: true);
+      progress.dispose();
     }
 
     if (mounted) {
@@ -695,6 +725,35 @@ class _AboutPageState extends State<AboutPage> {
       }
     }
     await _channel.invokeMethod('installApk', {'path': filePath});
+  }
+
+  HttpClient _createUpdateClient() {
+    return HttpClient()
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true
+      ..userAgent = 'JianxiReader/1.0';
+  }
+
+  bool _isApkResponse(HttpClientResponse response) {
+    final contentType = response.headers.value(HttpHeaders.contentTypeHeader);
+    return contentType?.contains(_apkContentType) ?? false;
+  }
+
+  Future<String?> _readUpdateMessage(HttpClientResponse response) async {
+    final body = await utf8.decoder.bind(response).join();
+    if (body.trim().isEmpty) return null;
+    try {
+      final data = jsonDecode(body);
+      if (data is Map<String, dynamic>) {
+        final message = data['message'] ?? data['error'];
+        if (message is String && message.isNotEmpty) {
+          return message;
+        }
+      }
+    } on FormatException {
+      return body;
+    }
+    return body;
   }
 
   Future<void> _openExternalLink(Uri uri, String failureMessage) async {

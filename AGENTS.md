@@ -64,10 +64,11 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.7.0+70` (versionName = 1.7.0, versionCode = 70)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=70`
-  - 204 No Content → already latest
-  - 200 OK → new version available, download via browser
+- `pubspec.yaml`: `1.8.0+80` (versionName = 1.8.0, versionCode = 80)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=80`
+  - 200 APK stream → new version available, download and install
+  - 200 JSON → already latest or server message
+  - 404 JSON → no APK available or file missing
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
 - **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
 
