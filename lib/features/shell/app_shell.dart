@@ -311,7 +311,7 @@ class _NavGlassBase extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withOpacity(0.10),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
@@ -323,10 +323,10 @@ class _NavGlassBase extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: palette.card.withValues(alpha: 0.72),
+              color: palette.card.withOpacity(0.72),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
-                color: palette.hairline.withValues(alpha: 0.38),
+                color: palette.hairline.withOpacity(0.38),
               ),
             ),
           ),
@@ -346,7 +346,7 @@ class _SelectedNavCapsule extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.20),
+            color: AppColors.primary.withOpacity(0.20),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -358,10 +358,10 @@ class _SelectedNavCapsule extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.18),
+              color: AppColors.primary.withOpacity(0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.22),
+                color: AppColors.primary.withOpacity(0.22),
               ),
             ),
           ),

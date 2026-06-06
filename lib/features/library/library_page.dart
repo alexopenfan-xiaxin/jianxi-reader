@@ -180,38 +180,58 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('简兮', style: Theme.of(context).textTheme.headlineLarge),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                saying,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: palette.muted,
-                      letterSpacing: 0,
-                    ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                '简兮',
+                style: Theme.of(context).textTheme.headlineLarge,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            IconButton.filled(
+              key: const ValueKey('import_button'),
+              tooltip: '导入文档',
+              onPressed: controller.isImporting
+                  ? null
+                  : () => _importDocument(context, controller),
+              icon: controller.isImporting
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_rounded),
+            ),
+          ],
         ),
-        const SizedBox(width: AppSpacing.md),
-        IconButton.filled(
-          key: const ValueKey('import_button'),
-          tooltip: '导入文档',
-          onPressed: controller.isImporting
-              ? null
-              : () => _importDocument(context, controller),
-          icon: controller.isImporting
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.add_rounded),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          saying,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: palette.muted,
+                letterSpacing: 0,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: [
+            _HeaderMetric(
+              icon: Icons.library_books_rounded,
+              label: '${controller.allDocuments.length} 个文档',
+            ),
+            _HeaderMetric(
+              icon: Icons.filter_alt_outlined,
+              label: '${controller.documents.length} 个显示',
+            ),
+          ],
         ),
       ],
     );
@@ -230,6 +250,47 @@ class _Header extends StatelessWidget {
     if (context.mounted) {
       await controller.loadDocuments();
     }
+  }
+}
+
+class _HeaderMetric extends StatelessWidget {
+  const _HeaderMetric({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: palette.hairline.withOpacity(0.65)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: palette.muted),
+            const SizedBox(width: AppSpacing.xxs),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: palette.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -285,6 +346,7 @@ class _LibraryToolsState extends State<_LibraryTools> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
+                  color: palette.card,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                   border: Border.all(
                     color:
@@ -300,6 +362,10 @@ class _LibraryToolsState extends State<_LibraryTools> {
                   decoration: InputDecoration(
                     hintText: '搜索文档',
                     prefixIcon: const Icon(Icons.search_rounded),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.sm,
+                    ),
                     suffixIcon: widget.controller.searchQuery.isEmpty
                         ? null
                         : IconButton(
@@ -353,10 +419,10 @@ class _SortModeButton extends StatelessWidget {
           child: Container(
             key: const ValueKey('library_sort_toggle'),
             width: 48,
-            height: 48,
+            height: 46,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withValues(alpha: 0.7)),
+              border: Border.all(color: palette.hairline.withOpacity(0.7)),
             ),
             child: Icon(
               sortMode == LibrarySortMode.modified
@@ -425,12 +491,12 @@ class _EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(AppRadii.lg),
+                color: AppColors.primary.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(AppRadii.md),
               ),
               child: Icon(
                 Icons.auto_stories_rounded,
-                color: AppColors.primary.withValues(alpha: 0.5),
+                color: AppColors.primary.withOpacity(0.56),
                 size: 36,
               ),
             ),
@@ -493,12 +559,12 @@ class _NoResultsState extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(AppRadii.lg),
+                color: AppColors.primary.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(AppRadii.md),
               ),
               child: Icon(
                 Icons.search_off_rounded,
-                color: AppColors.primary.withValues(alpha: 0.5),
+                color: AppColors.primary.withOpacity(0.56),
                 size: 28,
               ),
             ),
@@ -588,7 +654,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
       },
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _openDocument(context),
@@ -604,8 +670,8 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                 end: Alignment.bottomRight,
                 colors: [cover.start, cover.end],
               ),
-              borderRadius: BorderRadius.circular(AppRadii.lg),
-              border: Border.all(color: cover.border.withValues(alpha: 0.55)),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+              border: Border.all(color: cover.border.withOpacity(0.55)),
             ),
             child: Stack(
               children: [
@@ -615,19 +681,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                   bottom: 0,
                   child: Container(
                     width: 18,
-                    color: cover.spine.withValues(alpha: 0.72),
-                  ),
-                ),
-                Positioned(
-                  right: -30,
-                  top: -26,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.12),
-                    ),
+                    color: cover.spine.withOpacity(0.72),
                   ),
                 ),
                 Padding(
@@ -662,7 +716,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: cover.foreground.withValues(alpha: 0.78),
+                              color: cover.foreground.withOpacity(0.78),
                               fontSize: 12,
                               height: 1.35,
                               letterSpacing: 0,
@@ -746,9 +800,9 @@ class _ShelfTypeMark extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
+        color: Colors.white.withOpacity(0.18),
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -889,6 +943,7 @@ class _DocumentTileState extends State<_DocumentTile>
         onTap: () => _openDocument(context),
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _TypeBadge(document: widget.document),
             const SizedBox(width: AppSpacing.md),
@@ -920,8 +975,11 @@ class _DocumentTileState extends State<_DocumentTile>
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
                     _documentSummary(widget.document),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: palette.muted,
+                          fontSize: 12,
                           letterSpacing: 0,
                         ),
                   ),
@@ -988,11 +1046,10 @@ class _TypeBadge extends StatelessWidget {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadii.md),
+        color: badgeColor.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
         border: Border.all(
-          color: badgeColor.withValues(alpha: 0.15),
-          width: 2,
+          color: badgeColor.withOpacity(0.18),
         ),
       ),
       child: Icon(

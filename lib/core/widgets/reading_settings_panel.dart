@@ -35,7 +35,7 @@ class ReadingSettingsPanel extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: readingPalette.background,
-              borderRadius: BorderRadius.circular(AppRadii.lg),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
               border: Border.all(color: readingPalette.border),
             ),
             child: Text(

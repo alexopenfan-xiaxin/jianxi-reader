@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
+import '../../core/widgets/app_card.dart';
 import '../../core/widgets/reading_settings_panel.dart';
 import '../library/document_actions.dart';
 import '../library/document_entry.dart';
@@ -83,7 +84,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                   child: Container(
-                    color: readingPalette.background.withValues(alpha: 0.80),
+                    color: readingPalette.background.withOpacity(0.80),
                   ),
                 ),
               )
@@ -92,6 +93,11 @@ class _ReaderPageState extends State<ReaderPage> {
           _document.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: readingPalette.foreground,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
         ),
         actions: [
           IconButton(
@@ -200,20 +206,20 @@ class _ReaderProgressBar extends StatelessWidget {
       animation: scrollController,
       builder: (context, _) {
         if (!scrollController.hasClients) {
-          return const SizedBox(height: 2);
+          return const SizedBox(height: 3);
         }
         final position = scrollController.position;
         final progress = position.maxScrollExtent > 0
             ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
             : 0.0;
         if (progress <= 0) {
-          return const SizedBox(height: 2);
+          return const SizedBox(height: 3);
         }
         return LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.transparent,
-          color: AppColors.primary.withValues(alpha: 0.75),
-          minHeight: 2,
+          color: AppColors.primary.withOpacity(0.70),
+          minHeight: 3,
         );
       },
     );
@@ -274,7 +280,21 @@ class _ReaderError extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text(message, style: Theme.of(context).textTheme.bodyLarge),
+        child: AppCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: AppColors.error),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -285,6 +305,10 @@ void showReadingDisplaySheet(BuildContext context) {
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
+    backgroundColor: context.palette.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.md)),
+    ),
     builder: (context) => DraggableScrollableSheet(
       initialChildSize: 0.62,
       minChildSize: 0.42,
@@ -322,11 +346,14 @@ class _ReadingDisplaySheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(AppRadii.sm),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.12),
+                      ),
                     ),
                     child: const Icon(
                       Icons.text_fields_rounded,

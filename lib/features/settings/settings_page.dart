@@ -111,12 +111,12 @@ class _AppearanceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
       ),
       child: const Icon(
         Icons.palette_outlined,
@@ -294,13 +294,13 @@ class _ReadingSettingsIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadii.md),
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.10),
+          color: AppColors.primary.withOpacity(0.10),
         ),
       ),
       child: const Icon(
@@ -399,7 +399,7 @@ class _CardTitle extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
           child: Icon(icon, size: 18, color: AppColors.primary),
@@ -473,12 +473,12 @@ class _AboutIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
       ),
       child: const Icon(
         Icons.info_outline_rounded,
@@ -522,7 +522,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=100';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=101';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -792,13 +792,13 @@ class _AboutPageState extends State<AboutPage> {
                   Row(
                     children: [
                       Container(
-                        width: 58,
-                        height: 58,
+                        width: 54,
+                        height: 54,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          color: AppColors.primary.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(AppRadii.sm),
                           border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: AppColors.primary.withOpacity(0.12),
                           ),
                         ),
                         child: const Icon(

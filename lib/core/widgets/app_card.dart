@@ -6,7 +6,7 @@ class AppCard extends StatefulWidget {
   const AppCard({
     required this.child,
     super.key,
-    this.padding = const EdgeInsets.all(AppSpacing.lg),
+    this.padding = const EdgeInsets.all(AppSpacing.md),
     this.onTap,
   });
 
@@ -30,7 +30,7 @@ class _AppCardState extends State<AppCard>
       duration: const Duration(milliseconds: 120),
       vsync: this,
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.97).animate(
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.985).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
@@ -44,7 +44,7 @@ class _AppCardState extends State<AppCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final borderRadius = BorderRadius.circular(AppRadii.lg);
+    final borderRadius = BorderRadius.circular(AppRadii.sm);
 
     return AnimatedBuilder(
       animation: _scaleAnim,
@@ -71,11 +71,11 @@ class _AppCardState extends State<AppCard>
               : null,
           borderRadius: borderRadius,
           splashFactory: NoSplash.splashFactory,
-          highlightColor: AppColors.primary.withValues(alpha: 0.04),
+          highlightColor: AppColors.primary.withOpacity(0.05),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(
-                color: palette.hairline.withValues(alpha: 0.6),
+                color: palette.hairline.withOpacity(0.72),
               ),
               borderRadius: borderRadius,
             ),

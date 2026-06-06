@@ -215,7 +215,7 @@ class HighlightBuilder extends MarkdownWidgetBuilder {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEB3B).withValues(alpha: 0.35),
+        color: const Color(0xFFFFEB3B).withOpacity(0.35),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(highlightNode.text, style: baseStyle),
@@ -1325,7 +1325,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                           color: Theme.of(context)
                               .colorScheme
                               .primaryContainer
-                              .withValues(alpha: 0.3),
+                              .withOpacity(0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -1364,8 +1364,8 @@ class _SyntaxHighlightCodeBlockWidgetState
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: _copied
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.grey.withValues(alpha: 0.1),
+                              ? Colors.green.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
@@ -1379,7 +1379,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                                   : Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withValues(alpha: 0.6),
+                                      .withOpacity(0.6),
                             ),
                             if (_copied) ...[
                               const SizedBox(width: 4),
@@ -1680,8 +1680,16 @@ class _MindmapNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final bgColor = isDark ? palette.card : Color.lerp(palette.canvas, AppColors.primary, depth == 0 ? 0.06 : 0.03)!;
-    final borderColor = depth == 0 ? AppColors.primary.withValues(alpha: 0.3) : palette.hairline;
+    final bgColor = isDark
+        ? palette.card
+        : Color.lerp(
+            palette.canvas,
+            AppColors.primary,
+            depth == 0 ? 0.06 : 0.03,
+          )!;
+    final borderColor = depth == 0
+        ? AppColors.primary.withOpacity(0.3)
+        : palette.hairline;
 
     Widget label = Container(
       padding: EdgeInsets.symmetric(
@@ -1715,8 +1723,8 @@ class _MindmapNodeWidget extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            color: AppColors.primary.withOpacity(0.1),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           ),
           child: label,
         ),
@@ -1739,7 +1747,7 @@ class _MindmapConnector extends StatelessWidget {
         width: 12,
         height: 1.5,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.4),
+          color: AppColors.primary.withOpacity(0.4),
           borderRadius: BorderRadius.circular(1),
         ),
       ),
@@ -1916,7 +1924,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
         decoration: BoxDecoration(
           color: Color(_style.backgroundColor),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+          border: Border.all(color: Colors.grey.withOpacity(0.3)),
         ),
         clipBehavior: Clip.antiAlias,
         child: diagram,
@@ -1929,7 +1937,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
       decoration: BoxDecoration(
         color: Color(_style.backgroundColor),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Listener(
@@ -1985,10 +1993,10 @@ class _MermaidZoomControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.88),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.88),
         borderRadius: BorderRadius.circular(AppRadii.pill),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.28),
+          color: Theme.of(context).dividerColor.withOpacity(0.28),
         ),
       ),
       child: Row(
