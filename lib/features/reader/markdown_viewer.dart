@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_settings_controller.dart';
@@ -445,22 +446,10 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
         imageNode.url.startsWith('https://');
 
     Widget imageWidget;
-    if (isSvg) {
-      imageWidget = isNetwork
-          ? SvgPicture.network(
-              imageNode.url,
-              placeholderBuilder: (_) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-            )
-          : SvgPicture.asset(
-              imageNode.url,
-            );
-    } else if (isNetwork) {
-      imageWidget = Image.network(
-        imageNode.url,
-        errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.error),
-      );
+    if (isNetwork) {
+      imageWidget = _CachedMarkdownImage(url: imageNode.url, isSvg: isSvg);
+    } else if (isSvg) {
+      imageWidget = SvgPicture.asset(imageNode.url);
     } else {
       imageWidget = Image.asset(
         imageNode.url,
@@ -501,6 +490,182 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CachedMarkdownImage extends StatefulWidget {
+  const _CachedMarkdownImage({required this.url, required this.isSvg});
+
+  final String url;
+  final bool isSvg;
+
+  @override
+  State<_CachedMarkdownImage> createState() => _CachedMarkdownImageState();
+}
+
+class _CachedMarkdownImageState extends State<_CachedMarkdownImage> {
+  static const _timeout = Duration(seconds: 15);
+
+  Future<File>? _fileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileFuture = _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CachedMarkdownImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url || oldWidget.isSvg != widget.isSvg) {
+      _fileFuture = _loadImage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<File>(
+      future: _fileFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _ImageLoadingState(
+            message: '图片加载中',
+            showRetry: false,
+            onRetry: _retry,
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _ImageLoadingState(
+            message: '图片加载超时',
+            showRetry: true,
+            onRetry: _retry,
+          );
+        }
+        final file = snapshot.data!;
+        if (widget.isSvg) {
+          return SvgPicture.file(file);
+        }
+        return Image.file(
+          file,
+          fit: BoxFit.contain,
+          errorBuilder: (ctx, error, stackTrace) {
+            return _ImageLoadingState(
+              message: '图片渲染失败',
+              showRetry: true,
+              onRetry: _retry,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _retry() {
+    setState(() {
+      _fileFuture = _loadImage(forceRefresh: true);
+    });
+  }
+
+  Future<File> _loadImage({bool forceRefresh = false}) async {
+    final file = await _cacheFileForUrl(widget.url, widget.isSvg);
+    if (!forceRefresh && file.existsSync() && file.lengthSync() > 0) {
+      return file;
+    }
+    return _downloadImage(file);
+  }
+
+  Future<File> _downloadImage(File destination) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(widget.url)).timeout(_timeout);
+      final response = await request.close().timeout(_timeout);
+      if (response.statusCode != HttpStatus.ok) {
+        throw HttpException('图片请求失败：${response.statusCode}', uri: Uri.parse(widget.url));
+      }
+      final bytes = await response
+          .fold<List<int>>(<int>[], (buffer, chunk) => buffer..addAll(chunk))
+          .timeout(_timeout);
+      if (bytes.isEmpty) {
+        throw const FileSystemException('图片内容为空');
+      }
+      await destination.parent.create(recursive: true);
+      return destination.writeAsBytes(bytes, flush: true);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<File> _cacheFileForUrl(String url, bool isSvg) async {
+    final directory = await getTemporaryDirectory();
+    final cacheDirectory = Directory('${directory.path}/jianxi_image_cache');
+    final extension = isSvg ? 'svg' : 'img';
+    final key = _stableCacheKey(url);
+    return File('${cacheDirectory.path}/$key.$extension');
+  }
+
+  String _stableCacheKey(String value) {
+    var hash = 0x811c9dc5;
+    for (final unit in value.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
+  }
+}
+
+class _ImageLoadingState extends StatelessWidget {
+  const _ImageLoadingState({
+    required this.message,
+    required this.showRetry,
+    required this.onRetry,
+  });
+
+  final String message;
+  final bool showRetry;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 140),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: palette.hairline),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!showRetry)
+            const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(Icons.image_not_supported_outlined, color: palette.muted),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: palette.muted,
+                  letterSpacing: 0,
+                ),
+          ),
+          if (showRetry) ...[
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('重新加载'),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1199,7 +1364,27 @@ String _preprocessMarkdown(String raw) {
     (match) => '++${match.group(1)}++',
   );
 
-  return processed;
+  // 6. Keep indented ordered lists nested for parsers that flatten 2-3 spaces.
+  return _normalizeNestedOrderedLists(processed);
+}
+
+String _normalizeNestedOrderedLists(String markdown) {
+  final lines = markdown.split('\n');
+  var inFence = false;
+  for (var i = 0; i < lines.length; i++) {
+    final trimmed = lines[i].trimLeft();
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      inFence = !inFence;
+    }
+    if (inFence) {
+      continue;
+    }
+    lines[i] = lines[i].replaceFirstMapped(
+      RegExp(r'^( {2,3})(\d+[.)]\s+)'),
+      (match) => '    ${match.group(2)!}',
+    );
+  }
+  return lines.join('\n');
 }
 
 // ── Scroll-safe Mermaid Builder ──────────────────────────────────────────
@@ -1595,11 +1780,34 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
             child: InteractiveViewer(
               minScale: 0.5,
               maxScale: 4,
-              child: Image.network(url),
+              child: _PreviewImage(url: url),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PreviewImage extends StatelessWidget {
+  const _PreviewImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSvg = url.toLowerCase().endsWith('.svg');
+    final isNetwork = url.startsWith('http://') || url.startsWith('https://');
+    if (isNetwork) {
+      return _CachedMarkdownImage(url: url, isSvg: isSvg);
+    }
+    if (isSvg) {
+      return SvgPicture.asset(url);
+    }
+    return Image.asset(
+      url,
+      errorBuilder: (ctx, error, stackTrace) =>
+          const Icon(Icons.broken_image, color: Colors.white),
     );
   }
 }

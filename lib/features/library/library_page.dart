@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -21,7 +24,10 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage>
     with SingleTickerProviderStateMixin {
+  static String? _sessionSaying;
+
   late AnimationController _staggerController;
+  String _saying = '安静阅读，慢慢抵达。';
 
   @override
   void initState() {
@@ -33,6 +39,13 @@ class _LibraryPageState extends State<LibraryPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _staggerController.forward();
     });
+    final cachedSaying = _sessionSaying;
+    if (cachedSaying == null) {
+      _sessionSaying = _saying;
+      _loadSaying();
+    } else {
+      _saying = cachedSaying;
+    }
   }
 
   @override
@@ -62,7 +75,7 @@ class _LibraryPageState extends State<LibraryPage>
                 112,
               ),
               children: [
-                _Header(controller: controller),
+                _Header(controller: controller, saying: _saying),
                 if (controller.errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   _ErrorBanner(message: controller.errorMessage!),
@@ -96,6 +109,34 @@ class _LibraryPageState extends State<LibraryPage>
         },
       ),
     );
+  }
+
+  Future<void> _loadSaying() async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(
+        Uri.parse('https://uapis.cn/api/v1/saying'),
+      );
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != HttpStatus.ok) {
+        return;
+      }
+      final data = jsonDecode(body);
+      if (data is! Map<String, dynamic>) {
+        return;
+      }
+      final text = data['text'];
+      if (text is String && text.trim().isNotEmpty && mounted) {
+        final saying = text.trim();
+        _sessionSaying = saying;
+        setState(() => _saying = saying);
+      }
+    } catch (_) {
+      // The saying is decorative; keep the local fallback on network errors.
+    } finally {
+      client.close(force: true);
+    }
   }
 }
 
@@ -131,14 +172,14 @@ class _StaggeredFadeIn extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.controller});
+  const _Header({required this.controller, required this.saying});
 
   final LibraryController controller;
+  final String saying;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final documentCount = controller.allDocuments.length;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -149,9 +190,7 @@ class _Header extends StatelessWidget {
               Text('简兮', style: Theme.of(context).textTheme.headlineLarge),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                documentCount == 0
-                    ? '导入 Markdown 或 HTML，开始一段安静的阅读。'
-                    : '共 $documentCount 个文档，继续阅读或快速检索。',
+                saying,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: palette.muted,
                       letterSpacing: 0,
@@ -550,6 +589,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pressController;
   late final Animation<double> _pressAnimation;
+  bool _menuOpen = false;
 
   @override
   void initState() {
@@ -582,9 +622,9 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
         borderRadius: BorderRadius.circular(AppRadii.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => _openDocument(context),
-          onTapDown: (_) => _pressController.forward(),
-          onTapUp: (_) => _pressController.reverse(),
+          onTap: _menuOpen ? null : () => _openDocument(context),
+          onTapDown: _menuOpen ? null : (_) => _pressController.forward(),
+          onTapUp: _menuOpen ? null : (_) => _pressController.reverse(),
           onTapCancel: () => _pressController.reverse(),
           splashFactory: NoSplash.splashFactory,
           child: Ink(
@@ -636,12 +676,23 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                           const Spacer(),
                           PopupMenuButton<_DocumentMenuAction>(
                             tooltip: '文档操作',
+                            onOpened: () {
+                              setState(() {
+                                _menuOpen = true;
+                              });
+                              _pressController.reverse();
+                            },
+                            onCanceled: () {
+                              setState(() => _menuOpen = false);
+                            },
                             icon: Icon(
                               Icons.more_horiz_rounded,
                               color: cover.foreground.withValues(alpha: 0.82),
                             ),
-                            onSelected: (action) =>
-                                _handleAction(context, action),
+                            onSelected: (action) {
+                              setState(() => _menuOpen = false);
+                              _handleAction(context, action);
+                            },
                             itemBuilder: (context) {
                               return const <PopupMenuEntry<_DocumentMenuAction>>[
                                 PopupMenuItem(

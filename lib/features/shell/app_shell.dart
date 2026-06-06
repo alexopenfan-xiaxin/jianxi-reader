@@ -98,44 +98,98 @@ class _FloatingBottomNav extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: 18,
-                    right: 18,
-                    top: 1,
-                    child: Container(
-                      height: 1,
-                      color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.7),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _FloatingNavItem(
+                      selected: currentIndex == 0,
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home_rounded,
+                      label: '首页',
+                      onTap: () => onChanged(0),
                     ),
-                  ),
-                  NavigationBar(
-                    selectedIndex: currentIndex,
-                    onDestinationSelected: onChanged,
-                    height: 60,
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    surfaceTintColor: Colors.transparent,
-                    indicatorColor: AppColors.primary.withValues(
-                      alpha: isDark ? 0.24 : 0.14,
+                    const SizedBox(width: 4),
+                    _FloatingNavItem(
+                      selected: currentIndex == 1,
+                      icon: Icons.settings_outlined,
+                      selectedIcon: Icons.settings_rounded,
+                      label: '设置',
+                      onTap: () => onChanged(1),
                     ),
-                    labelBehavior:
-                        NavigationDestinationLabelBehavior.alwaysShow,
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: '首页',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings_rounded),
-                        label: '设置',
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingNavItem extends StatelessWidget {
+  const _FloatingNavItem({
+    required this.selected,
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final foreground = selected ? AppColors.primary : palette.muted;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          splashFactory: NoSplash.splashFactory,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: 48,
+            width: 96,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.primary.withValues(alpha: 0.13)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  selected ? selectedIcon : icon,
+                  color: foreground,
+                  size: 21,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: foreground,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                        letterSpacing: 0,
+                      ),
+                ),
+              ],
             ),
           ),
         ),

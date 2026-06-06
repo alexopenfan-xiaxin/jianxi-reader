@@ -64,11 +64,12 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.3.0+30` (versionName = 1.3.0, versionCode = 30)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=30`
+- `pubspec.yaml`: `1.4.0+40` (versionName = 1.4.0, versionCode = 40)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=40`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
+- **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
@@ -140,17 +141,35 @@ import 'dart:io';
 - `INTERNET` permission added to main `AndroidManifest.xml` (debug has it, release didn't)
 - APK ~10MB ARM64
 - `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (wraps a `Text` in `GestureDetector` with `HitTestBehavior.opaque`; the package's `renderInline` keeps non-text widgets as a `WidgetSpan`, so the `GestureDetector` survives the unwrap step that strips a plain `Text`)
-- `TappableImageBuilder` registered as the 'image' builder (wraps `Image.network`/`Image.asset` in `GestureDetector` with `HitTestBehavior.opaque`; the package's inline renderer keeps it as a `WidgetSpan`, so the tap is captured even when the image is inline within a paragraph and `selectable: true` would otherwise route the gesture to the `SelectionArea`)
+- `TappableImageBuilder` registered as the 'image' builder (wraps cached network images or local assets in `GestureDetector` with `HitTestBehavior.opaque`; the package's inline renderer keeps it as a `WidgetSpan`, so the tap is captured even when the image is inline within a paragraph and `selectable: true` would otherwise route the gesture to the `SelectionArea`)
 - "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
 - `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
 - Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
 - Code highlighting uses `syntax_highlight` (serverpod) via custom `SyntaxHighlightCodeBlockBuilder`, replacing the built-in `EnhancedCodeBlockBuilder` (which used `flutter_highlight`/`highlight`); `useEnhancedComponents: false` since we register all builders manually
-- `flutter_svg` used in `TappableImageBuilder` to render SVG images (both network and asset) via `SvgPicture.network`/`SvgPicture.asset`
+- `flutter_svg` used in `TappableImageBuilder` to render SVG images; network images are downloaded with a 15s timeout and cached under the app temp image cache before rendering
 - `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
-- `_normalizeListIndent` removed; `flutter_smooth_markdown` handles nested ordered lists natively
+- `_normalizeNestedOrderedLists` keeps 2-3 space indented ordered sublists nested before handing Markdown to `flutter_smooth_markdown`
 - `syntax_highlight: ^0.5.0` added to `pubspec.yaml`
 - `_supportedLanguages` must only contain languages with grammar files in `syntax_highlight-<version>/grammars/`; verify by checking `%PUB_CACHE%` — including a missing language causes `Highlighter.initialize()` to throw and silently disable ALL highlighting
 - `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
 - `_initFailed` static flag + orange ⚠ `Tooltip` icon on code blocks so developers can visually identify when initialization silently failed
 - Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
+- `file_paths.xml` now includes `<root-path>` to authorize FileProvider access to the entire app data directory (needed for APK install after download to `getApplicationDocumentsDirectory()`)
+- `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
+- File hot-reload uses `Timer.periodic(3s)` in `_MarkdownViewerState` to poll `lastModifiedSync()`; `_checkFileChanged` now logs errors and guards against deleted files
+
+## Operation Boundaries
+
+When the user says "只做这几件事" or explicitly scopes the task, do NOT perform any extra checks, fixes, or modifications beyond what was requested — even if you spot issues. This includes:
+
+- Version checks (pubspec vs in-app display vs update URL)
+- Code quality / linting / analysis
+- Encoding fixes
+- Changelog generation (only use user-provided changelog)
+- Any git operation not explicitly listed
+
+## Release Creation
+
+- Prefer Dart script (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` for creating releases with Chinese content — `curl.exe` / PowerShell have persistent UTF-8 encoding issues.
+- Contributor defaults to `alexopenfan-xiaxin` unless otherwise specified.

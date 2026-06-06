@@ -54,8 +54,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.3.0',
-      buildNumber: '30',
+      version: '1.4.0',
+      buildNumber: '40',
       buildSignature: '',
     );
   });
@@ -184,7 +184,7 @@ void main() {
     expect(find.text('浅色'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
     expect(find.text('阅读体验'), findsOneWidget);
-    expect(find.text('版本 1.3.0 (30)'), findsOneWidget);
+    expect(find.text('关于应用'), findsOneWidget);
     expect(find.text('阅读主题'), findsNothing);
 
     await tester.tap(find.text('阅读体验'));
@@ -194,6 +194,23 @@ void main() {
     expect(find.text('页边距'), findsOneWidget);
     expect(find.text('字号'), findsOneWidget);
     expect(find.text('行距'), findsOneWidget);
+  });
+
+  testWidgets('opens the about page from settings', (tester) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(documentService: FakeDocumentService([])),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('关于应用'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('版本 1.4.0 (40)'), findsOneWidget);
+    expect(find.text('应用更新'), findsOneWidget);
+    expect(find.text('检查更新'), findsOneWidget);
   });
 }
 

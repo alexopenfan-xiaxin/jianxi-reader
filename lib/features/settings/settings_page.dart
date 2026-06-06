@@ -33,7 +33,7 @@ class SettingsPage extends StatelessWidget {
           _SectionLabel(text: '阅读'),
           _ReadingSettingsEntry(),
           SizedBox(height: AppSpacing.lg),
-          _AboutCard(),
+          _AboutEntry(),
         ],
       ),
     );
@@ -321,16 +321,102 @@ class _CardTitle extends StatelessWidget {
   }
 }
 
-class _AboutCard extends StatefulWidget {
-  const _AboutCard();
+class _AboutEntry extends StatelessWidget {
+  const _AboutEntry();
 
   @override
-  State<_AboutCard> createState() => _AboutCardState();
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: () => _openAboutPage(context),
+      child: Row(
+        children: const [
+          _AboutIcon(),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(child: _AboutEntryText()),
+          SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+
+  void _openAboutPage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AboutPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.3, 0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
 }
 
-class _AboutCardState extends State<_AboutCard> {
+class _AboutIcon extends StatelessWidget {
+  const _AboutIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+      ),
+      child: const Icon(
+        Icons.info_outline_rounded,
+        size: 21,
+        color: AppColors.primary,
+      ),
+    );
+  }
+}
+
+class _AboutEntryText extends StatelessWidget {
+  const _AboutEntryText();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('关于应用', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          '应用信息、支持格式和版本更新',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: palette.muted,
+                letterSpacing: 0,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class AboutPage extends StatefulWidget {
+  const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=30';
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=40';
 
   bool _isChecking = false;
   PackageInfo? _packageInfo;
@@ -508,74 +594,117 @@ class _AboutCardState extends State<_AboutCard> {
         ? '版本信息读取中'
         : '版本 ${_packageInfo!.version} (${_packageInfo!.buildNumber})';
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _CardTitle(
-            icon: Icons.info_outline,
-            title: '关于应用',
-            subtitle: '版本信息、支持格式和应用更新。',
+    return Scaffold(
+      backgroundColor: palette.parchment,
+      appBar: AppBar(title: const Text('关于应用')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xl,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                ),
-                child: const Icon(
-                  Icons.auto_stories_rounded,
-                  color: AppColors.primary,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('简兮阅读器', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      versionLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: palette.muted,
-                            letterSpacing: 0,
+          children: [
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.12),
                           ),
-                    ),
-                    Text(
-                      '支持 Markdown 与 HTML',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: palette.muted,
-                            letterSpacing: 0,
-                            fontSize: 13,
-                          ),
-                    ),
-                  ],
-                ),
+                        ),
+                        child: const Icon(
+                          Icons.auto_stories_rounded,
+                          color: AppColors.primary,
+                          size: 29,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '简兮阅读器',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(
+                              versionLabel,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: palette.muted,
+                                    letterSpacing: 0,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    '为 Markdown 与 HTML 文档设计的本地阅读器，专注于安静的书库管理、稳定的原文件刷新和舒适的阅读显示。',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: palette.ink,
+                          height: 1.55,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    '支持格式：Markdown、HTML',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _isChecking ? null : _checkForUpdate,
-              icon: _isChecking
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.system_update_outlined, size: 18),
-              label: Text(_isChecking ? '检查中' : '检查更新'),
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CardTitle(
+                    icon: Icons.system_update_outlined,
+                    title: '应用更新',
+                    subtitle: _isChecking
+                        ? '正在连接更新服务。'
+                        : '检查是否有可下载的新版本。',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _isChecking ? null : _checkForUpdate,
+                      icon: _isChecking
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh_rounded),
+                      label: Text(_isChecking ? '检查中' : '检查更新'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
