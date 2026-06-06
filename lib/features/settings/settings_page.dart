@@ -728,10 +728,11 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   HttpClient _createUpdateClient() {
-    return HttpClient()
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true
-      ..userAgent = 'JianxiReader/1.0';
+    final client = HttpClient();
+    client.badCertificateCallback =
+        (X509Certificate cert, String host, int port) => true;
+    client.userAgent = 'JianxiReader/1.0';
+    return client;
   }
 
   bool _isApkResponse(HttpClientResponse response) {
