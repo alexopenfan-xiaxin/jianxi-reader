@@ -64,8 +64,8 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.4.0+40` (versionName = 1.4.0, versionCode = 40)
-- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=40`
+- `pubspec.yaml`: `1.5.0+50` (versionName = 1.5.0, versionCode = 50)
+- Update check URL: `https://alexxia.5imh.xyz/update/?request&local=50`
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
@@ -148,7 +148,7 @@ import 'dart:io';
 - Code highlighting uses `syntax_highlight` (serverpod) via custom `SyntaxHighlightCodeBlockBuilder`, replacing the built-in `EnhancedCodeBlockBuilder` (which used `flutter_highlight`/`highlight`); `useEnhancedComponents: false` since we register all builders manually
 - `flutter_svg` used in `TappableImageBuilder` to render SVG images; network images are downloaded with a 15s timeout and cached under the app temp image cache before rendering
 - `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
-- `_normalizeNestedOrderedLists` keeps 2-3 space indented ordered sublists nested before handing Markdown to `flutter_smooth_markdown`
+- `IndentedOrderedListPlugin` parses indented ordered lists before the package default list parser, because `flutter_smooth_markdown` 0.7.2 trims list lines and otherwise flattens nested ordered sublists
 - `syntax_highlight: ^0.5.0` added to `pubspec.yaml`
 - `_supportedLanguages` must only contain languages with grammar files in `syntax_highlight-<version>/grammars/`; verify by checking `%PUB_CACHE%` — including a missing language causes `Highlighter.initialize()` to throw and silently disable ALL highlighting
 - `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails

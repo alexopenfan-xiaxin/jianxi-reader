@@ -81,7 +81,7 @@ class _LibraryPageState extends State<LibraryPage>
                   _ErrorBanner(message: controller.errorMessage!),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                _LibraryTools(controller: controller, settings: settings),
+                _LibraryTools(controller: controller),
                 const SizedBox(height: AppSpacing.lg),
                 if (controller.isLoading)
                   const _LoadingState()
@@ -234,10 +234,9 @@ class _Header extends StatelessWidget {
 }
 
 class _LibraryTools extends StatefulWidget {
-  const _LibraryTools({required this.controller, required this.settings});
+  const _LibraryTools({required this.controller});
 
   final LibraryController controller;
-  final AppSettingsController settings;
 
   @override
   State<_LibraryTools> createState() => _LibraryToolsState();
@@ -318,40 +317,7 @@ class _LibraryToolsState extends State<_LibraryTools> {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            _ViewModeToggle(settings: widget.settings),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Text(
-              '排序',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: palette.muted,
-                    letterSpacing: 0,
-                  ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: palette.hairline.withValues(alpha: 0.3)),
-              ),
-              child: SegmentedButton<LibrarySortMode>(
-                segments: LibrarySortMode.values
-                    .map(
-                      (sortMode) => ButtonSegment(
-                        value: sortMode,
-                        label: Text(sortMode.label),
-                      ),
-                    )
-                    .toList(),
-                selected: {widget.controller.sortMode},
-                onSelectionChanged: (selection) {
-                  widget.controller.updateSortMode(selection.first);
-                },
-              ),
-            ),
+            _SortModeButton(controller: widget.controller),
           ],
         ),
       ],
@@ -359,31 +325,33 @@ class _LibraryToolsState extends State<_LibraryTools> {
   }
 }
 
-class _ViewModeToggle extends StatelessWidget {
-  const _ViewModeToggle({required this.settings});
+class _SortModeButton extends StatelessWidget {
+  const _SortModeButton({required this.controller});
 
-  final AppSettingsController settings;
+  final LibraryController controller;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final isShelf = settings.libraryViewMode == LibraryViewMode.shelf;
+    final sortMode = controller.sortMode;
     return Tooltip(
-      message: isShelf ? '切换到列表' : '切换到书架',
+      message: '排序：${sortMode.label}',
       child: Material(
         color: palette.card,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            settings.setLibraryViewMode(
-              isShelf ? LibraryViewMode.list : LibraryViewMode.shelf,
+            controller.updateSortMode(
+              sortMode == LibrarySortMode.modified
+                  ? LibrarySortMode.name
+                  : LibrarySortMode.modified,
             );
           },
           borderRadius: BorderRadius.circular(AppRadii.pill),
           splashFactory: NoSplash.splashFactory,
           child: Container(
-            key: const ValueKey('library_view_toggle'),
+            key: const ValueKey('library_sort_toggle'),
             width: 48,
             height: 48,
             decoration: BoxDecoration(
@@ -391,8 +359,10 @@ class _ViewModeToggle extends StatelessWidget {
               border: Border.all(color: palette.hairline.withValues(alpha: 0.7)),
             ),
             child: Icon(
-              isShelf ? Icons.view_agenda_rounded : Icons.grid_view_rounded,
-              color: isShelf ? AppColors.primary : palette.ink,
+              sortMode == LibrarySortMode.modified
+                  ? Icons.schedule_rounded
+                  : Icons.sort_by_alpha_rounded,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -589,7 +559,6 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pressController;
   late final Animation<double> _pressAnimation;
-  bool _menuOpen = false;
 
   @override
   void initState() {
@@ -622,9 +591,10 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
         borderRadius: BorderRadius.circular(AppRadii.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: _menuOpen ? null : () => _openDocument(context),
-          onTapDown: _menuOpen ? null : (_) => _pressController.forward(),
-          onTapUp: _menuOpen ? null : (_) => _pressController.reverse(),
+          onTap: () => _openDocument(context),
+          onLongPress: () => _showShelfActions(context),
+          onTapDown: (_) => _pressController.forward(),
+          onTapUp: (_) => _pressController.reverse(),
           onTapCancel: () => _pressController.reverse(),
           splashFactory: NoSplash.splashFactory,
           child: Ink(
@@ -673,39 +643,6 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                       Row(
                         children: [
                           _ShelfTypeMark(document: widget.document),
-                          const Spacer(),
-                          PopupMenuButton<_DocumentMenuAction>(
-                            tooltip: '文档操作',
-                            onOpened: () {
-                              setState(() {
-                                _menuOpen = true;
-                              });
-                              _pressController.reverse();
-                            },
-                            onCanceled: () {
-                              setState(() => _menuOpen = false);
-                            },
-                            icon: Icon(
-                              Icons.more_horiz_rounded,
-                              color: cover.foreground.withValues(alpha: 0.82),
-                            ),
-                            onSelected: (action) {
-                              setState(() => _menuOpen = false);
-                              _handleAction(context, action);
-                            },
-                            itemBuilder: (context) {
-                              return const <PopupMenuEntry<_DocumentMenuAction>>[
-                                PopupMenuItem(
-                                  value: _DocumentMenuAction.rename,
-                                  child: Text('重命名'),
-                                ),
-                                PopupMenuItem(
-                                  value: _DocumentMenuAction.remove,
-                                  child: Text('移出'),
-                                ),
-                              ];
-                            },
-                          ),
                         ],
                       ),
                       const Spacer(),
@@ -760,6 +697,40 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
         await showRenameDocumentDialog(context, widget.document);
       case _DocumentMenuAction.remove:
         await removeDocumentFromLibrary(context, widget.document);
+    }
+  }
+
+  Future<void> _showShelfActions(BuildContext context) async {
+    _pressController.reverse();
+    final action = await showModalBottomSheet<_DocumentMenuAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.drive_file_rename_outline_rounded),
+                title: const Text('重命名'),
+                onTap: () => Navigator.of(context).pop(
+                  _DocumentMenuAction.rename,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.remove_circle_outline_rounded),
+                title: const Text('移出'),
+                onTap: () => Navigator.of(context).pop(
+                  _DocumentMenuAction.remove,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (action != null && mounted) {
+      await _handleAction(context, action);
     }
   }
 }

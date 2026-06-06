@@ -54,8 +54,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.4.0',
-      buildNumber: '40',
+      version: '1.5.0',
+      buildNumber: '50',
       buildSignature: '',
     );
   });
@@ -92,7 +92,7 @@ void main() {
     expect(find.text('beta.html'), findsNothing);
   });
 
-  testWidgets('defaults to list view and can switch to shelf view', (
+  testWidgets('changes the home view mode from appearance settings', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -107,7 +107,15 @@ void main() {
 
     expect(find.byKey(const ValueKey('library_shelf_grid')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('library_view_toggle')));
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('外观'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书架'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('library_shelf_grid')), findsOneWidget);
@@ -151,6 +159,27 @@ void main() {
     expect(find.text('移出'), findsOneWidget);
   });
 
+  testWidgets('opens shelf document actions with a long press', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'settings.libraryViewMode': 'shelf',
+    });
+
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('article.md', modifiedAt: DateTime(2026)),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('article.md'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('移出'), findsOneWidget);
+  });
+
   testWidgets('removes a document from the visible list', (tester) async {
     await tester.pumpWidget(
       JianxiReaderApp(
@@ -180,9 +209,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('外观'), findsOneWidget);
-    expect(find.text('系统'), findsOneWidget);
-    expect(find.text('浅色'), findsOneWidget);
-    expect(find.text('深色'), findsOneWidget);
     expect(find.text('阅读体验'), findsOneWidget);
     expect(find.text('关于应用'), findsOneWidget);
     expect(find.text('阅读主题'), findsNothing);
@@ -208,9 +234,10 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 1.4.0 (40)'), findsOneWidget);
+    expect(find.text('版本 1.5.0 (50)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
+    expect(find.text('联系作者：alex.openfan@gmail.com'), findsOneWidget);
   });
 }
 

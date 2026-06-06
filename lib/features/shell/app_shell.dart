@@ -46,7 +46,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class _FloatingBottomNav extends StatelessWidget {
+class _FloatingBottomNav extends StatefulWidget {
   const _FloatingBottomNav({
     required this.currentIndex,
     required this.onChanged,
@@ -56,10 +56,18 @@ class _FloatingBottomNav extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  State<_FloatingBottomNav> createState() => _FloatingBottomNavState();
+}
 
+class _FloatingBottomNavState extends State<_FloatingBottomNav> {
+  static const _itemWidth = 100.0;
+  static const _itemHeight = 52.0;
+  static const _gap = 8.0;
+
+  double _dragOffset = 0;
+
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -70,56 +78,111 @@ class _FloatingBottomNav extends StatelessWidget {
       child: Align(
         alignment: Alignment.bottomCenter,
         heightFactor: 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    (isDark ? const Color(0xFF2B2B2D) : Colors.white)
-                        .withValues(alpha: 0.92),
-                    (isDark ? const Color(0xFF18181A) : palette.card)
-                        .withValues(alpha: 0.82),
-                  ],
+        child: GestureDetector(
+          onHorizontalDragUpdate: (details) {
+            setState(() {
+              _dragOffset = (_dragOffset + details.delta.dx).clamp(
+                -_itemWidth - _gap,
+                _itemWidth + _gap,
+              );
+            });
+          },
+          onHorizontalDragEnd: (details) {
+            final shouldMoveRight =
+                widget.currentIndex == 0 &&
+                    (_dragOffset > 38 ||
+                        details.primaryVelocity != null &&
+                            details.primaryVelocity! > 280);
+            final shouldMoveLeft =
+                widget.currentIndex == 1 &&
+                    (_dragOffset < -38 ||
+                        details.primaryVelocity != null &&
+                            details.primaryVelocity! < -280);
+            if (shouldMoveRight) {
+              widget.onChanged(1);
+            } else if (shouldMoveLeft) {
+              widget.onChanged(0);
+            }
+            setState(() => _dragOffset = 0);
+          },
+          onHorizontalDragCancel: () => setState(() => _dragOffset = 0),
+          child: SizedBox(
+            width: _itemWidth * 2 + _gap,
+            height: _itemHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  left: (widget.currentIndex == 0 ? 0 : _itemWidth + _gap) +
+                      _dragOffset,
+                  top: 0,
+                  width: _itemWidth,
+                  height: _itemHeight,
+                  child: const _SelectedNavCapsule(),
                 ),
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(
-                  color: palette.hairline.withValues(alpha: 0.58),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _FloatingNavItem(
-                      selected: currentIndex == 0,
+                      selected: widget.currentIndex == 0,
                       icon: Icons.home_outlined,
                       selectedIcon: Icons.home_rounded,
                       label: '首页',
-                      onTap: () => onChanged(0),
+                      onTap: () {
+                        setState(() => _dragOffset = 0);
+                        widget.onChanged(0);
+                      },
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: _gap),
                     _FloatingNavItem(
-                      selected: currentIndex == 1,
+                      selected: widget.currentIndex == 1,
                       icon: Icons.settings_outlined,
                       selectedIcon: Icons.settings_rounded,
                       label: '设置',
-                      onTap: () => onChanged(1),
+                      onTap: () {
+                        setState(() => _dragOffset = 0);
+                        widget.onChanged(1);
+                      },
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedNavCapsule extends StatelessWidget {
+  const _SelectedNavCapsule();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.20),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.22),
               ),
             ),
           ),
@@ -152,44 +215,51 @@ class _FloatingNavItem extends StatelessWidget {
       selected: selected,
       button: true,
       label: label,
-      child: Material(
-        color: Colors.transparent,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          splashFactory: NoSplash.splashFactory,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            height: 48,
-            width: 96,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.primary.withValues(alpha: 0.13)
-                  : Colors.transparent,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            child: InkWell(
+              onTap: onTap,
               borderRadius: BorderRadius.circular(AppRadii.pill),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  selected ? selectedIcon : icon,
-                  color: foreground,
-                  size: 21,
+              splashFactory: NoSplash.splashFactory,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                height: _FloatingBottomNavState._itemHeight,
+                width: _FloatingBottomNavState._itemWidth,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: palette.card.withValues(alpha: selected ? 0.18 : 0.58),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(
+                    color: palette.hairline.withValues(alpha: 0.32),
+                  ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: foreground,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0,
-                      ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      selected ? selectedIcon : icon,
+                      color: foreground,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: foreground,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.w500,
+                            letterSpacing: 0,
+                          ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

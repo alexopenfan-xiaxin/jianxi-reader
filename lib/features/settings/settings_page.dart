@@ -26,39 +26,13 @@ class SettingsPage extends StatelessWidget {
         ),
         children: const [
           _SettingsHeader(),
-          SizedBox(height: AppSpacing.sm),
-          _SectionLabel(text: '显示'),
-          _ThemeSettingsCard(),
-          SizedBox(height: AppSpacing.sm),
-          _SectionLabel(text: '阅读'),
-          _ReadingSettingsEntry(),
           SizedBox(height: AppSpacing.lg),
+          _AppearanceEntry(),
+          SizedBox(height: AppSpacing.sm),
+          _ReadingSettingsEntry(),
+          SizedBox(height: AppSpacing.sm),
           _AboutEntry(),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: AppSpacing.xxs,
-        bottom: AppSpacing.sm,
-        top: AppSpacing.lg,
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: context.palette.muted,
-              letterSpacing: 0.5,
-            ),
       ),
     );
   }
@@ -87,55 +61,184 @@ class _SettingsHeader extends StatelessWidget {
   }
 }
 
-class _ThemeSettingsCard extends StatelessWidget {
-  const _ThemeSettingsCard();
+class _AppearanceEntry extends StatelessWidget {
+  const _AppearanceEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: () => _openAppearancePage(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: const [
+          _AppearanceIcon(),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(child: _AppearanceEntryText()),
+          SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+
+  void _openAppearancePage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AppearancePage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.3, 0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+}
+
+class _AppearanceIcon extends StatelessWidget {
+  const _AppearanceIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+      ),
+      child: const Icon(
+        Icons.palette_outlined,
+        size: 21,
+        color: AppColors.primary,
+      ),
+    );
+  }
+}
+
+class _AppearanceEntryText extends StatelessWidget {
+  const _AppearanceEntryText();
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettingsController>();
+    final palette = context.palette;
+    final themeLabel = switch (settings.themeMode) {
+      ThemeMode.system => '跟随系统',
+      ThemeMode.light => '浅色',
+      ThemeMode.dark => '深色',
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('外观', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          '$themeLabel · 首页${settings.libraryViewMode.label}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: palette.muted,
+                letterSpacing: 0,
+              ),
+        ),
+      ],
+    );
+  }
+}
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _CardTitle(
-            icon: Icons.palette_outlined,
-            title: '外观',
-            subtitle: '跟随系统，或手动选择浅色/深色界面。',
+class AppearancePage extends StatelessWidget {
+  const AppearancePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsController>();
+    final palette = context.palette;
+    return Scaffold(
+      backgroundColor: palette.parchment,
+      appBar: AppBar(title: const Text('外观')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xl,
           ),
-          const SizedBox(height: AppSpacing.md),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(
-                color: context.palette.hairline.withValues(alpha: 0.3),
+          children: [
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _CardTitle(
+                    icon: Icons.palette_outlined,
+                    title: '界面主题',
+                    subtitle: '跟随系统，或手动选择浅色/深色界面。',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text('系统'),
+                        icon: Icon(Icons.phone_android_rounded),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('浅色'),
+                        icon: Icon(Icons.light_mode_rounded),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text('深色'),
+                        icon: Icon(Icons.dark_mode_rounded),
+                      ),
+                    ],
+                    selected: {settings.themeMode},
+                    onSelectionChanged: (selection) {
+                      settings.setThemeMode(selection.first);
+                    },
+                  ),
+                ],
               ),
             ),
-            child: SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment(
-                  value: ThemeMode.system,
-                  label: Text('系统'),
-                  icon: Icon(Icons.phone_android_rounded),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.light,
-                  label: Text('浅色'),
-                  icon: Icon(Icons.light_mode_rounded),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.dark,
-                  label: Text('深色'),
-                  icon: Icon(Icons.dark_mode_rounded),
-                ),
-              ],
-              selected: {settings.themeMode},
-              onSelectionChanged: (selection) {
-                settings.setThemeMode(selection.first);
-              },
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _CardTitle(
+                    icon: Icons.grid_view_rounded,
+                    title: '首页视图',
+                    subtitle: '选择首页文档以列表或书架方式展示。',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SegmentedButton<LibraryViewMode>(
+                    segments: LibraryViewMode.values
+                        .map(
+                          (viewMode) => ButtonSegment(
+                            value: viewMode,
+                            label: Text(viewMode.label),
+                          ),
+                        )
+                        .toList(),
+                    selected: {settings.libraryViewMode},
+                    onSelectionChanged: (selection) {
+                      settings.setLibraryViewMode(selection.first);
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -416,7 +519,7 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=40';
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=50';
 
   bool _isChecking = false;
   PackageInfo? _packageInfo;
@@ -665,6 +768,22 @@ class _AboutPageState extends State<AboutPage> {
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     '支持格式：Markdown、HTML',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    '联系作者：alex.openfan@gmail.com',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: palette.muted,
                           letterSpacing: 0,
