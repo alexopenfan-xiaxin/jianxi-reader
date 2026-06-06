@@ -14,7 +14,7 @@ enum ReadingFontSize {
 
 enum ReadingLineHeight {
   compact('紧凑', 1.42),
-  comfortable('舒适', 1.58),
+  comfortable('标准', 1.58),
   airy('宽松', 1.74);
 
   const ReadingLineHeight(this.label, this.value);

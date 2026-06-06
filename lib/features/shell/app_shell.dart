@@ -20,27 +20,38 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                  child: child,
+                );
+              },
+              child: IndexedStack(
+                index: _currentIndex,
+                children: const [LibraryPage(), SettingsPage()],
+              ),
             ),
-            child: child,
-          );
-        },
-        child: IndexedStack(
-          index: _currentIndex,
-          children: const [LibraryPage(), SettingsPage()],
-        ),
-      ),
-      bottomNavigationBar: _FloatingBottomNav(
-        currentIndex: _currentIndex,
-        onChanged: (index) => setState(() => _currentIndex = index),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _FloatingBottomNav(
+              currentIndex: _currentIndex,
+              onChanged: (index) => setState(() => _currentIndex = index),
+            ),
+          ),
+        ],
       ),
     );
   }

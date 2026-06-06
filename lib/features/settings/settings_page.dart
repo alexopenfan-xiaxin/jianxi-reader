@@ -23,7 +23,7 @@ class SettingsPage extends StatelessWidget {
           AppSpacing.lg,
           AppSpacing.lg,
           AppSpacing.lg,
-          112,
+          AppSpacing.lg,
         ),
         children: const [
           _SettingsHeader(),
