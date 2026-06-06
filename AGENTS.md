@@ -69,6 +69,8 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
   - 204 No Content → already latest
   - 200 OK → new version available, download via browser
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
+- **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
+- **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
@@ -154,3 +156,21 @@ import 'dart:io';
 - `_initFailed` static flag + orange ⚠ `Tooltip` icon on code blocks so developers can visually identify when initialization silently failed
 - Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
+- `file_paths.xml` now includes `<root-path>` to authorize FileProvider access to the entire app data directory (needed for APK install after download to `getApplicationDocumentsDirectory()`)
+- `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
+- File hot-reload uses `Timer.periodic(3s)` in `_MarkdownViewerState` to poll `lastModifiedSync()`; `_checkFileChanged` now logs errors and guards against deleted files
+
+## Operation Boundaries
+
+When the user says "只做这几件事" or explicitly scopes the task, do NOT perform any extra checks, fixes, or modifications beyond what was requested — even if you spot issues. This includes:
+
+- Version checks (pubspec vs in-app display vs update URL)
+- Code quality / linting / analysis
+- Encoding fixes
+- Changelog generation (only use user-provided changelog)
+- Any git operation not explicitly listed
+
+## Release Creation
+
+- Prefer Dart script (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` for creating releases with Chinese content — `curl.exe` / PowerShell have persistent UTF-8 encoding issues.
+- Contributor defaults to `alexopenfan-xiaxin` unless otherwise specified.
