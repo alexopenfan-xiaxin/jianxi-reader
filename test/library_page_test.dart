@@ -54,8 +54,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.5.0',
-      buildNumber: '50',
+      version: '1.6.0',
+      buildNumber: '60',
       buildSignature: '',
     );
   });
@@ -234,9 +234,14 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 1.5.0 (50)'), findsOneWidget);
+    expect(find.text('版本 1.6.0 (60)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
+    expect(find.text('支持格式：Markdown、HTML'), findsNothing);
+    expect(
+      find.text('开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader'),
+      findsOneWidget,
+    );
     expect(find.text('联系作者：alex.openfan@gmail.com'), findsOneWidget);
   });
 }

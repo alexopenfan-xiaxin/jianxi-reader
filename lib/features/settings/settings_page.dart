@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
@@ -499,7 +500,7 @@ class _AboutEntryText extends StatelessWidget {
         Text('关于应用', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: AppSpacing.xxs),
         Text(
-          '应用信息、支持格式和版本更新',
+          '应用信息、版本更新与联系信息',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: palette.muted,
                 letterSpacing: 0,
@@ -519,7 +520,10 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=50';
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=60';
+  static final _repositoryUrl = Uri.parse(
+    'https://github.com/alexopenfan-xiaxin/jianxi-reader',
+  );
 
   bool _isChecking = false;
   PackageInfo? _packageInfo;
@@ -690,6 +694,18 @@ class _AboutPageState extends State<AboutPage> {
     await _channel.invokeMethod('installApk', {'path': filePath});
   }
 
+  Future<void> _openRepository() async {
+    final launched = await launchUrl(
+      _repositoryUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法打开开源地址')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
@@ -766,20 +782,21 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                    '支持格式：Markdown、HTML',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.muted,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.muted,
-                          letterSpacing: 0,
-                        ),
+                  InkWell(
+                    onTap: _openRepository,
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.primary,
+                              letterSpacing: 0,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.primary,
+                            ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(

@@ -60,14 +60,20 @@ class _FloatingBottomNav extends StatefulWidget {
 }
 
 class _FloatingBottomNavState extends State<_FloatingBottomNav> {
-  static const _itemWidth = 100.0;
+  static const _itemWidth = 104.0;
   static const _itemHeight = 52.0;
-  static const _gap = 8.0;
+  static const _outerPadding = 4.0;
+  static const _navWidth = _itemWidth * 2 + _outerPadding * 2;
+  static const _dragThreshold = _itemWidth * 0.35;
 
   double _dragOffset = 0;
+  bool _isDragging = false;
 
   @override
   Widget build(BuildContext context) {
+    final selectedLeft = _outerPadding +
+        widget.currentIndex * _itemWidth +
+        _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -81,21 +87,22 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
         child: GestureDetector(
           onHorizontalDragUpdate: (details) {
             setState(() {
-              _dragOffset = (_dragOffset + details.delta.dx).clamp(
-                -_itemWidth - _gap,
-                _itemWidth + _gap,
-              );
+              _isDragging = true;
+              final nextOffset = _dragOffset + details.delta.dx;
+              _dragOffset = widget.currentIndex == 0
+                  ? nextOffset.clamp(0, _itemWidth).toDouble()
+                  : nextOffset.clamp(-_itemWidth, 0).toDouble();
             });
           },
           onHorizontalDragEnd: (details) {
             final shouldMoveRight =
                 widget.currentIndex == 0 &&
-                    (_dragOffset > 38 ||
+                    (_dragOffset > _dragThreshold ||
                         details.primaryVelocity != null &&
                             details.primaryVelocity! > 280);
             final shouldMoveLeft =
                 widget.currentIndex == 1 &&
-                    (_dragOffset < -38 ||
+                    (_dragOffset < -_dragThreshold ||
                         details.primaryVelocity != null &&
                             details.primaryVelocity! < -280);
             if (shouldMoveRight) {
@@ -103,52 +110,107 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
             } else if (shouldMoveLeft) {
               widget.onChanged(0);
             }
-            setState(() => _dragOffset = 0);
+            setState(() {
+              _dragOffset = 0;
+              _isDragging = false;
+            });
           },
-          onHorizontalDragCancel: () => setState(() => _dragOffset = 0),
+          onHorizontalDragCancel: () {
+            setState(() {
+              _dragOffset = 0;
+              _isDragging = false;
+            });
+          },
           child: SizedBox(
-            width: _itemWidth * 2 + _gap,
+            width: _navWidth,
             height: _itemHeight,
             child: Stack(
-              clipBehavior: Clip.none,
               children: [
+                const Positioned.fill(child: _NavGlassBase()),
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 220),
+                  duration: _isDragging
+                      ? Duration.zero
+                      : const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
-                  left: (widget.currentIndex == 0 ? 0 : _itemWidth + _gap) +
-                      _dragOffset,
-                  top: 0,
+                  left: selectedLeft,
+                  top: _outerPadding,
                   width: _itemWidth,
-                  height: _itemHeight,
+                  height: _itemHeight - _outerPadding * 2,
                   child: const _SelectedNavCapsule(),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _FloatingNavItem(
-                      selected: widget.currentIndex == 0,
-                      icon: Icons.home_outlined,
-                      selectedIcon: Icons.home_rounded,
-                      label: '首页',
-                      onTap: () {
-                        setState(() => _dragOffset = 0);
-                        widget.onChanged(0);
-                      },
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(_outerPadding),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _FloatingNavItem(
+                          selected: widget.currentIndex == 0,
+                          icon: Icons.home_outlined,
+                          selectedIcon: Icons.home_rounded,
+                          label: '首页',
+                          onTap: () {
+                            setState(() {
+                              _dragOffset = 0;
+                              _isDragging = false;
+                            });
+                            widget.onChanged(0);
+                          },
+                        ),
+                        _FloatingNavItem(
+                          selected: widget.currentIndex == 1,
+                          icon: Icons.settings_outlined,
+                          selectedIcon: Icons.settings_rounded,
+                          label: '设置',
+                          onTap: () {
+                            setState(() {
+                              _dragOffset = 0;
+                              _isDragging = false;
+                            });
+                            widget.onChanged(1);
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: _gap),
-                    _FloatingNavItem(
-                      selected: widget.currentIndex == 1,
-                      icon: Icons.settings_outlined,
-                      selectedIcon: Icons.settings_rounded,
-                      label: '设置',
-                      onTap: () {
-                        setState(() => _dragOffset = 0);
-                        widget.onChanged(1);
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavGlassBase extends StatelessWidget {
+  const _NavGlassBase();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.card.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(
+                color: palette.hairline.withValues(alpha: 0.38),
+              ),
             ),
           ),
         ),
@@ -215,51 +277,36 @@ class _FloatingNavItem extends StatelessWidget {
       selected: selected,
       button: true,
       label: label,
-      child: ClipRRect(
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              splashFactory: NoSplash.splashFactory,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                height: _FloatingBottomNavState._itemHeight,
-                width: _FloatingBottomNavState._itemWidth,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: palette.card.withValues(alpha: selected ? 0.18 : 0.58),
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                  border: Border.all(
-                    color: palette.hairline.withValues(alpha: 0.32),
-                  ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          splashFactory: NoSplash.splashFactory,
+          child: SizedBox(
+            height: _FloatingBottomNavState._itemHeight -
+                _FloatingBottomNavState._outerPadding * 2,
+            width: _FloatingBottomNavState._itemWidth,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  selected ? selectedIcon : icon,
+                  color: foreground,
+                  size: 21,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      selected ? selectedIcon : icon,
-                      color: foreground,
-                      size: 21,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: foreground,
-                            fontWeight:
-                                selected ? FontWeight.w600 : FontWeight.w500,
-                            letterSpacing: 0,
-                          ),
-                    ),
-                  ],
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: foreground,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                        letterSpacing: 0,
+                      ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
