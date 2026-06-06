@@ -44,6 +44,15 @@ enum ReadingMargin {
   final double value;
 }
 
+enum LibraryViewMode {
+  list('列表'),
+  shelf('书架');
+
+  const LibraryViewMode(this.label);
+
+  final String label;
+}
+
 class ReadingPalette {
   const ReadingPalette({
     required this.background,
@@ -93,12 +102,14 @@ class AppSettingsController extends ChangeNotifier {
   static const _readingLineHeightKey = 'settings.readingLineHeight';
   static const _readingThemeKey = 'settings.readingTheme';
   static const _readingMarginKey = 'settings.readingMargin';
+  static const _libraryViewModeKey = 'settings.libraryViewMode';
 
   ThemeMode _themeMode = ThemeMode.system;
   ReadingFontSize _readingFontSize = ReadingFontSize.comfortable;
   ReadingLineHeight _readingLineHeight = ReadingLineHeight.comfortable;
   ReadingTheme _readingTheme = ReadingTheme.defaultTheme;
   ReadingMargin _readingMargin = ReadingMargin.comfortable;
+  LibraryViewMode _libraryViewMode = LibraryViewMode.list;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -109,6 +120,8 @@ class AppSettingsController extends ChangeNotifier {
   ReadingTheme get readingTheme => _readingTheme;
 
   ReadingMargin get readingMargin => _readingMargin;
+
+  LibraryViewMode get libraryViewMode => _libraryViewMode;
 
   double get readingFontSizeValue => _readingFontSize.value;
 
@@ -173,6 +186,9 @@ class AppSettingsController extends ChangeNotifier {
     _readingMargin = _readingMarginFromName(
       preferences.getString(_readingMarginKey),
     );
+    _libraryViewMode = _libraryViewModeFromName(
+      preferences.getString(_libraryViewModeKey),
+    );
     notifyListeners();
   }
 
@@ -231,6 +247,17 @@ class AppSettingsController extends ChangeNotifier {
     await preferences.setString(_readingMarginKey, readingMargin.name);
   }
 
+  Future<void> setLibraryViewMode(LibraryViewMode libraryViewMode) async {
+    if (_libraryViewMode == libraryViewMode) {
+      return;
+    }
+    _libraryViewMode = libraryViewMode;
+    notifyListeners();
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_libraryViewModeKey, libraryViewMode.name);
+  }
+
   static ThemeMode _themeModeFromName(String? name) {
     return ThemeMode.values.firstWhere(
       (mode) => mode.name == name,
@@ -263,6 +290,13 @@ class AppSettingsController extends ChangeNotifier {
     return ReadingMargin.values.firstWhere(
       (margin) => margin.name == name,
       orElse: () => ReadingMargin.comfortable,
+    );
+  }
+
+  static LibraryViewMode _libraryViewModeFromName(String? name) {
+    return LibraryViewMode.values.firstWhere(
+      (viewMode) => viewMode.name == name,
+      orElse: () => LibraryViewMode.list,
     );
   }
 }

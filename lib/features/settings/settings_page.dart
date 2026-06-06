@@ -31,7 +31,7 @@ class SettingsPage extends StatelessWidget {
           _ThemeSettingsCard(),
           SizedBox(height: AppSpacing.sm),
           _SectionLabel(text: '阅读'),
-          _ReadingSettingsCard(),
+          _ReadingSettingsEntry(),
           SizedBox(height: AppSpacing.lg),
           _AboutCard(),
         ],
@@ -141,23 +141,133 @@ class _ThemeSettingsCard extends StatelessWidget {
   }
 }
 
-class _ReadingSettingsCard extends StatelessWidget {
-  const _ReadingSettingsCard();
+class _ReadingSettingsEntry extends StatelessWidget {
+  const _ReadingSettingsEntry();
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      onTap: () => _openReadingSettingsPage(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: const [
-          _CardTitle(
-            icon: Icons.text_fields_rounded,
-            title: '阅读',
-            subtitle: '阅读主题、页边距、字号和行距只影响阅读内容。',
-          ),
-          SizedBox(height: AppSpacing.md),
-          ReadingSettingsPanel(showPreview: true),
+          _ReadingSettingsIcon(),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(child: _ReadingSettingsEntryText()),
+          SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right_rounded),
         ],
+      ),
+    );
+  }
+
+  void _openReadingSettingsPage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const ReadingSettingsPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.3, 0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+}
+
+class _ReadingSettingsIcon extends StatelessWidget {
+  const _ReadingSettingsIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.10),
+        ),
+      ),
+      child: const Icon(
+        Icons.menu_book_rounded,
+        size: 21,
+        color: AppColors.primary,
+      ),
+    );
+  }
+}
+
+class _ReadingSettingsEntryText extends StatelessWidget {
+  const _ReadingSettingsEntryText();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsController>();
+    final palette = context.palette;
+    final summary =
+        '${settings.readingTheme.label} · ${settings.readingMargin.label}边距 · '
+        '${settings.readingFontSize.label}字号 · ${settings.readingLineHeight.label}行距';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('阅读体验', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          summary,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: palette.muted,
+                letterSpacing: 0,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class ReadingSettingsPage extends StatelessWidget {
+  const ReadingSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Scaffold(
+      backgroundColor: palette.parchment,
+      appBar: AppBar(title: const Text('阅读体验')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xl,
+          ),
+          children: [
+            Text(
+              '调整阅读主题、页边距、字号和行距，只影响文档阅读内容。',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: palette.muted,
+                    letterSpacing: 0,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const AppCard(
+              child: ReadingSettingsPanel(showPreview: true),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -220,7 +330,7 @@ class _AboutCard extends StatefulWidget {
 
 class _AboutCardState extends State<_AboutCard> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=20';
+  static const _updateUrl = 'https://alexxia.5imh.xyz/update/?request&local=30';
 
   bool _isChecking = false;
   PackageInfo? _packageInfo;

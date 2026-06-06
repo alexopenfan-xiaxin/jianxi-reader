@@ -54,8 +54,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.2.0',
-      buildNumber: '20',
+      version: '1.3.0',
+      buildNumber: '30',
       buildSignature: '',
     );
   });
@@ -90,6 +90,46 @@ void main() {
 
     expect(find.text('alpha.md'), findsOneWidget);
     expect(find.text('beta.html'), findsNothing);
+  });
+
+  testWidgets('defaults to list view and can switch to shelf view', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026)),
+          _document('beta.html', type: DocumentType.html),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('library_shelf_grid')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('library_view_toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('library_shelf_grid')), findsOneWidget);
+    expect(find.text('alpha.md'), findsOneWidget);
+    expect(find.text('beta.html'), findsOneWidget);
+  });
+
+  testWidgets('restores the saved shelf view preference', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'settings.libraryViewMode': 'shelf',
+    });
+
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026)),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('library_shelf_grid')), findsOneWidget);
   });
 
   testWidgets('exposes rename and remove actions for a document', (
@@ -130,7 +170,7 @@ void main() {
     expect(find.byKey(const ValueKey('empty_library')), findsOneWidget);
   });
 
-  testWidgets('shows settings page reading and theme choices', (tester) async {
+  testWidgets('opens the reading settings page from settings', (tester) async {
     await tester.pumpWidget(
       JianxiReaderApp(documentService: FakeDocumentService([])),
     );
@@ -143,8 +183,17 @@ void main() {
     expect(find.text('系统'), findsOneWidget);
     expect(find.text('浅色'), findsOneWidget);
     expect(find.text('深色'), findsOneWidget);
+    expect(find.text('阅读体验'), findsOneWidget);
+    expect(find.text('版本 1.3.0 (30)'), findsOneWidget);
+    expect(find.text('阅读主题'), findsNothing);
+
+    await tester.tap(find.text('阅读体验'));
+    await tester.pumpAndSettle();
+
     expect(find.text('阅读主题'), findsOneWidget);
-    expect(find.text('版本 1.2.0 (20)'), findsOneWidget);
+    expect(find.text('页边距'), findsOneWidget);
+    expect(find.text('字号'), findsOneWidget);
+    expect(find.text('行距'), findsOneWidget);
   });
 }
 

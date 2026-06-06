@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
 import '../../core/widgets/app_card.dart';
@@ -45,6 +46,7 @@ class _LibraryPageState extends State<LibraryPage>
     return SafeArea(
       child: Consumer<LibraryController>(
         builder: (context, controller, _) {
+          final settings = context.watch<AppSettingsController>();
           if (controller.allDocuments.isNotEmpty &&
               _staggerController.status == AnimationStatus.dismissed) {
             _staggerController.forward();
@@ -66,7 +68,7 @@ class _LibraryPageState extends State<LibraryPage>
                   _ErrorBanner(message: controller.errorMessage!),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                _LibraryTools(controller: controller),
+                _LibraryTools(controller: controller, settings: settings),
                 const SizedBox(height: AppSpacing.lg),
                 if (controller.isLoading)
                   const _LoadingState()
@@ -74,6 +76,8 @@ class _LibraryPageState extends State<LibraryPage>
                   const _EmptyState()
                 else if (controller.documents.isEmpty)
                   const _NoResultsState()
+                else if (settings.libraryViewMode == LibraryViewMode.shelf)
+                  _ShelfGrid(documents: controller.documents)
                 else
                   ...controller.documents.asMap().entries.map(
                         (entry) => _StaggeredFadeIn(
@@ -191,9 +195,10 @@ class _Header extends StatelessWidget {
 }
 
 class _LibraryTools extends StatefulWidget {
-  const _LibraryTools({required this.controller});
+  const _LibraryTools({required this.controller, required this.settings});
 
   final LibraryController controller;
+  final AppSettingsController settings;
 
   @override
   State<_LibraryTools> createState() => _LibraryToolsState();
@@ -236,37 +241,46 @@ class _LibraryToolsState extends State<_LibraryTools> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(
-              color: _isFocused ? AppColors.primaryFocus : palette.hairline,
-              width: _isFocused ? 2 : 1,
+        Row(
+          children: [
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(
+                    color:
+                        _isFocused ? AppColors.primaryFocus : palette.hairline,
+                    width: _isFocused ? 2 : 1,
+                  ),
+                ),
+                child: TextField(
+                  key: const ValueKey('library_search_field'),
+                  focusNode: _focusNode,
+                  controller: _searchController,
+                  onChanged: widget.controller.updateSearchQuery,
+                  decoration: InputDecoration(
+                    hintText: '搜索文档',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: widget.controller.searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: '清除搜索',
+                            onPressed: () {
+                              _searchController.clear();
+                              widget.controller.updateSearchQuery('');
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                    border: InputBorder.none,
+                    filled: false,
+                  ),
+                ),
+              ),
             ),
-          ),
-          child: TextField(
-            key: const ValueKey('library_search_field'),
-            focusNode: _focusNode,
-            controller: _searchController,
-            onChanged: widget.controller.updateSearchQuery,
-            decoration: InputDecoration(
-              hintText: '搜索文档',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: widget.controller.searchQuery.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: '清除搜索',
-                      onPressed: () {
-                        _searchController.clear();
-                        widget.controller.updateSearchQuery('');
-                      },
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-              border: InputBorder.none,
-              filled: false,
-            ),
-          ),
+            const SizedBox(width: AppSpacing.sm),
+            _ViewModeToggle(settings: widget.settings),
+          ],
         ),
         const SizedBox(height: AppSpacing.md),
         Row(
@@ -302,6 +316,48 @@ class _LibraryToolsState extends State<_LibraryTools> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _ViewModeToggle extends StatelessWidget {
+  const _ViewModeToggle({required this.settings});
+
+  final AppSettingsController settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final isShelf = settings.libraryViewMode == LibraryViewMode.shelf;
+    return Tooltip(
+      message: isShelf ? '切换到列表' : '切换到书架',
+      child: Material(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            settings.setLibraryViewMode(
+              isShelf ? LibraryViewMode.list : LibraryViewMode.shelf,
+            );
+          },
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          splashFactory: NoSplash.splashFactory,
+          child: Container(
+            key: const ValueKey('library_view_toggle'),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(color: palette.hairline.withValues(alpha: 0.7)),
+            ),
+            child: Icon(
+              isShelf ? Icons.view_agenda_rounded : Icons.grid_view_rounded,
+              color: isShelf ? AppColors.primary : palette.ink,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -350,6 +406,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Center(
+      key: const ValueKey('empty_library'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: Column(
@@ -447,6 +504,321 @@ class _NoResultsState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ShelfGrid extends StatelessWidget {
+  const _ShelfGrid({required this.documents});
+
+  final List<DocumentEntry> documents;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 620 ? 3 : 2;
+        return GridView.builder(
+          key: const ValueKey('library_shelf_grid'),
+          itemCount: documents.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpacing.sm,
+            mainAxisSpacing: AppSpacing.sm,
+            childAspectRatio: 0.72,
+          ),
+          itemBuilder: (context, index) {
+            return _ShelfDocumentCard(document: documents[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ShelfDocumentCard extends StatefulWidget {
+  const _ShelfDocumentCard({required this.document});
+
+  final DocumentEntry document;
+
+  @override
+  State<_ShelfDocumentCard> createState() => _ShelfDocumentCardState();
+}
+
+class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressController;
+  late final Animation<double> _pressAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: const Duration(milliseconds: 130),
+      vsync: this,
+    );
+    _pressAnimation = Tween<double>(begin: 1.0, end: 0.965).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cover = _CoverStyle.forDocument(widget.document);
+    return AnimatedBuilder(
+      animation: _pressAnimation,
+      builder: (context, child) {
+        return Transform.scale(scale: _pressAnimation.value, child: child);
+      },
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openDocument(context),
+          onTapDown: (_) => _pressController.forward(),
+          onTapUp: (_) => _pressController.reverse(),
+          onTapCancel: () => _pressController.reverse(),
+          splashFactory: NoSplash.splashFactory,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [cover.start, cover.end],
+              ),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: cover.border.withValues(alpha: 0.55)),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 18,
+                    color: cover.spine.withValues(alpha: 0.72),
+                  ),
+                ),
+                Positioned(
+                  right: -30,
+                  top: -26,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _ShelfTypeMark(document: widget.document),
+                          const Spacer(),
+                          PopupMenuButton<_DocumentMenuAction>(
+                            tooltip: '文档操作',
+                            icon: Icon(
+                              Icons.more_horiz_rounded,
+                              color: cover.foreground.withValues(alpha: 0.82),
+                            ),
+                            onSelected: (action) =>
+                                _handleAction(context, action),
+                            itemBuilder: (context) {
+                              return const <PopupMenuEntry<_DocumentMenuAction>>[
+                                PopupMenuItem(
+                                  value: _DocumentMenuAction.rename,
+                                  child: Text('重命名'),
+                                ),
+                                PopupMenuItem(
+                                  value: _DocumentMenuAction.remove,
+                                  child: Text('移出'),
+                                ),
+                              ];
+                            },
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Text(
+                        widget.document.name,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: cover.foreground,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        _documentSummary(widget.document),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: cover.foreground.withValues(alpha: 0.78),
+                              fontSize: 12,
+                              height: 1.35,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDocument(BuildContext context) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final controller = context.read<LibraryController>();
+    await _openReader(context, widget.document);
+    if (context.mounted) {
+      await controller.loadDocuments();
+    }
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    _DocumentMenuAction action,
+  ) async {
+    switch (action) {
+      case _DocumentMenuAction.rename:
+        await showRenameDocumentDialog(context, widget.document);
+      case _DocumentMenuAction.remove:
+        await removeDocumentFromLibrary(context, widget.document);
+    }
+  }
+}
+
+class _ShelfTypeMark extends StatelessWidget {
+  const _ShelfTypeMark({required this.document});
+
+  final DocumentEntry document;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMd = document.type == DocumentType.markdown;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isMd ? Icons.description_rounded : Icons.code_rounded,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            document.type.label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CoverStyle {
+  const _CoverStyle({
+    required this.start,
+    required this.end,
+    required this.spine,
+    required this.border,
+    required this.foreground,
+  });
+
+  final Color start;
+  final Color end;
+  final Color spine;
+  final Color border;
+  final Color foreground;
+
+  static const _styles = [
+    _CoverStyle(
+      start: Color(0xFF2F5C8F),
+      end: Color(0xFF16324F),
+      spine: Color(0xFF0E2238),
+      border: Color(0xFF5E89B9),
+      foreground: Colors.white,
+    ),
+    _CoverStyle(
+      start: Color(0xFF7A5C38),
+      end: Color(0xFF3E2F22),
+      spine: Color(0xFF2A2018),
+      border: Color(0xFFB18A5B),
+      foreground: Colors.white,
+    ),
+    _CoverStyle(
+      start: Color(0xFF346B57),
+      end: Color(0xFF183D32),
+      spine: Color(0xFF102A23),
+      border: Color(0xFF69A58B),
+      foreground: Colors.white,
+    ),
+    _CoverStyle(
+      start: Color(0xFF6A4D7D),
+      end: Color(0xFF33243E),
+      spine: Color(0xFF241A2C),
+      border: Color(0xFFA487B7),
+      foreground: Colors.white,
+    ),
+    _CoverStyle(
+      start: Color(0xFF8A4B42),
+      end: Color(0xFF472620),
+      spine: Color(0xFF301A16),
+      border: Color(0xFFC17A70),
+      foreground: Colors.white,
+    ),
+    _CoverStyle(
+      start: Color(0xFF4C6171),
+      end: Color(0xFF24313A),
+      spine: Color(0xFF182129),
+      border: Color(0xFF8199AA),
+      foreground: Colors.white,
+    ),
+  ];
+
+  static _CoverStyle forDocument(DocumentEntry document) {
+    final source = '${document.path}/${document.name}/${document.type.name}';
+    final hash = source.codeUnits.fold<int>(
+      0,
+      (value, unit) => (value * 31 + unit) & 0x7fffffff,
+    );
+    return _styles[hash % _styles.length];
   }
 }
 
@@ -616,18 +988,25 @@ Future<void> _openReader(BuildContext context, DocumentEntry document) {
       pageBuilder: (context, animation, secondaryAnimation) =>
           ReaderPage(document: document),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.3, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          )),
-          child: child,
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curve,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.985, end: 1).animate(curve),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.08, 0.015),
+                end: Offset.zero,
+              ).animate(curve),
+              child: child,
+            ),
+          ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: const Duration(milliseconds: 260),
     ),
   );
 }

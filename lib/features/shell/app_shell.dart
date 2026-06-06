@@ -76,32 +76,63 @@ class _FloatingBottomNav extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: (isDark ? const Color(0xFF1C1C1E) : palette.card)
-                    .withValues(alpha: 0.82),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    (isDark ? const Color(0xFF2B2B2D) : Colors.white)
+                        .withValues(alpha: 0.92),
+                    (isDark ? const Color(0xFF18181A) : palette.card)
+                        .withValues(alpha: 0.82),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(
-                  color: palette.hairline.withValues(alpha: 0.4),
+                  color: palette.hairline.withValues(alpha: 0.58),
                 ),
-              ),
-              child: NavigationBar(
-                selectedIndex: currentIndex,
-                onDestinationSelected: onChanged,
-                height: 60,
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: '首页',
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(Icons.settings_rounded),
-                    label: '设置',
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 18,
+                    right: 18,
+                    top: 1,
+                    child: Container(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.7),
+                    ),
+                  ),
+                  NavigationBar(
+                    selectedIndex: currentIndex,
+                    onDestinationSelected: onChanged,
+                    height: 60,
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    indicatorColor: AppColors.primary.withValues(
+                      alpha: isDark ? 0.24 : 0.14,
+                    ),
+                    labelBehavior:
+                        NavigationDestinationLabelBehavior.alwaysShow,
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home_rounded),
+                        label: '首页',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.settings_outlined),
+                        selectedIcon: Icon(Icons.settings_rounded),
+                        label: '设置',
+                      ),
+                    ],
                   ),
                 ],
               ),
