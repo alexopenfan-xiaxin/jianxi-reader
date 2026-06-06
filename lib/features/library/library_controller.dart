@@ -82,6 +82,25 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
+  Future<DocumentEntry> importExternalUri(Uri uri) async {
+    _isImporting = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final imported = await documentService.importExternalUri(uri);
+      await documentService.markDocumentOpened(imported);
+      _allDocuments = await documentService.scanLibrary();
+      return imported;
+    } catch (error) {
+      _errorMessage = '打开外部文档失败：$error';
+      rethrow;
+    } finally {
+      _isImporting = false;
+      notifyListeners();
+    }
+  }
+
   Future<DocumentEntry> renameDocument(
     DocumentEntry document,
     String baseName,

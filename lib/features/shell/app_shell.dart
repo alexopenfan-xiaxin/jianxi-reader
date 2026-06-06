@@ -1,9 +1,15 @@
+import 'dart:async';
 import 'dart:ui';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/design_tokens.dart';
+import '../library/document_entry.dart';
+import '../library/library_controller.dart';
 import '../library/library_page.dart';
+import '../reader/reader_page.dart';
 import '../settings/settings_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -14,7 +20,84 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
   int _currentIndex = 0;
+  String? _lastExternalUri;
+  DateTime? _lastExternalUriAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startExternalDocumentListener();
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startExternalDocumentListener() async {
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        unawaited(_handleExternalDocumentUri(initialUri));
+      }
+    } catch (error) {
+      debugPrint('[AppShell] read initial external uri failed: $error');
+    }
+
+    try {
+      _linkSubscription ??= _appLinks.uriLinkStream.listen(
+        (uri) => unawaited(_handleExternalDocumentUri(uri)),
+        onError: (error) {
+          debugPrint('[AppShell] external uri stream error: $error');
+        },
+      );
+    } catch (error) {
+      debugPrint('[AppShell] subscribe external uri stream failed: $error');
+    }
+  }
+
+  Future<void> _handleExternalDocumentUri(Uri uri) async {
+    if (!mounted || _isDuplicateExternalUri(uri)) {
+      return;
+    }
+
+    _lastExternalUri = uri.toString();
+    _lastExternalUriAt = DateTime.now();
+
+    try {
+      final controller = context.read<LibraryController>();
+      final document = await controller.importExternalUri(uri);
+      if (!mounted) return;
+      FocusManager.instance.primaryFocus?.unfocus();
+      if (_currentIndex != 0) {
+        setState(() => _currentIndex = 0);
+      }
+      unawaited(_openExternalReader(context, document));
+    } catch (error) {
+      debugPrint('[AppShell] open external document failed: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('打开外部文档失败：$error')),
+      );
+    }
+  }
+
+  bool _isDuplicateExternalUri(Uri uri) {
+    final uriValue = uri.toString();
+    final lastHandledAt = _lastExternalUriAt;
+    if (_lastExternalUri != uriValue || lastHandledAt == null) {
+      return false;
+    }
+    return DateTime.now().difference(lastHandledAt) <
+        const Duration(seconds: 2);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +275,29 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
       ),
     );
   }
+}
+
+Future<void> _openExternalReader(BuildContext context, DocumentEntry document) {
+  return Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          ReaderPage(document: document),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.08, 0),
+            end: Offset.zero,
+          ).animate(curve),
+          child: FadeTransition(opacity: curve, child: child),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+  );
 }
 
 class _NavGlassBase extends StatelessWidget {

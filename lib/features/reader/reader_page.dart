@@ -28,8 +28,7 @@ class ReaderPage extends StatefulWidget {
 class _ReaderPageState extends State<ReaderPage> {
   late DocumentEntry _document;
   final _scrollController = ScrollController();
-  double _scrollOffset = 0;
-  double _maxScrollExtent = 0;
+  bool _showGlass = false;
   bool _isPreparingDocument = true;
   String? _prepareError;
 
@@ -37,12 +36,7 @@ class _ReaderPageState extends State<ReaderPage> {
   void initState() {
     super.initState();
     _document = widget.document;
-    _scrollController.addListener(() {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-        _maxScrollExtent = _scrollController.position.maxScrollExtent;
-      });
-    });
+    _scrollController.addListener(_handleScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDocument());
   }
 
@@ -52,14 +46,18 @@ class _ReaderPageState extends State<ReaderPage> {
     super.dispose();
   }
 
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final nextShowGlass = _scrollController.offset > 20;
+    if (nextShowGlass != _showGlass && mounted) {
+      setState(() => _showGlass = nextShowGlass);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final showGlass = _scrollOffset > 20;
     final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight;
-    final progress = _maxScrollExtent > 0
-        ? (_scrollOffset / _maxScrollExtent).clamp(0.0, 1.0)
-        : 0.0;
     final settings = context.watch<AppSettingsController>();
     final readingPalette = settings.readingPalette(
       defaultBackground: palette.parchment,
@@ -77,10 +75,10 @@ class _ReaderPageState extends State<ReaderPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor:
-            showGlass ? Colors.transparent : readingPalette.background,
+            _showGlass ? Colors.transparent : readingPalette.background,
         foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
-        flexibleSpace: showGlass
+        flexibleSpace: _showGlass
             ? ClipRRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -121,13 +119,7 @@ class _ReaderPageState extends State<ReaderPage> {
       ),
       body: Column(
         children: [
-          if (progress > 0)
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.transparent,
-              color: AppColors.primary.withValues(alpha: 0.75),
-              minHeight: 2,
-            ),
+          _ReaderProgressBar(scrollController: _scrollController),
           Expanded(
             child: _buildBody(topPadding, settings, readingPalette),
           ),
@@ -150,20 +142,12 @@ class _ReaderPageState extends State<ReaderPage> {
       return _ReaderError(message: _prepareError!);
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollUpdateNotification) {
-          setState(() {});
-        }
-        return false;
-      },
-      child: _ReaderContent(
-        document: _document,
-        scrollController: _scrollController,
-        topPadding: topPadding,
-        settings: settings,
-        readingPalette: readingPalette,
-      ),
+    return _ReaderContent(
+      document: _document,
+      scrollController: _scrollController,
+      topPadding: topPadding,
+      settings: settings,
+      readingPalette: readingPalette,
     );
   }
 
@@ -202,6 +186,37 @@ class _ReaderPageState extends State<ReaderPage> {
           Navigator.of(context).pop();
         }
     }
+  }
+}
+
+class _ReaderProgressBar extends StatelessWidget {
+  const _ReaderProgressBar({required this.scrollController});
+
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: scrollController,
+      builder: (context, _) {
+        if (!scrollController.hasClients) {
+          return const SizedBox(height: 2);
+        }
+        final position = scrollController.position;
+        final progress = position.maxScrollExtent > 0
+            ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
+            : 0.0;
+        if (progress <= 0) {
+          return const SizedBox(height: 2);
+        }
+        return LinearProgressIndicator(
+          value: progress,
+          backgroundColor: Colors.transparent,
+          color: AppColors.primary.withValues(alpha: 0.75),
+          minHeight: 2,
+        );
+      },
+    );
   }
 }
 

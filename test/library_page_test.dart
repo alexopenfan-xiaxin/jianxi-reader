@@ -16,6 +16,13 @@ class FakeDocumentService implements DocumentLibraryService {
   Future<DocumentEntry?> pickAndImportDocument() async => null;
 
   @override
+  Future<DocumentEntry> importExternalUri(Uri uri) async {
+    final document = _document(uri.pathSegments.last);
+    _documents.add(document);
+    return document;
+  }
+
+  @override
   Future<List<DocumentEntry>> scanLibrary() async => List.of(_documents);
 
   @override
@@ -54,8 +61,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.9.0',
-      buildNumber: '90',
+      version: '2.0.0',
+      buildNumber: '100',
       buildSignature: '',
     );
   });
@@ -234,7 +241,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 1.9.0 (90)'), findsOneWidget);
+    expect(find.text('版本 2.0.0 (100)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('支持格式：Markdown、HTML'), findsNothing);

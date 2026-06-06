@@ -34,7 +34,7 @@ class MainActivity : FlutterActivity() {
                         installApk(path)
                         result.success(true)
                     } else {
-                        result.error("INVALID_PATH", "Path is null", null)
+                        result.error("INVALID_PATH", "安装包路径为空", null)
                     }
                 }
                 else -> result.notImplemented()
@@ -47,7 +47,7 @@ class MainActivity : FlutterActivity() {
                     val uri = call.argument<String>("uri")
                     val path = call.argument<String>("path")
                     if (uri.isNullOrEmpty() || path.isNullOrEmpty()) {
-                        result.error("INVALID_ARGUMENT", "uri and path are required", null)
+                        result.error("INVALID_ARGUMENT", "文档地址和本地路径不能为空", null)
                     } else {
                         try {
                             result.success(copyUriToFile(Uri.parse(uri), File(path)))
@@ -56,9 +56,26 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
+                "importExternalUri" -> {
+                    val uriValue = call.argument<String>("uri")
+                    if (uriValue.isNullOrEmpty()) {
+                        result.error("INVALID_ARGUMENT", "文档地址不能为空", null)
+                    } else {
+                        try {
+                            result.success(importExternalUri(Uri.parse(uriValue)))
+                        } catch (error: Exception) {
+                            result.error("IMPORT_FAILED", error.message, null)
+                        }
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -139,7 +156,7 @@ class MainActivity : FlutterActivity() {
     private fun copyUriToFile(uri: Uri, file: File): Map<String, Any?> {
         file.parentFile?.mkdirs()
         val input = contentResolver.openInputStream(uri)
-            ?: throw IOException("Unable to open document input stream")
+            ?: throw IOException("无法读取文档内容")
         input.use { source ->
             file.outputStream().use { destination ->
                 source.copyTo(destination)
@@ -156,6 +173,63 @@ class MainActivity : FlutterActivity() {
             "size" to file.length(),
             "modifiedAt" to file.lastModified()
         )
+    }
+
+    private fun importExternalUri(uri: Uri): Map<String, Any?> {
+        val currentIntent = intent
+        if (currentIntent?.data == uri) {
+            persistReadPermission(uri, currentIntent)
+        }
+
+        val name = documentNameForUri(uri)
+        val file = nextDocumentMirrorFile(name)
+        val metadata = copyUriToFile(uri, file).toMutableMap()
+        metadata["uri"] = uri.toString()
+        return metadata
+    }
+
+    private fun documentNameForUri(uri: Uri): String {
+        val displayName = queryDisplayName(uri)
+        val fallbackName = when (uri.scheme) {
+            "file" -> uri.path?.let { File(it).name }
+            else -> uri.lastPathSegment
+        }
+        val rawName = sanitizeFileName(
+            displayName ?: fallbackName ?: "document"
+        ).ifEmpty { "document" }
+        return ensureSupportedDocumentName(uri, rawName)
+    }
+
+    private fun ensureSupportedDocumentName(uri: Uri, rawName: String): String {
+        val lowerName = rawName.lowercase()
+        if (isSupportedDocumentName(lowerName)) return rawName
+
+        val path = uri.path?.lowercase().orEmpty()
+        val extension = when {
+            path.endsWith(".md") -> ".md"
+            path.endsWith(".markdown") -> ".markdown"
+            path.endsWith(".html") -> ".html"
+            path.endsWith(".htm") -> ".htm"
+            else -> extensionForMimeType(contentResolver.getType(uri))
+        }
+
+        if (extension != null) return "$rawName$extension"
+        throw IOException("仅支持 Markdown 和 HTML 文档: $uri")
+    }
+
+    private fun isSupportedDocumentName(name: String): Boolean {
+        return name.endsWith(".md") ||
+            name.endsWith(".markdown") ||
+            name.endsWith(".html") ||
+            name.endsWith(".htm")
+    }
+
+    private fun extensionForMimeType(mimeType: String?): String? {
+        return when (mimeType?.lowercase()) {
+            "text/markdown", "text/x-markdown" -> ".md"
+            "text/html", "application/xhtml+xml" -> ".html"
+            else -> null
+        }
     }
 
     private fun nextDocumentMirrorFile(displayName: String): File {

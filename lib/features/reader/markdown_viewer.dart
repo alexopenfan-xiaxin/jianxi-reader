@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -463,7 +464,7 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
 
     return Semantics(
       image: true,
-      label: caption.isNotEmpty ? caption : 'Image',
+      label: caption.isNotEmpty ? caption : '图片',
       button: true,
       child: GestureDetector(
         onTap: () => context.onTapImage?.call(
@@ -927,6 +928,146 @@ class EmojiBuilder extends MarkdownWidgetBuilder {
 
 // ── Syntax Highlight Code Block Builder (via syntax_highlight) ─────────────
 
+class PerformanceTableBuilder extends MarkdownWidgetBuilder {
+  const PerformanceTableBuilder();
+
+  static const _minColumnWidth = 136.0;
+
+  @override
+  bool canBuild(MarkdownNode node) => node is TableNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final tableNode = node as TableNode;
+    final columnCount = _columnCount(tableNode);
+    if (columnCount == 0) {
+      return const SizedBox.shrink();
+    }
+
+    final rows = <TableRow>[
+      _buildRow(
+        tableNode.headers,
+        tableNode.alignments,
+        columnCount,
+        styleSheet,
+        context,
+        isHeader: true,
+      ),
+      for (final row in tableNode.rows)
+        _buildRow(
+          row.cells,
+          tableNode.alignments,
+          columnCount,
+          styleSheet,
+          context,
+          isHeader: false,
+        ),
+    ];
+
+    return RepaintBoundary(
+      child: LayoutBuilder(
+        builder: (buildContext, constraints) {
+          final availableWidth =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 0.0;
+          final tableWidth = columnCount * _minColumnWidth;
+          final minWidth =
+              tableWidth > availableWidth ? tableWidth : availableWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: minWidth),
+              child: Table(
+                border: styleSheet.tableBorder,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: rows,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  static int _columnCount(TableNode tableNode) {
+    var columnCount = tableNode.alignments.length;
+    if (tableNode.headers.length > columnCount) {
+      columnCount = tableNode.headers.length;
+    }
+    for (final row in tableNode.rows) {
+      if (row.cells.length > columnCount) {
+        columnCount = row.cells.length;
+      }
+    }
+    return columnCount;
+  }
+
+  TableRow _buildRow(
+    List<List<MarkdownNode>> cells,
+    List<TableAlignment?> alignments,
+    int columnCount,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context, {
+    required bool isHeader,
+  }) {
+    return TableRow(
+      decoration: isHeader ? styleSheet.tableHeaderDecoration : null,
+      children: [
+        for (var index = 0; index < columnCount; index++)
+          _buildCell(
+            index < cells.length ? cells[index] : const <MarkdownNode>[],
+            index < alignments.length ? alignments[index] : null,
+            styleSheet,
+            context,
+            isHeader: isHeader,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCell(
+    List<MarkdownNode> content,
+    TableAlignment? alignment,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context, {
+    required bool isHeader,
+  }) {
+    final textStyle = isHeader
+        ? styleSheet.tableHeaderStyle ?? styleSheet.textStyle
+        : styleSheet.tableCellStyle ?? styleSheet.textStyle;
+    final inlineRenderer = context.inlineRenderer;
+    final child = inlineRenderer != null
+        ? inlineRenderer(content, textStyle)
+        : Text(
+            content.whereType<TextNode>().map((node) => node.content).join(),
+            style: textStyle,
+          );
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: _minColumnWidth),
+      padding: styleSheet.tableCellPadding ??
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      alignment: _alignmentFor(alignment),
+      color: isHeader ? styleSheet.tableHeaderDecoration?.color : null,
+      child: DefaultTextStyle.merge(
+        style: textStyle,
+        child: child,
+      ),
+    );
+  }
+
+  static Alignment _alignmentFor(TableAlignment? alignment) {
+    return switch (alignment) {
+      TableAlignment.center => Alignment.center,
+      TableAlignment.right => Alignment.centerRight,
+      TableAlignment.left || null => Alignment.centerLeft,
+    };
+  }
+}
+
 class SyntaxHighlightCodeBlockBuilder extends MarkdownWidgetBuilder {
   const SyntaxHighlightCodeBlockBuilder({
     this.showCopyButton = true,
@@ -979,6 +1120,29 @@ class _SyntaxHighlightCodeBlockWidget extends StatefulWidget {
       _SyntaxHighlightCodeBlockWidgetState();
 }
 
+class _HighlightCacheKey {
+  const _HighlightCacheKey({
+    required this.language,
+    required this.themeId,
+    required this.code,
+  });
+
+  final String language;
+  final String themeId;
+  final String code;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _HighlightCacheKey &&
+        other.language == language &&
+        other.themeId == themeId &&
+        other.code == code;
+  }
+
+  @override
+  int get hashCode => Object.hash(language, themeId, code);
+}
+
 class _SyntaxHighlightCodeBlockWidgetState
     extends State<_SyntaxHighlightCodeBlockWidget> {
   static bool _initialized = false;
@@ -986,6 +1150,8 @@ class _SyntaxHighlightCodeBlockWidgetState
   static Future<void>? _initFuture;
   static HighlighterTheme? _lightTheme;
   static HighlighterTheme? _darkTheme;
+  static final _highlightCache = LinkedHashMap<_HighlightCacheKey, TextSpan>();
+  static const _highlightCacheLimit = 80;
 
   bool _highlightReady = false;
   bool _copied = false;
@@ -1053,12 +1219,19 @@ class _SyntaxHighlightCodeBlockWidgetState
     );
   }
 
-  Widget _buildCodeContent(BuildContext context, HighlighterTheme? theme) {
+  Widget _buildCodeContent(
+    BuildContext context,
+    HighlighterTheme? theme,
+    String themeId,
+  ) {
     if (theme != null && _canHighlight) {
       try {
         final lang = widget.language!.toLowerCase();
-        final highlighter = Highlighter(language: lang, theme: theme);
-        final highlighted = highlighter.highlight(widget.code);
+        final highlighted = _highlightCode(
+          language: lang,
+          theme: theme,
+          themeId: themeId,
+        );
         if (widget.selectable) return Text.rich(highlighted);
         return RichText(text: highlighted);
       } catch (e) {
@@ -1077,6 +1250,31 @@ class _SyntaxHighlightCodeBlockWidgetState
     return Text(widget.code, style: style);
   }
 
+  TextSpan _highlightCode({
+    required String language,
+    required HighlighterTheme theme,
+    required String themeId,
+  }) {
+    final key = _HighlightCacheKey(
+      language: language,
+      themeId: themeId,
+      code: widget.code,
+    );
+    final cached = _highlightCache.remove(key);
+    if (cached != null) {
+      _highlightCache[key] = cached;
+      return cached;
+    }
+
+    final highlighter = Highlighter(language: language, theme: theme);
+    final highlighted = highlighter.highlight(widget.code);
+    _highlightCache[key] = highlighted;
+    while (_highlightCache.length > _highlightCacheLimit) {
+      _highlightCache.remove(_highlightCache.keys.first);
+    }
+    return highlighted;
+  }
+
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.code));
     setState(() => _copied = true);
@@ -1090,19 +1288,21 @@ class _SyntaxHighlightCodeBlockWidgetState
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final theme = brightness == Brightness.dark ? _darkTheme : _lightTheme;
+    final themeId = brightness == Brightness.dark ? 'dark' : 'light';
 
-    return Container(
-      decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
-        boxShadow: null,
-      ),
-      child: Stack(
-        children: [
+    return RepaintBoundary(
+      child: Container(
+        decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
+          boxShadow: null,
+        ),
+        child: Stack(
+          children: [
           Container(
             padding: widget.styleSheet.codeBlockPadding,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: _highlightReady
-                  ? _buildCodeContent(context, theme)
+                  ? _buildCodeContent(context, theme, themeId)
                   : _buildPlainCode(),
             ),
           ),
@@ -1142,7 +1342,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: Tooltip(
-                            message: 'Highlight failed — check debug log',
+                            message: '代码高亮失败，请查看调试日志',
                             child: Icon(
                               Icons.error_outline,
                               size: 14,
@@ -1184,7 +1384,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                             if (_copied) ...[
                               const SizedBox(width: 4),
                               Text(
-                                'Copied!',
+                                '已复制',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.green[700],
@@ -1200,7 +1400,8 @@ class _SyntaxHighlightCodeBlockWidgetState
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1808,7 +2009,8 @@ class _MermaidZoomControls extends StatelessWidget {
             tooltip: '放大',
             onPressed: canZoomIn ? onZoomIn : null,
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2025,10 +2227,18 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ),
       codeBlockPadding: const EdgeInsets.all(AppSpacing.md),
       tableBorder: TableBorder.all(color: widget.readingPalette.border),
+      tableHeaderDecoration: BoxDecoration(
+        color: widget.readingPalette.surface,
+      ),
       tableHeaderStyle: (textTheme.titleMedium ?? const TextStyle()).copyWith(
         color: widget.readingPalette.foreground,
+        fontWeight: FontWeight.w700,
       ),
       tableCellStyle: bodyStyle.copyWith(fontSize: 15),
+      tableCellPadding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
       horizontalRuleColor: widget.readingPalette.border,
       horizontalRuleThickness: 1,
       linkStyle: bodyStyle.copyWith(color: widget.readingPalette.link),
@@ -2051,6 +2261,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..register('highlight', const HighlightBuilder())
       ..register('superscript', const SuperscriptBuilder())
       ..register('subscript', const SubscriptBuilder())
+      ..register('table', const PerformanceTableBuilder())
       ..register('code_block', const SyntaxHighlightCodeBlockBuilder(
         showCopyButton: true,
         showLanguageTag: true,

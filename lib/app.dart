@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_settings_controller.dart';
@@ -31,6 +32,13 @@ class JianxiReaderApp extends StatelessWidget {
           return MaterialApp(
             title: '简兮阅读器',
             debugShowCheckedModeBanner: false,
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: settings.themeMode,

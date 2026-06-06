@@ -15,6 +15,8 @@ abstract class DocumentLibraryService {
 
   Future<DocumentEntry?> pickAndImportDocument();
 
+  Future<DocumentEntry> importExternalUri(Uri uri);
+
   Future<DocumentEntry> refreshDocument(DocumentEntry document);
 
   Future<DocumentEntry> renameDocument(DocumentEntry document, String baseName);
@@ -120,6 +122,45 @@ class DocumentFileService implements DocumentLibraryService {
       await preferences.setStringList(_referencedPathsKey, paths);
     }
 
+    return DocumentEntry.fromFile(source, isReferenced: true);
+  }
+
+  @override
+  Future<DocumentEntry> importExternalUri(Uri uri) async {
+    if (Platform.isAndroid) {
+      try {
+        final imported = await _importAndroidExternalUri(uri);
+        return imported;
+      } on MissingPluginException {
+        debugPrint(
+          '[DocumentFileService] Android external uri channel unavailable',
+        );
+      }
+    }
+
+    if (uri.scheme.isNotEmpty && uri.scheme != 'file') {
+      throw FileSystemException('无法读取系统传入的文档地址', uri.toString());
+    }
+
+    final sourcePath = uri.scheme == 'file' ? uri.toFilePath() : uri.path;
+    if (sourcePath.isEmpty) {
+      throw FileSystemException('系统没有传入可读取的文件路径', uri.toString());
+    }
+    if (!DocumentFileRules.isSupportedPath(sourcePath)) {
+      throw FileSystemException('仅支持 Markdown 和 HTML 文档', sourcePath);
+    }
+
+    final source = File(sourcePath);
+    if (!source.existsSync()) {
+      throw FileSystemException('文档不存在或已被移除', sourcePath);
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    await _rememberReferencedDocument(
+      preferences: preferences,
+      path: sourcePath,
+      sourceUri: uri.toString(),
+    );
     return DocumentEntry.fromFile(source, isReferenced: true);
   }
 
@@ -314,14 +355,82 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     final preferences = await SharedPreferences.getInstance();
+    await _rememberReferencedDocument(
+      preferences: preferences,
+      path: path,
+      sourceUri: sourceUri,
+    );
+
+    return DocumentEntry.fromFile(File(path), isReferenced: true);
+  }
+
+  Future<DocumentEntry> _importAndroidExternalUri(Uri uri) async {
+    final imported = await _documentAccessChannel
+        .invokeMapMethod<String, Object?>(
+      'importExternalUri',
+      {'uri': uri.toString()},
+    );
+    if (imported == null) {
+      throw FileSystemException('系统没有传入可读取的文件路径', uri.toString());
+    }
+
+    final path = imported['path'] as String?;
+    final sourceUri = imported['uri'] as String?;
+    if (path == null || path.isEmpty || sourceUri == null || sourceUri.isEmpty) {
+      throw FileSystemException('系统没有传入可读取的文件路径', uri.toString());
+    }
+    if (!DocumentFileRules.isSupportedPath(path)) {
+      final importedFile = File(path);
+      if (importedFile.existsSync()) {
+        await importedFile.delete();
+      }
+      throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    await _rememberReferencedDocument(
+      preferences: preferences,
+      path: path,
+      sourceUri: sourceUri,
+    );
+    return DocumentEntry.fromFile(File(path), isReferenced: true);
+  }
+
+  static Future<void> _rememberReferencedDocument({
+    required SharedPreferences preferences,
+    required String path,
+    required String sourceUri,
+  }) async {
     final paths = preferences.getStringList(_referencedPathsKey) ?? [];
+    final previousPath = paths.cast<String?>().firstWhere(
+          (candidate) =>
+              candidate != null &&
+              candidate != path &&
+              preferences.getString(_referencedSourceUriKey(candidate)) ==
+                  sourceUri,
+          orElse: () => null,
+        );
+    if (previousPath != null) {
+      paths.remove(previousPath);
+      await preferences.remove(_referencedSourceUriKey(previousPath));
+      final previousFile = File(previousPath);
+      if (previousFile.existsSync()) {
+        try {
+          await previousFile.delete();
+        } catch (error) {
+          debugPrint(
+            '[DocumentFileService] remove old referenced mirror failed: $error',
+          );
+        }
+      }
+    }
     if (!paths.contains(path)) {
       paths.add(path);
       await preferences.setStringList(_referencedPathsKey, paths);
+    } else if (previousPath != null) {
+      await preferences.setStringList(_referencedPathsKey, paths);
     }
     await preferences.setString(_referencedSourceUriKey(path), sourceUri);
-
-    return DocumentEntry.fromFile(File(path), isReferenced: true);
   }
 
   Future<String?> _refreshReferencedMirror(
