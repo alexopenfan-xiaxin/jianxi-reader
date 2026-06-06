@@ -15,7 +15,7 @@
 
 ## QQ交流群
 
-[点击加入QQ交流群](https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%3D%3D)
+[点击加入QQ交流群](https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%253D%253D)
 
 ## 诞生背景
 

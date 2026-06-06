@@ -54,8 +54,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '1.8.0',
-      buildNumber: '80',
+      version: '1.9.0',
+      buildNumber: '90',
       buildSignature: '',
     );
   });
@@ -234,7 +234,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 1.8.0 (80)'), findsOneWidget);
+    expect(find.text('版本 1.9.0 (90)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('支持格式：Markdown、HTML'), findsNothing);

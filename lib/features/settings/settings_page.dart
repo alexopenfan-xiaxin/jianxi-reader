@@ -522,10 +522,10 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=80';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=90';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
-    'https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%3D%3D',
+    'https://qun.qq.com/universal-share/share?ac=1&svctype=5&tempid=h5_group_info&busi_data=eyJncm91cENvZGUiOiI0NjA3MTkyOTEifQ%253D%253D',
   );
   static final _repositoryUrl = Uri.parse(
     'https://github.com/alexopenfan-xiaxin/jianxi-reader',
