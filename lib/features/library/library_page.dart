@@ -192,25 +192,25 @@ class _FixedLibraryHeader extends StatelessWidget {
     final palette = context.palette;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withOpacity(0.94),
+        color: palette.parchment.withOpacity(0.92),
         border: Border(
           bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
-              AppSpacing.md,
+              AppSpacing.sm,
               AppSpacing.lg,
-              AppSpacing.md,
+              AppSpacing.sm,
             ),
             child: Row(
               children: [
                 const _LibraryHomeIcon(),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +219,7 @@ class _FixedLibraryHeader extends StatelessWidget {
                       Text(
                         '首页',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0,
                             ),
@@ -240,7 +240,7 @@ class _FixedLibraryHeader extends StatelessWidget {
                   icon: Icons.search_rounded,
                   onPressed: () => _openSearchPage(context),
                 ),
-                const SizedBox(width: AppSpacing.xs),
+                const SizedBox(width: 2),
                 _HeaderIconButton(
                   tooltip: '文档排序',
                   icon: Icons.format_list_bulleted_rounded,
@@ -290,52 +290,97 @@ class _LibraryHomeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
-      width: 58,
-      height: 58,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFF242426),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.primary.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.13),
-            blurRadius: 16,
+            color: AppColors.primary.withOpacity(0.14),
+            blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: CustomPaint(painter: _DocumentTypeIconPainter()),
+      child: CustomPaint(
+        painter: _DocumentTypeIconPainter(
+          primary: AppColors.primary,
+          paper: palette.card,
+          line: palette.ink,
+        ),
+      ),
     );
   }
 }
 
 class _DocumentTypeIconPainter extends CustomPainter {
+  const _DocumentTypeIconPainter({
+    required this.primary,
+    required this.paper,
+    required this.line,
+  });
+
+  final Color primary;
+  final Color paper;
+  final Color line;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paperPaint = Paint()..color = const Color(0xFFFFCC00);
+    final backPaint = Paint()..color = primary.withOpacity(0.18);
+    final paperPaint = Paint()..color = paper.withOpacity(0.92);
+    final outlinePaint = Paint()
+      ..color = primary.withOpacity(0.70)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
     final linePaint = Paint()
-      ..color = const Color(0xFF5B4A13)
-      ..strokeWidth = 2.2
+      ..color = line.withOpacity(0.62)
+      ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(size.width * 0.31, size.height * 0.23, 22, 31),
-      const Radius.circular(3),
+    final backRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(size.width * 0.29, size.height * 0.22, 17, 24),
+      const Radius.circular(5),
     );
-    canvas.drawRRect(rect, paperPaint);
+    final frontRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(size.width * 0.38, size.height * 0.29, 18, 25),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(backRect, backPaint);
+    canvas.drawRRect(frontRect, paperPaint);
+    canvas.drawRRect(frontRect, outlinePaint);
+
+    final foldPath = Path()
+      ..moveTo(size.width * 0.61, size.height * 0.29)
+      ..lineTo(size.width * 0.76, size.height * 0.44)
+      ..lineTo(size.width * 0.61, size.height * 0.44)
+      ..close();
+    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.18));
     canvas.drawLine(
-      Offset(size.width * 0.42, size.height * 0.40),
-      Offset(size.width * 0.58, size.height * 0.40),
+      Offset(size.width * 0.61, size.height * 0.30),
+      Offset(size.width * 0.75, size.height * 0.44),
+      outlinePaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.46, size.height * 0.54),
+      Offset(size.width * 0.67, size.height * 0.54),
       linePaint,
     );
     canvas.drawLine(
-      Offset(size.width * 0.42, size.height * 0.52),
-      Offset(size.width * 0.55, size.height * 0.52),
+      Offset(size.width * 0.46, size.height * 0.65),
+      Offset(size.width * 0.62, size.height * 0.65),
       linePaint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DocumentTypeIconPainter oldDelegate) {
+    return oldDelegate.primary != primary ||
+        oldDelegate.paper != paper ||
+        oldDelegate.line != line;
+  }
 }
 
 class _HeaderIconButton extends StatelessWidget {
@@ -354,9 +399,9 @@ class _HeaderIconButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, size: 31),
+      icon: Icon(icon, size: 29),
       color: context.palette.ink,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       padding: EdgeInsets.zero,
     );
   }
@@ -375,38 +420,59 @@ class _FloatingImportButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = !importing;
+    final fillOpacity = enabled ? 0.68 : 0.38;
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFCC00).withOpacity(enabled ? 0.42 : 0.18),
-            blurRadius: enabled ? 30 : 16,
-            spreadRadius: enabled ? 2 : 0,
-            offset: const Offset(0, 12),
+            color: AppColors.primary.withOpacity(enabled ? 0.30 : 0.12),
+            blurRadius: enabled ? 34 : 18,
+            spreadRadius: enabled ? 1 : 0,
+            offset: const Offset(0, 11),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withOpacity(enabled ? 0.18 : 0.08),
+            blurRadius: enabled ? 14 : 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: SizedBox(
-        width: 68,
-        height: 68,
-        child: FloatingActionButton(
-          heroTag: 'library_import',
-          tooltip: '导入文档',
-          onPressed: enabled ? onPressed : null,
-          backgroundColor: const Color(0xFFFFCC00),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: const CircleBorder(),
-          child: importing
-              ? const SizedBox.square(
-                  dimension: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
+      child: Tooltip(
+        message: '导入文档',
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Material(
+              color: AppColors.primary.withOpacity(fillOpacity),
+              shape: CircleBorder(
+                side: BorderSide(color: Colors.white.withOpacity(0.34)),
+              ),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: enabled ? onPressed : null,
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Center(
+                    child: importing
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.add_rounded,
+                            size: 32,
+                            color: Colors.white,
+                          ),
                   ),
-                )
-              : const Icon(Icons.add_rounded, size: 36),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -502,7 +568,7 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                       child: const Text(
                         '取消',
                         style: TextStyle(
-                          color: Color(0xFFE3B600),
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1338,7 +1404,7 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
     context: context,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.18),
+    barrierColor: Colors.black.withOpacity(0.14),
     builder: (context) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -1350,13 +1416,13 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(30),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: context.palette.card.withOpacity(0.88),
+                color: context.palette.card.withOpacity(0.72),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: context.palette.hairline.withOpacity(0.42),
+                  color: context.palette.hairline.withOpacity(0.28),
                 ),
               ),
               child: SafeArea(
@@ -1485,10 +1551,10 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+              filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: context.palette.card.withOpacity(0.94),
+                  color: context.palette.card.withOpacity(0.78),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
