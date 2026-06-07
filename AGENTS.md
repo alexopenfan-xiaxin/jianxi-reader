@@ -53,6 +53,7 @@ lib/
 - HTTP requests use `dart:io` `HttpClient` with `badCertificateCallback` (server uses self-signed cert)
 - Target Flutter compatibility is **Flutter 3.32.5** unless the user explicitly says otherwise. Do not use APIs introduced after that version; for example, `Color.withValues(alpha:)` is not available on 3.32.5, so use a compatible alternative such as `withOpacity(...)` when adjusting alpha.
 - After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
+- On this local machine, do not probe whether `dart` / `flutter` commands are available. Unless the user explicitly asks to run them, skip `dart format`, `flutter analyze`, builds, and Flutter tests here; rely on static review and state that these commands were skipped by local rule.
 
 ## Build & Run
 ```bash
@@ -73,6 +74,7 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
   - 404 JSON → no APK available or file missing
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
 - **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
+- If the user requests code changes but does not explicitly specify `versionName`, increment the patch version by one while keeping the build number monotonic as requested or inferred. Example: after `2.0.1+102`, the next unspecified versionName should be `2.0.2`, not another `2.0.1` build.
 
 ## GitHub
 - Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
