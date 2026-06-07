@@ -117,13 +117,6 @@ class _GlassTrack extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -152,10 +145,9 @@ class _GlassThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.24),
-            blurRadius: 18,
-            spreadRadius: 1,
-            offset: const Offset(0, 6),
+            color: AppColors.primary.withOpacity(0.14),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),

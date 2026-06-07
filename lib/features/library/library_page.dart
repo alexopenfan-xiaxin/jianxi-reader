@@ -420,7 +420,7 @@ class _FloatingImportButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = !importing;
-    final fillOpacity = enabled ? 0.68 : 0.38;
+    final fillOpacity = enabled ? 0.42 : 0.26;
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -442,7 +442,7 @@ class _FloatingImportButton extends StatelessWidget {
         message: '导入文档',
         child: ClipOval(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
             child: Material(
               color: AppColors.primary.withOpacity(fillOpacity),
               shape: CircleBorder(

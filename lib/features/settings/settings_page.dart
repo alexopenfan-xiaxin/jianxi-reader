@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,47 +21,235 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        children: const [
-          _SettingsHeader(),
-          SizedBox(height: AppSpacing.lg),
-          _AppearanceEntry(),
-          SizedBox(height: AppSpacing.sm),
-          _ReadingSettingsEntry(),
-          SizedBox(height: AppSpacing.sm),
-          _AboutEntry(),
+      child: Column(
+        children: [
+          const _FixedSettingsHeader(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              children: const [
+                _AppearanceEntry(),
+                SizedBox(height: AppSpacing.sm),
+                _ReadingSettingsEntry(),
+                SizedBox(height: AppSpacing.sm),
+                _AboutEntry(),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SettingsHeader extends StatelessWidget {
-  const _SettingsHeader();
+class _FixedSettingsHeader extends StatelessWidget {
+  const _FixedSettingsHeader();
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('设置', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          '阅读方式、显示偏好和应用信息集中管理。',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: palette.muted,
-                letterSpacing: 0,
-              ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.parchment.withOpacity(0.92),
+        border: Border(
+          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
         ),
-      ],
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                const _SettingsHomeIcon(),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '设置',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                ),
+                const _SettingsCompanionIcon(),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
+}
+
+class _SettingsHomeIcon extends StatelessWidget {
+  const _SettingsHomeIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: _SettingsHomeIconPainter(
+          primary: AppColors.primary,
+          line: palette.ink,
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsHomeIconPainter extends CustomPainter {
+  const _SettingsHomeIconPainter({
+    required this.primary,
+    required this.line,
+  });
+
+  final Color primary;
+  final Color line;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final knobPaint = Paint()..color = primary.withOpacity(0.92);
+    final trackPaint = Paint()
+      ..color = line.withOpacity(0.58)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final glowPaint = Paint()..color = primary.withOpacity(0.15);
+
+    final rows = <double>[0.34, 0.50, 0.66];
+    final knobs = <double>[0.58, 0.42, 0.64];
+    for (var index = 0; index < rows.length; index++) {
+      final y = size.height * rows[index];
+      canvas.drawLine(
+        Offset(size.width * 0.30, y),
+        Offset(size.width * 0.72, y),
+        trackPaint,
+      );
+      final center = Offset(size.width * knobs[index], y);
+      canvas.drawCircle(center, 5.8, glowPaint);
+      canvas.drawCircle(center, 3.6, knobPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SettingsHomeIconPainter oldDelegate) {
+    return oldDelegate.primary != primary || oldDelegate.line != line;
+  }
+}
+
+class _SettingsCompanionIcon extends StatelessWidget {
+  const _SettingsCompanionIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: CustomPaint(
+        painter: _SettingsCompanionIconPainter(
+          primary: AppColors.primary,
+          line: palette.ink,
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsCompanionIconPainter extends CustomPainter {
+  const _SettingsCompanionIconPainter({
+    required this.primary,
+    required this.line,
+  });
+
+  final Color primary;
+  final Color line;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bodyPaint = Paint()..color = primary.withOpacity(0.10);
+    final linePaint = Paint()
+      ..color = line.withOpacity(0.70)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final accentPaint = Paint()
+      ..color = primary.withOpacity(0.82)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    final headRect = Rect.fromCenter(
+      center: Offset(size.width * 0.50, size.height * 0.53),
+      width: size.width * 0.46,
+      height: size.height * 0.38,
+    );
+    final headPath = Path()
+      ..moveTo(size.width * 0.30, size.height * 0.45)
+      ..lineTo(size.width * 0.35, size.height * 0.30)
+      ..lineTo(size.width * 0.45, size.height * 0.42)
+      ..lineTo(size.width * 0.55, size.height * 0.42)
+      ..lineTo(size.width * 0.65, size.height * 0.30)
+      ..lineTo(size.width * 0.70, size.height * 0.45)
+      ..arcTo(headRect, -0.15, 3.44, false)
+      ..close();
+    canvas.drawPath(headPath, bodyPaint);
+    canvas.drawPath(headPath, linePaint);
+
+    canvas.drawCircle(
+      Offset(size.width * 0.43, size.height * 0.53),
+      1.8,
+      Paint()..color = line.withOpacity(0.80),
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.57, size.height * 0.53),
+      1.8,
+      Paint()..color = line.withOpacity(0.80),
+    );
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.50, size.height * 0.60),
+        width: 9,
+        height: 6,
+      ),
+      0.10,
+      2.94,
+      false,
+      accentPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SettingsCompanionIconPainter oldDelegate) {
+    return oldDelegate.primary != primary || oldDelegate.line != line;
   }
 }
 
@@ -469,7 +658,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=110';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=111';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -909,7 +1098,7 @@ class _AboutPageState extends State<AboutPage> {
                   const SizedBox(height: AppSpacing.lg),
                   SizedBox(
                     width: double.infinity,
-                    child: FilledButton.icon(
+                    child: OutlinedButton.icon(
                       onPressed: _isChecking ? null : _checkForUpdate,
                       icon: _isChecking
                           ? const SizedBox(
