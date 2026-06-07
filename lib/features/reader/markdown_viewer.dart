@@ -2016,9 +2016,8 @@ class _MermaidZoomControls extends StatelessWidget {
             icon: Icons.add_rounded,
             tooltip: '放大',
             onPressed: canZoomIn ? onZoomIn : null,
-          ),
-          ],
-        ),
+          )
+        ],
       ),
     );
   }
