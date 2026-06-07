@@ -24,6 +24,14 @@ abstract class DocumentLibraryService {
   Future<void> removeDocument(DocumentEntry document);
 
   Future<void> markDocumentOpened(DocumentEntry document);
+
+  Future<List<String>> loadTags();
+
+  Future<void> createTag(String name);
+
+  Future<void> deleteTag(String name);
+
+  Future<void> updateDocumentTags(DocumentEntry document, List<String> tags);
 }
 
 class DocumentFileService implements DocumentLibraryService {
@@ -35,6 +43,8 @@ class DocumentFileService implements DocumentLibraryService {
   static const _recentOpenedPrefix = 'document.recentOpened.';
   static const _referencedPathsKey = 'referenced.paths';
   static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
+  static const _tagsKey = 'document.tags';
+  static const _documentTagsPrefix = 'document.tags.';
   static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
 
   @override
@@ -54,6 +64,7 @@ class DocumentFileService implements DocumentLibraryService {
         await DocumentEntry.fromFile(
           file,
           recentOpenedAt: _recentOpenedAt(preferences, file.path),
+          tags: _documentTags(preferences, file.path),
         ),
       );
     }
@@ -85,6 +96,7 @@ class DocumentFileService implements DocumentLibraryService {
           file,
           recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
           isReferenced: true,
+          tags: _documentTags(preferences, refreshedPath),
         ),
       );
     }
@@ -182,7 +194,11 @@ class DocumentFileService implements DocumentLibraryService {
       path: sourcePath,
       sourceUri: uri.toString(),
     );
-    return DocumentEntry.fromFile(source, isReferenced: true);
+    return DocumentEntry.fromFile(
+      source,
+      isReferenced: true,
+      tags: _documentTags(preferences, sourcePath),
+    );
   }
 
   @override
@@ -200,6 +216,7 @@ class DocumentFileService implements DocumentLibraryService {
       file,
       recentOpenedAt: _recentOpenedAt(preferences, path),
       isReferenced: document.isReferenced,
+      tags: _documentTags(preferences, path),
     );
   }
 
@@ -254,6 +271,7 @@ class DocumentFileService implements DocumentLibraryService {
       renamedFile,
       recentOpenedAt: _recentOpenedAt(preferences, renamedFile.path),
       isReferenced: document.isReferenced,
+      tags: _documentTags(preferences, renamedFile.path),
     );
   }
 
@@ -307,6 +325,60 @@ class DocumentFileService implements DocumentLibraryService {
     );
   }
 
+  @override
+  Future<List<String>> loadTags() async {
+    final preferences = await SharedPreferences.getInstance();
+    return _allTags(preferences);
+  }
+
+  @override
+  Future<void> createTag(String name) async {
+    final tag = _validateTagName(name);
+    final preferences = await SharedPreferences.getInstance();
+    final tags = _allTags(preferences);
+    if (!tags.contains(tag)) {
+      tags.add(tag);
+      tags.sort();
+      await preferences.setStringList(_tagsKey, tags);
+    }
+  }
+
+  @override
+  Future<void> deleteTag(String name) async {
+    final tag = _validateTagName(name);
+    final preferences = await SharedPreferences.getInstance();
+    final tags = _allTags(preferences)..remove(tag);
+    await preferences.setStringList(_tagsKey, tags);
+
+    for (final key in preferences.getKeys()) {
+      if (!key.startsWith(_documentTagsPrefix)) {
+        continue;
+      }
+      final documentTags = preferences.getStringList(key) ?? [];
+      if (documentTags.remove(tag)) {
+        await preferences.setStringList(key, documentTags);
+      }
+    }
+  }
+
+  @override
+  Future<void> updateDocumentTags(
+    DocumentEntry document,
+    List<String> tags,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final cleanTags = _cleanTags(tags);
+    final allTags = _allTags(preferences);
+    for (final tag in cleanTags) {
+      if (!allTags.contains(tag)) {
+        allTags.add(tag);
+      }
+    }
+    allTags.sort();
+    await preferences.setStringList(_tagsKey, allTags);
+    await preferences.setStringList(_documentTagsKey(document.path), cleanTags);
+  }
+
   static DateTime? _recentOpenedAt(SharedPreferences preferences, String path) {
     final milliseconds = preferences.getInt(_recentOpenedKey(path));
     if (milliseconds == null) {
@@ -323,11 +395,49 @@ class DocumentFileService implements DocumentLibraryService {
     return '$_referencedSourceUriPrefix$path';
   }
 
+  static String _documentTagsKey(String path) {
+    return '$_documentTagsPrefix$path';
+  }
+
+  static List<String> _allTags(SharedPreferences preferences) {
+    final tags = preferences.getStringList(_tagsKey) ?? [];
+    return _cleanTags(tags);
+  }
+
+  static List<String> _documentTags(SharedPreferences preferences, String path) {
+    final tags = preferences.getStringList(_documentTagsKey(path)) ?? [];
+    return _cleanTags(tags);
+  }
+
+  static List<String> _cleanTags(List<String> tags) {
+    final unique = <String>{};
+    for (final tag in tags) {
+      final cleanTag = tag.trim();
+      if (cleanTag.isNotEmpty) {
+        unique.add(cleanTag);
+      }
+    }
+    final sorted = unique.toList()..sort();
+    return sorted;
+  }
+
+  static String _validateTagName(String name) {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) {
+      throw const FileSystemException('标签名称不能为空');
+    }
+    if (cleanName.length > 16) {
+      throw const FileSystemException('标签名称不能超过 16 个字');
+    }
+    return cleanName;
+  }
+
   static Future<void> _clearDocumentMetadata(
     SharedPreferences preferences,
     String path,
-  ) {
-    return preferences.remove(_recentOpenedKey(path));
+  ) async {
+    await preferences.remove(_recentOpenedKey(path));
+    await preferences.remove(_documentTagsKey(path));
   }
 
   static Future<void> _moveDocumentMetadata(
@@ -336,9 +446,13 @@ class DocumentFileService implements DocumentLibraryService {
     String newPath,
   ) async {
     final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
+    final tags = preferences.getStringList(_documentTagsKey(oldPath));
     await _clearDocumentMetadata(preferences, oldPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
+    }
+    if (tags != null) {
+      await preferences.setStringList(_documentTagsKey(newPath), tags);
     }
   }
 
@@ -388,7 +502,11 @@ class DocumentFileService implements DocumentLibraryService {
         sourceUri: sourceUri,
       );
       documents.add(
-        await DocumentEntry.fromFile(File(path), isReferenced: true),
+        await DocumentEntry.fromFile(
+          File(path),
+          isReferenced: true,
+          tags: _documentTags(preferences, path),
+        ),
       );
     }
     return documents;
@@ -423,7 +541,11 @@ class DocumentFileService implements DocumentLibraryService {
       path: path,
       sourceUri: sourceUri,
     );
-    return DocumentEntry.fromFile(File(path), isReferenced: true);
+    return DocumentEntry.fromFile(
+      File(path),
+      isReferenced: true,
+      tags: _documentTags(preferences, path),
+    );
   }
 
   static Future<void> _rememberReferencedDocument({
@@ -443,6 +565,7 @@ class DocumentFileService implements DocumentLibraryService {
     if (previousPath != null) {
       paths.remove(previousPath);
       await preferences.remove(_referencedSourceUriKey(previousPath));
+      await _moveDocumentMetadata(preferences, previousPath, path);
       final previousFile = File(previousPath);
       if (previousFile.existsSync()) {
         try {

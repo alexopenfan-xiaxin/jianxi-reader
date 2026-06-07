@@ -13,6 +13,7 @@ class DocumentEntry {
     required this.modifiedAt,
     this.recentOpenedAt,
     this.isReferenced = false,
+    this.tags = const [],
   });
 
   final String path;
@@ -22,11 +23,13 @@ class DocumentEntry {
   final DateTime modifiedAt;
   final DateTime? recentOpenedAt;
   final bool isReferenced;
+  final List<String> tags;
 
   static Future<DocumentEntry> fromFile(
     File file, {
     DateTime? recentOpenedAt,
     bool isReferenced = false,
+    List<String> tags = const [],
   }) async {
     final type = DocumentFileRules.typeForPath(file.path);
     if (type == null) {
@@ -42,6 +45,7 @@ class DocumentEntry {
       modifiedAt: stat.modified,
       recentOpenedAt: recentOpenedAt,
       isReferenced: isReferenced,
+      tags: List.unmodifiable(tags),
     );
   }
 

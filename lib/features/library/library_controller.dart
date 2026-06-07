@@ -4,8 +4,8 @@ import '../../core/document_file_service.dart';
 import 'document_entry.dart';
 
 enum LibrarySortMode {
-  modified('修改'),
-  name('名称');
+  modifiedNewest('按修改时间：新到旧'),
+  name('按名称：A 到 Z');
 
   const LibrarySortMode(this.label);
 
@@ -22,15 +22,31 @@ class LibraryController extends ChangeNotifier {
   bool _isImporting = false;
   String? _errorMessage;
   String _searchQuery = '';
-  LibrarySortMode _sortMode = LibrarySortMode.modified;
+  String? _selectedTag;
+  LibrarySortMode _sortMode = LibrarySortMode.modifiedNewest;
+  List<String> _tags = const [];
 
   List<DocumentEntry> get documents {
     final query = _searchQuery.trim().toLowerCase();
     final filtered = _allDocuments.where((document) {
-      if (query.isEmpty) {
+      final matchesQuery =
+          query.isEmpty || document.name.toLowerCase().contains(query);
+      final tag = _selectedTag;
+      final matchesTag = tag == null || document.tags.contains(tag);
+      return matchesQuery && matchesTag;
+    }).toList();
+
+    filtered.sort(_compareDocuments);
+    return filtered;
+  }
+
+  List<DocumentEntry> get documentsIgnoringSearch {
+    final tag = _selectedTag;
+    final filtered = _allDocuments.where((document) {
+      if (tag == null) {
         return true;
       }
-      return document.name.toLowerCase().contains(query);
+      return document.tags.contains(tag);
     }).toList();
 
     filtered.sort(_compareDocuments);
@@ -47,7 +63,11 @@ class LibraryController extends ChangeNotifier {
 
   String get searchQuery => _searchQuery;
 
+  String? get selectedTag => _selectedTag;
+
   LibrarySortMode get sortMode => _sortMode;
+
+  List<String> get tags => _tags;
 
   Future<void> loadDocuments() async {
     _isLoading = true;
@@ -56,6 +76,7 @@ class LibraryController extends ChangeNotifier {
 
     try {
       _allDocuments = await documentService.scanLibrary();
+      _tags = await documentService.loadTags();
     } catch (error) {
       _errorMessage = '读取文档库失败：$error';
     } finally {
@@ -72,6 +93,7 @@ class LibraryController extends ChangeNotifier {
     try {
       final imported = await documentService.pickAndImportDocuments();
       _allDocuments = await documentService.scanLibrary();
+      _tags = await documentService.loadTags();
       return imported;
     } catch (error) {
       _errorMessage = '导入外部文档失败：$error';
@@ -91,6 +113,7 @@ class LibraryController extends ChangeNotifier {
       final imported = await documentService.importExternalUri(uri);
       await documentService.markDocumentOpened(imported);
       _allDocuments = await documentService.scanLibrary();
+      _tags = await documentService.loadTags();
       return imported;
     } catch (error) {
       _errorMessage = '打开外部文档失败：$error';
@@ -107,6 +130,7 @@ class LibraryController extends ChangeNotifier {
   ) async {
     final renamed = await documentService.renameDocument(document, baseName);
     _allDocuments = await documentService.scanLibrary();
+    _tags = await documentService.loadTags();
     _errorMessage = null;
     notifyListeners();
     return renamed;
@@ -115,6 +139,7 @@ class LibraryController extends ChangeNotifier {
   Future<void> removeDocument(DocumentEntry document) async {
     await documentService.removeDocument(document);
     _allDocuments = await documentService.scanLibrary();
+    _tags = await documentService.loadTags();
     _errorMessage = null;
     notifyListeners();
   }
@@ -122,6 +147,7 @@ class LibraryController extends ChangeNotifier {
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
     final refreshed = await documentService.refreshDocument(document);
     _allDocuments = await documentService.scanLibrary();
+    _tags = await documentService.loadTags();
     _errorMessage = null;
     notifyListeners();
     return refreshed;
@@ -130,6 +156,36 @@ class LibraryController extends ChangeNotifier {
   Future<void> markDocumentOpened(DocumentEntry document) async {
     await documentService.markDocumentOpened(document);
     _allDocuments = await documentService.scanLibrary();
+    _tags = await documentService.loadTags();
+    notifyListeners();
+  }
+
+  Future<void> createTag(String name) async {
+    await documentService.createTag(name);
+    _tags = await documentService.loadTags();
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<void> deleteTag(String name) async {
+    await documentService.deleteTag(name);
+    _tags = await documentService.loadTags();
+    if (_selectedTag == name) {
+      _selectedTag = null;
+    }
+    _allDocuments = await documentService.scanLibrary();
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<void> updateDocumentTags(
+    DocumentEntry document,
+    List<String> tags,
+  ) async {
+    await documentService.updateDocumentTags(document, tags);
+    _tags = await documentService.loadTags();
+    _allDocuments = await documentService.scanLibrary();
+    _errorMessage = null;
     notifyListeners();
   }
 
@@ -138,6 +194,14 @@ class LibraryController extends ChangeNotifier {
       return;
     }
     _searchQuery = query;
+    notifyListeners();
+  }
+
+  void updateSelectedTag(String? tag) {
+    if (_selectedTag == tag) {
+      return;
+    }
+    _selectedTag = tag;
     notifyListeners();
   }
 
@@ -151,7 +215,9 @@ class LibraryController extends ChangeNotifier {
 
   int _compareDocuments(DocumentEntry left, DocumentEntry right) {
     return switch (_sortMode) {
-      LibrarySortMode.modified => right.modifiedAt.compareTo(left.modifiedAt),
+      LibrarySortMode.modifiedNewest => right.modifiedAt.compareTo(
+          left.modifiedAt,
+        ),
       LibrarySortMode.name => left.name.toLowerCase().compareTo(
             right.name.toLowerCase(),
           ),

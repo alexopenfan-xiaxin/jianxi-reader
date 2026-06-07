@@ -46,6 +46,8 @@ class FakeDocumentService implements DocumentLibraryService {
       sizeBytes: document.sizeBytes,
       modifiedAt: document.modifiedAt,
       recentOpenedAt: document.recentOpenedAt,
+      isReferenced: document.isReferenced,
+      tags: document.tags,
     );
     _documents[index] = renamed;
     return renamed;
@@ -58,6 +60,30 @@ class FakeDocumentService implements DocumentLibraryService {
 
   @override
   Future<void> markDocumentOpened(DocumentEntry document) async {}
+
+  @override
+  Future<List<String>> loadTags() async {
+    final tags = <String>{};
+    for (final document in _documents) {
+      tags.addAll(document.tags);
+    }
+    return tags.toList()..sort();
+  }
+
+  @override
+  Future<void> createTag(String name) async {}
+
+  @override
+  Future<void> deleteTag(String name) async {}
+
+  @override
+  Future<void> updateDocumentTags(
+    DocumentEntry document,
+    List<String> tags,
+  ) async {
+    final index = _documents.indexWhere((entry) => entry.path == document.path);
+    _documents[index] = _copyDocument(document, tags: tags);
+  }
 }
 
 void main() {
@@ -66,8 +92,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '2.0.3',
-      buildNumber: '104',
+      version: '2.1.0',
+      buildNumber: '110',
       buildSignature: '',
     );
   });
@@ -83,6 +109,25 @@ void main() {
     expect(find.byKey(const ValueKey('import_button')), findsOneWidget);
   });
 
+  testWidgets('shows the fixed home header and floating import action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026)),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('首页'), findsWidgets);
+    expect(find.text('1 个文档'), findsOneWidget);
+    expect(find.byTooltip('搜索文档'), findsOneWidget);
+    expect(find.byTooltip('文档排序'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import_button')), findsOneWidget);
+  });
+
   testWidgets('filters documents from the search field', (tester) async {
     await tester.pumpWidget(
       JianxiReaderApp(
@@ -94,10 +139,32 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('搜索文档'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('library_search_field')),
       'alpha',
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('alpha.md'), findsOneWidget);
+    expect(find.text('beta.html'), findsNothing);
+  });
+
+  testWidgets('filters documents by tag from the search page', (tester) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026), tags: ['工作']),
+          _document('beta.html', type: DocumentType.html, tags: ['生活']),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('搜索文档'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工作'));
     await tester.pumpAndSettle();
 
     expect(find.text('alpha.md'), findsOneWidget);
@@ -177,6 +244,25 @@ void main() {
     expect(find.byKey(const ValueKey('library_shelf_grid')), findsOneWidget);
   });
 
+  testWidgets('opens the rounded sort sheet from the header', (tester) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026)),
+          _document('beta.html', type: DocumentType.html),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('文档排序'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('文档排序'), findsOneWidget);
+    expect(find.text('按修改时间：新到旧'), findsOneWidget);
+    expect(find.text('按名称：A 到 Z'), findsOneWidget);
+  });
+
   testWidgets('exposes rename and remove actions for a document', (
     tester,
   ) async {
@@ -193,6 +279,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('设置标签'), findsOneWidget);
     expect(find.text('移出'), findsOneWidget);
   });
 
@@ -214,6 +301,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('重命名'), findsOneWidget);
+    expect(find.text('设置标签'), findsOneWidget);
     expect(find.text('移出'), findsOneWidget);
   });
 
@@ -234,6 +322,29 @@ void main() {
 
     expect(find.text('article.md'), findsNothing);
     expect(find.byKey(const ValueKey('empty_library')), findsOneWidget);
+  });
+
+  testWidgets('adds a tag from the document actions menu', (tester) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('article.md', modifiedAt: DateTime(2026)),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('文档操作').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('设置标签'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('tag_name_field')), '工作');
+    await tester.tap(find.text('添加'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('工作'), findsOneWidget);
   });
 
   testWidgets('opens the reading settings page from settings', (tester) async {
@@ -271,7 +382,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 2.0.3 (104)'), findsOneWidget);
+    expect(find.text('版本 2.1.0 (110)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('缓存清理'), findsOneWidget);
@@ -291,6 +402,7 @@ DocumentEntry _document(
   DocumentType type = DocumentType.markdown,
   DateTime? modifiedAt,
   DateTime? recentOpenedAt,
+  List<String> tags = const [],
 }) {
   return DocumentEntry(
     path: '/tmp/$name',
@@ -299,5 +411,19 @@ DocumentEntry _document(
     sizeBytes: 2048,
     modifiedAt: modifiedAt ?? DateTime(2025),
     recentOpenedAt: recentOpenedAt,
+    tags: tags,
+  );
+}
+
+DocumentEntry _copyDocument(DocumentEntry document, {List<String>? tags}) {
+  return DocumentEntry(
+    path: document.path,
+    name: document.name,
+    type: document.type,
+    sizeBytes: document.sizeBytes,
+    modifiedAt: document.modifiedAt,
+    recentOpenedAt: document.recentOpenedAt,
+    isReferenced: document.isReferenced,
+    tags: tags ?? document.tags,
   );
 }

@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +13,7 @@ import 'document_actions.dart';
 import 'document_entry.dart';
 import 'library_controller.dart';
 
-enum _DocumentMenuAction { rename, remove }
+enum _DocumentMenuAction { rename, tags, remove }
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -25,10 +24,7 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage>
     with SingleTickerProviderStateMixin {
-  static String? _sessionSaying;
-
   late AnimationController _staggerController;
-  String _saying = '安静阅读，慢慢抵达。';
 
   @override
   void initState() {
@@ -40,13 +36,6 @@ class _LibraryPageState extends State<LibraryPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _staggerController.forward();
     });
-    final cachedSaying = _sessionSaying;
-    if (cachedSaying == null) {
-      _sessionSaying = _saying;
-      _loadSaying();
-    } else {
-      _saying = cachedSaying;
-    }
   }
 
   @override
@@ -65,79 +54,100 @@ class _LibraryPageState extends State<LibraryPage>
               _staggerController.status == AnimationStatus.dismissed) {
             _staggerController.forward();
           }
-          return GestureDetector(
-            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-            behavior: HitTestBehavior.translucent,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              children: [
-                _Header(controller: controller, saying: _saying),
-                if (controller.errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _ErrorBanner(message: controller.errorMessage!),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                _LibraryTools(controller: controller),
-                const SizedBox(height: AppSpacing.lg),
-                if (controller.isLoading)
-                  const _LoadingState()
-                else if (controller.allDocuments.isEmpty)
-                  const _EmptyState()
-                else if (controller.documents.isEmpty)
-                  const _NoResultsState()
-                else if (settings.libraryViewMode == LibraryViewMode.shelf)
-                  _ShelfGrid(documents: controller.documents)
-                else
-                  ...controller.documents.asMap().entries.map(
-                        (entry) => _StaggeredFadeIn(
-                          index: entry.key,
-                          controller: _staggerController,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: _DocumentTile(document: entry.value),
-                          ),
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  _FixedLibraryHeader(controller: controller),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                      behavior: HitTestBehavior.translucent,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                          AppSpacing.lg,
+                          118,
                         ),
+                        children: [
+                          if (controller.errorMessage != null) ...[
+                            _ErrorBanner(message: controller.errorMessage!),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
+                          if (controller.isLoading)
+                            const _LoadingState()
+                          else if (controller.allDocuments.isEmpty)
+                            const _EmptyState()
+                          else if (controller.documents.isEmpty)
+                            const _NoResultsState()
+                          else if (settings.libraryViewMode ==
+                              LibraryViewMode.shelf)
+                            _ShelfGrid(documents: controller.documents)
+                          else
+                            ...controller.documents.asMap().entries.map(
+                                  (entry) => _StaggeredFadeIn(
+                                    index: entry.key,
+                                    controller: _staggerController,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: AppSpacing.sm,
+                                      ),
+                                      child: _DocumentTile(
+                                        document: entry.value,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ],
                       ),
-              ],
-            ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: AppSpacing.lg,
+                bottom: 86,
+                child: _FloatingImportButton(
+                  key: const ValueKey('import_button'),
+                  importing: controller.isImporting,
+                  onPressed: () => _importDocuments(context, controller),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  Future<void> _loadSaying() async {
-    final client = HttpClient();
-    try {
-      final request = await client.getUrl(
-        Uri.parse('https://uapis.cn/api/v1/saying'),
-      );
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-      if (response.statusCode != HttpStatus.ok) {
-        return;
-      }
-      final data = jsonDecode(body);
-      if (data is! Map<String, dynamic>) {
-        return;
-      }
-      final text = data['text'];
-      if (text is String && text.trim().isNotEmpty && mounted) {
-        final saying = text.trim();
-        _sessionSaying = saying;
-        setState(() => _saying = saying);
-      }
-    } catch (_) {
-      // The saying is decorative; keep the local fallback on network errors.
-    } finally {
-      client.close(force: true);
-    }
+  Future<void> _importDocuments(
+    BuildContext context,
+    LibraryController controller,
+  ) {
+    return _importAndMaybeOpen(context, controller);
+  }
+}
+
+Future<void> _importAndMaybeOpen(
+  BuildContext context,
+  LibraryController controller,
+) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  final documents = await controller.importExternalDocuments();
+  if (!context.mounted || documents.isEmpty) {
+    return;
+  }
+  HapticService.selectionClick();
+  if (documents.length > 1) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已导入 ${documents.length} 个文档')),
+    );
+    return;
+  }
+  await _openReader(context, documents.single);
+  if (context.mounted) {
+    await controller.loadDocuments();
   }
 }
 
@@ -172,74 +182,188 @@ class _StaggeredFadeIn extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.controller, required this.saying});
+class _FixedLibraryHeader extends StatelessWidget {
+  const _FixedLibraryHeader({required this.controller});
 
   final LibraryController controller;
-  final String saying;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                '简兮',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            _GlowingImportButton(
-              key: const ValueKey('import_button'),
-              importing: controller.isImporting,
-              onPressed: () => _importDocument(context, controller),
-            ),
-          ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.parchment.withOpacity(0.94),
+        border: Border(
+          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          saying,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: palette.muted,
-                letterSpacing: 0,
-              ),
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                const _LibraryHomeIcon(),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '首页',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${controller.allDocuments.length} 个文档',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: palette.muted,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                _HeaderIconButton(
+                  tooltip: '搜索文档',
+                  icon: Icons.search_rounded,
+                  onPressed: () => _openSearchPage(context),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                _HeaderIconButton(
+                  tooltip: '文档排序',
+                  icon: Icons.format_list_bulleted_rounded,
+                  onPressed: () => _showSortSheet(context),
+                ),
+              ],
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 
-  Future<void> _importDocument(
-    BuildContext context,
-    LibraryController controller,
-  ) async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    final documents = await controller.importExternalDocuments();
-    if (!context.mounted || documents.isEmpty) {
-      return;
-    }
-    HapticService.selectionClick();
-    if (documents.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已导入 ${documents.length} 个文档')),
-      );
-      return;
-    }
-    await _openReader(context, documents.single);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
+  void _openSearchPage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const _LibrarySearchPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 220),
+      ),
+    );
+  }
+
+  void _showSortSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.36),
+      builder: (context) => const _SortSheet(),
+    );
   }
 }
 
-class _GlowingImportButton extends StatelessWidget {
-  const _GlowingImportButton({
+class _LibraryHomeIcon extends StatelessWidget {
+  const _LibraryHomeIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: const Color(0xFF242426),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.13),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: CustomPaint(painter: _DocumentTypeIconPainter()),
+    );
+  }
+}
+
+class _DocumentTypeIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paperPaint = Paint()..color = const Color(0xFFFFCC00);
+    final linePaint = Paint()
+      ..color = const Color(0xFF5B4A13)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(size.width * 0.31, size.height * 0.23, 22, 31),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(rect, paperPaint);
+    canvas.drawLine(
+      Offset(size.width * 0.42, size.height * 0.40),
+      Offset(size.width * 0.58, size.height * 0.40),
+      linePaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.42, size.height * 0.52),
+      Offset(size.width * 0.55, size.height * 0.52),
+      linePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 31),
+      color: context.palette.ink,
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      padding: EdgeInsets.zero,
+    );
+  }
+}
+
+class _FloatingImportButton extends StatelessWidget {
+  const _FloatingImportButton({
     required this.importing,
     required this.onPressed,
     super.key,
@@ -253,177 +377,387 @@ class _GlowingImportButton extends StatelessWidget {
     final enabled = !importing;
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
+        shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(enabled ? 0.26 : 0.10),
-            blurRadius: enabled ? 24 : 12,
-            spreadRadius: enabled ? 1 : 0,
-            offset: const Offset(0, 7),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(enabled ? 0.12 : 0.04),
-            blurRadius: enabled ? 8 : 4,
+            color: const Color(0xFFFFCC00).withOpacity(enabled ? 0.42 : 0.18),
+            blurRadius: enabled ? 30 : 16,
+            spreadRadius: enabled ? 2 : 0,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: AppColors.primary.withOpacity(0.22)),
-        ),
-        child: IconButton.filled(
+      child: SizedBox(
+        width: 68,
+        height: 68,
+        child: FloatingActionButton(
+          heroTag: 'library_import',
           tooltip: '导入文档',
           onPressed: enabled ? onPressed : null,
-          icon: importing
+          backgroundColor: const Color(0xFFFFCC00),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: const CircleBorder(),
+          child: importing
               ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  dimension: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                  ),
                 )
-              : const Icon(Icons.add_rounded),
+              : const Icon(Icons.add_rounded, size: 36),
         ),
       ),
     );
   }
 }
 
-class _LibraryTools extends StatefulWidget {
-  const _LibraryTools({required this.controller});
-
-  final LibraryController controller;
+class _LibrarySearchPage extends StatefulWidget {
+  const _LibrarySearchPage();
 
   @override
-  State<_LibraryTools> createState() => _LibraryToolsState();
+  State<_LibrarySearchPage> createState() => _LibrarySearchPageState();
 }
 
-class _LibraryToolsState extends State<_LibraryTools> {
-  late final TextEditingController _searchController;
-  final _focusNode = FocusNode();
-  bool _isFocused = false;
+class _LibrarySearchPageState extends State<_LibrarySearchPage> {
+  late final TextEditingController _controller;
+  late final LibraryController _libraryController;
 
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController(
-      text: widget.controller.searchQuery,
-    );
-    _focusNode.addListener(() {
-      setState(() => _isFocused = _focusNode.hasFocus);
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _LibraryTools oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_searchController.text != widget.controller.searchQuery) {
-      _searchController.text = widget.controller.searchQuery;
-    }
+    _libraryController = context.read<LibraryController>();
+    _controller = TextEditingController(text: _libraryController.searchQuery);
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _focusNode.dispose();
+    _libraryController.updateSearchQuery('');
+    _libraryController.updateSelectedTag(null);
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: palette.card,
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                  border: Border.all(
-                    color:
-                        _isFocused ? AppColors.primaryFocus : palette.hairline,
-                    width: _isFocused ? 2 : 1,
-                  ),
-                ),
-                child: TextField(
-                  key: const ValueKey('library_search_field'),
-                  focusNode: _focusNode,
-                  controller: _searchController,
-                  onChanged: widget.controller.updateSearchQuery,
-                  decoration: InputDecoration(
-                    hintText: '搜索文档',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.sm,
-                    ),
-                    suffixIcon: widget.controller.searchQuery.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: '清除搜索',
-                            onPressed: () {
-                              _searchController.clear();
-                              widget.controller.updateSearchQuery('');
-                            },
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                    border: InputBorder.none,
-                    filled: false,
-                  ),
-                ),
+    return Scaffold(
+      backgroundColor: palette.parchment,
+      body: SafeArea(
+        child: Consumer<LibraryController>(
+          builder: (context, controller, _) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xl,
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            _SortModeButton(controller: widget.controller),
-          ],
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: palette.dividerSoft,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                        ),
+                        child: TextField(
+                          key: const ValueKey('library_search_field'),
+                          controller: _controller,
+                          autofocus: true,
+                          onChanged: controller.updateSearchQuery,
+                          decoration: InputDecoration(
+                            hintText: '搜索文档',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.sm,
+                            ),
+                            suffixIcon: controller.searchQuery.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: '清除搜索',
+                                    onPressed: () {
+                                      _controller.clear();
+                                      controller.updateSearchQuery('');
+                                    },
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text(
+                        '取消',
+                        style: TextStyle(
+                          color: Color(0xFFE3B600),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '搜索指定标签',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: palette.muted,
+                        letterSpacing: 0,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _SearchTagWrap(controller: controller),
+                if (controller.documents.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  ...controller.documents.map(
+                    (document) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: _SearchResultTile(document: document),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 }
 
-class _SortModeButton extends StatelessWidget {
-  const _SortModeButton({required this.controller});
+class _SearchTagWrap extends StatelessWidget {
+  const _SearchTagWrap({required this.controller});
 
   final LibraryController controller;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
-    final sortMode = controller.sortMode;
-    return Tooltip(
-      message: '排序：${sortMode.label}',
-      child: Material(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            controller.updateSortMode(
-              sortMode == LibrarySortMode.modified
-                  ? LibrarySortMode.name
-                  : LibrarySortMode.modified,
-            );
-          },
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          splashFactory: NoSplash.splashFactory,
-          child: Container(
-            key: const ValueKey('library_sort_toggle'),
-            width: 48,
-            height: 46,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withOpacity(0.7)),
-            ),
-            child: Icon(
-              sortMode == LibrarySortMode.modified
-                  ? Icons.schedule_rounded
-                  : Icons.sort_by_alpha_rounded,
-              color: AppColors.primary,
+    final tags = controller.tags;
+    if (tags.isEmpty) {
+      return Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: const [_SearchTagChip(label: '无标签', selected: true)],
+      );
+    }
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        _SearchTagChip(
+          label: '全部',
+          selected: controller.selectedTag == null,
+          onTap: () => controller.updateSelectedTag(null),
+        ),
+        for (final tag in tags)
+          _SearchTagChip(
+            label: tag,
+            selected: controller.selectedTag == tag,
+            onTap: () => controller.updateSelectedTag(tag),
+          ),
+      ],
+    );
+  }
+}
+
+class _SearchTagChip extends StatelessWidget {
+  const _SearchTagChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? const Color(0xFF1D1D1F) : context.palette.ink;
+    return ActionChip(
+      onPressed: onTap,
+      avatar: const Icon(Icons.label_outline_rounded, size: 18),
+      label: Text(label),
+      backgroundColor: selected
+          ? const Color(0xFFFFCC00).withOpacity(0.18)
+          : context.palette.dividerSoft,
+      labelStyle: TextStyle(
+        color: foreground,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+        letterSpacing: 0,
+      ),
+      side: BorderSide.none,
+      shape: const StadiumBorder(),
+    );
+  }
+}
+
+class _SearchResultTile extends StatelessWidget {
+  const _SearchResultTile({required this.document});
+
+  final DocumentEntry document;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: () => _openReader(context, document),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(document.name, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            _documentSummary(document),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.palette.muted,
+                  letterSpacing: 0,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SortSheet extends StatelessWidget {
+  const _SortSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LibraryController>(
+      builder: (context, controller, _) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(42),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.palette.card.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(42),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '文档排序',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0,
+                                  ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        for (final mode in LibrarySortMode.values)
+                          _SortOptionTile(
+                            mode: mode,
+                            selected: controller.sortMode == mode,
+                            onTap: () {
+                              controller.updateSortMode(mode);
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            '取消',
+                            style: TextStyle(
+                              color: Color(0xFFE3B600),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _SortOptionTile extends StatelessWidget {
+  const _SortOptionTile({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final LibrarySortMode mode;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: Container(
+        height: 72,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: context.palette.hairline),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                mode.label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+              ),
+            ),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFFE3B600)
+                      : context.palette.hairline,
+                  width: selected ? 5 : 2,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -527,19 +861,7 @@ class _EmptyState extends StatelessWidget {
     BuildContext context,
     LibraryController controller,
   ) async {
-    final documents = await controller.importExternalDocuments();
-    if (!context.mounted || documents.isEmpty) return;
-    HapticService.selectionClick();
-    if (documents.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已导入 ${documents.length} 个文档')),
-      );
-      return;
-    }
-    await _openReader(context, documents.single);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
+    await _importAndMaybeOpen(context, controller);
   }
 }
 
@@ -722,6 +1044,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                               letterSpacing: 0,
                             ),
                       ),
+                      _DocumentTagRow(tags: widget.document.tags),
                     ],
                   ),
                 ),
@@ -749,6 +1072,8 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     switch (action) {
       case _DocumentMenuAction.rename:
         await showRenameDocumentDialog(context, widget.document);
+      case _DocumentMenuAction.tags:
+        await _showTagEditor(context, widget.document);
       case _DocumentMenuAction.remove:
         await removeDocumentFromLibrary(context, widget.document);
     }
@@ -756,33 +1081,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
 
   Future<void> _showShelfActions(BuildContext context) async {
     _pressController.reverse();
-    final action = await showModalBottomSheet<_DocumentMenuAction>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.drive_file_rename_outline_rounded),
-                title: const Text('重命名'),
-                onTap: () => Navigator.of(context).pop(
-                  _DocumentMenuAction.rename,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline_rounded),
-                title: const Text('移出'),
-                onTap: () => Navigator.of(context).pop(
-                  _DocumentMenuAction.remove,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final action = await _showGlassDocumentMenu(context, widget.document);
     if (action != null && mounted) {
       await _handleAction(context, action);
     }
@@ -983,25 +1282,22 @@ class _DocumentTileState extends State<_DocumentTile>
                           letterSpacing: 0,
                         ),
                   ),
+                  _DocumentTagRow(tags: widget.document.tags),
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            PopupMenuButton<_DocumentMenuAction>(
+            IconButton(
               tooltip: '文档操作',
               icon: const Icon(Icons.more_horiz_rounded),
-              onSelected: (action) => _handleAction(context, action),
-              itemBuilder: (context) {
-                return const <PopupMenuEntry<_DocumentMenuAction>>[
-                  PopupMenuItem(
-                    value: _DocumentMenuAction.rename,
-                    child: Text('重命名'),
-                  ),
-                  PopupMenuItem(
-                    value: _DocumentMenuAction.remove,
-                    child: Text('移出'),
-                  ),
-                ];
+              onPressed: () async {
+                final action = await _showGlassDocumentMenu(
+                  context,
+                  widget.document,
+                );
+                if (action != null && context.mounted) {
+                  await _handleAction(context, action);
+                }
               },
             ),
           ],
@@ -1026,9 +1322,414 @@ class _DocumentTileState extends State<_DocumentTile>
     switch (action) {
       case _DocumentMenuAction.rename:
         await showRenameDocumentDialog(context, widget.document);
+      case _DocumentMenuAction.tags:
+        await _showTagEditor(context, widget.document);
       case _DocumentMenuAction.remove:
         await removeDocumentFromLibrary(context, widget.document);
     }
+  }
+}
+
+Future<_DocumentMenuAction?> _showGlassDocumentMenu(
+  BuildContext context,
+  DocumentEntry document,
+) {
+  return showModalBottomSheet<_DocumentMenuAction>(
+    context: context,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.18),
+    builder: (context) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.palette.card.withOpacity(0.88),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: context.palette.hairline.withOpacity(0.42),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.xs,
+                      ),
+                      child: Text(
+                        document.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    _GlassMenuTile(
+                      icon: Icons.drive_file_rename_outline_rounded,
+                      title: '重命名',
+                      action: _DocumentMenuAction.rename,
+                    ),
+                    _GlassMenuTile(
+                      icon: Icons.label_outline_rounded,
+                      title: '设置标签',
+                      action: _DocumentMenuAction.tags,
+                    ),
+                    _GlassMenuTile(
+                      icon: Icons.remove_circle_outline_rounded,
+                      title: '移出',
+                      action: _DocumentMenuAction.remove,
+                      destructive: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _GlassMenuTile extends StatelessWidget {
+  const _GlassMenuTile({
+    required this.icon,
+    required this.title,
+    required this.action,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final _DocumentMenuAction action;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : context.palette.ink;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              letterSpacing: 0,
+            ),
+      ),
+      onTap: () => Navigator.of(context).pop(action),
+    );
+  }
+}
+
+Future<void> _showTagEditor(BuildContext context, DocumentEntry document) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => _TagEditorSheet(document: document),
+  );
+}
+
+class _TagEditorSheet extends StatefulWidget {
+  const _TagEditorSheet({required this.document});
+
+  final DocumentEntry document;
+
+  @override
+  State<_TagEditorSheet> createState() => _TagEditorSheetState();
+}
+
+class _TagEditorSheetState extends State<_TagEditorSheet> {
+  late final TextEditingController _tagController;
+  late final Set<String> _selectedTags;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tagController = TextEditingController();
+    _selectedTags = widget.document.tags.toSet();
+  }
+
+  @override
+  void dispose() {
+    _tagController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LibraryController>(
+      builder: (context, controller, _) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.palette.card.withOpacity(0.94),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '设置标签',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        widget.document.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: context.palette.muted,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          for (final tag in controller.tags)
+                            _EditableTagChip(
+                              tag: tag,
+                              selected: _selectedTags.contains(tag),
+                              canDelete: !controller.allDocuments.any(
+                                (document) => document.tags.contains(tag),
+                              ),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedTags.add(tag);
+                                  } else {
+                                    _selectedTags.remove(tag);
+                                  }
+                                });
+                              },
+                              onDeleted: () => _deleteTag(controller, tag),
+                            ),
+                          if (controller.tags.isEmpty)
+                            Text(
+                              '默认无标签。先创建标签，再为文档勾选。',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: context.palette.muted,
+                                    letterSpacing: 0,
+                                  ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              key: const ValueKey('tag_name_field'),
+                              controller: _tagController,
+                              decoration: const InputDecoration(
+                                hintText: '新建标签',
+                              ),
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _createTag(controller),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          FilledButton(
+                            onPressed: () => _createTag(controller),
+                            child: const Text('添加'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => Navigator.of(context).pop(),
+                              child: const Text('取消'),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => _saveTags(controller),
+                              child: Text(_isSaving ? '保存中' : '保存'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _createTag(LibraryController controller) async {
+    final tag = _tagController.text.trim();
+    if (tag.isEmpty) {
+      return;
+    }
+    try {
+      await controller.createTag(tag);
+      setState(() {
+        _selectedTags.add(tag);
+        _tagController.clear();
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('创建标签失败：$error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteTag(LibraryController controller, String tag) async {
+    try {
+      await controller.deleteTag(tag);
+      setState(() => _selectedTags.remove(tag));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除标签失败：$error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveTags(LibraryController controller) async {
+    setState(() => _isSaving = true);
+    try {
+      await controller.updateDocumentTags(
+        widget.document,
+        _selectedTags.toList(),
+      );
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存标签失败：$error')),
+        );
+      }
+    }
+  }
+}
+
+class _EditableTagChip extends StatelessWidget {
+  const _EditableTagChip({
+    required this.tag,
+    required this.selected,
+    required this.canDelete,
+    required this.onSelected,
+    required this.onDeleted,
+  });
+
+  final String tag;
+  final bool selected;
+  final bool canDelete;
+  final ValueChanged<bool> onSelected;
+  final VoidCallback onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputChip(
+      label: Text(tag),
+      selected: selected,
+      onSelected: onSelected,
+      onDeleted: canDelete ? onDeleted : null,
+    );
+  }
+}
+
+class _DocumentTagRow extends StatelessWidget {
+  const _DocumentTagRow({required this.tags});
+
+  final List<String> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final visibleTags = tags.take(2).toList();
+    final overflow = tags.length - visibleTags.length;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xxs,
+        children: [
+          for (final tag in visibleTags) _SmallTagChip(label: tag),
+          if (overflow > 0) _SmallTagChip(label: '+$overflow'),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallTagChip extends StatelessWidget {
+  const _SmallTagChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFCC00).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: const Color(0xFF9A7900),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
+      ),
+    );
   }
 }
 
