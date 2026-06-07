@@ -193,18 +193,10 @@ class _Header extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            IconButton.filled(
+            _GlowingImportButton(
               key: const ValueKey('import_button'),
-              tooltip: '导入文档',
-              onPressed: controller.isImporting
-                  ? null
-                  : () => _importDocument(context, controller),
-              icon: controller.isImporting
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add_rounded),
+              importing: controller.isImporting,
+              onPressed: () => _importDocument(context, controller),
             ),
           ],
         ),
@@ -288,6 +280,55 @@ class _HeaderMetric extends StatelessWidget {
                   ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlowingImportButton extends StatelessWidget {
+  const _GlowingImportButton({
+    required this.importing,
+    required this.onPressed,
+    super.key,
+  });
+
+  final bool importing;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = !importing;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(enabled ? 0.26 : 0.10),
+            blurRadius: enabled ? 24 : 12,
+            spreadRadius: enabled ? 1 : 0,
+            offset: const Offset(0, 7),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withOpacity(enabled ? 0.12 : 0.04),
+            blurRadius: enabled ? 8 : 4,
+          ),
+        ],
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          border: Border.all(color: AppColors.primary.withOpacity(0.22)),
+        ),
+        child: IconButton.filled(
+          tooltip: '导入文档',
+          onPressed: enabled ? onPressed : null,
+          icon: importing
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add_rounded),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
+import 'glass_segmented_control.dart';
 
 class ReadingSettingsPanel extends StatelessWidget {
   final bool showPreview;
@@ -52,70 +53,58 @@ class ReadingSettingsPanel extends StatelessWidget {
         ],
         _SettingLabel(text: '阅读主题'),
         const SizedBox(height: AppSpacing.sm),
-        SegmentedButton<ReadingTheme>(
-          segments: ReadingTheme.values
-              .map(
-                (theme) => ButtonSegment(
-                  value: theme,
-                  label: Text(theme.label),
-                ),
-              )
-              .toList(),
-          selected: {settings.readingTheme},
-          onSelectionChanged: (selection) {
-            settings.setReadingTheme(selection.first);
-          },
+        GlassSegmentedControl<ReadingTheme>(
+          segments: ReadingTheme.values.map((theme) {
+            return GlassSegment(
+              value: theme,
+              label: theme.label,
+              selectedIcon: Icons.check_rounded,
+            );
+          }).toList(),
+          value: settings.readingTheme,
+          onChanged: settings.setReadingTheme,
         ),
         const SizedBox(height: AppSpacing.lg),
         _SettingLabel(text: '页边距'),
         const SizedBox(height: AppSpacing.sm),
-        SegmentedButton<ReadingMargin>(
-          segments: ReadingMargin.values
-              .map(
-                (margin) => ButtonSegment(
-                  value: margin,
-                  label: Text(margin.label),
-                ),
-              )
-              .toList(),
-          selected: {settings.readingMargin},
-          onSelectionChanged: (selection) {
-            settings.setReadingMargin(selection.first);
-          },
+        GlassSegmentedControl<ReadingMargin>(
+          segments: ReadingMargin.values.map((margin) {
+            return GlassSegment(
+              value: margin,
+              label: margin.label,
+              selectedIcon: Icons.check_rounded,
+            );
+          }).toList(),
+          value: settings.readingMargin,
+          onChanged: settings.setReadingMargin,
         ),
         const SizedBox(height: AppSpacing.lg),
         _SettingLabel(text: '字号'),
         const SizedBox(height: AppSpacing.sm),
-        SegmentedButton<ReadingFontSize>(
-          segments: ReadingFontSize.values
-              .map(
-                (fontSize) => ButtonSegment(
-                  value: fontSize,
-                  label: Text(fontSize.label),
-                ),
-              )
-              .toList(),
-          selected: {settings.readingFontSize},
-          onSelectionChanged: (selection) {
-            settings.setReadingFontSize(selection.first);
-          },
+        GlassSegmentedControl<ReadingFontSize>(
+          segments: ReadingFontSize.values.map((fontSize) {
+            return GlassSegment(
+              value: fontSize,
+              label: fontSize.label,
+              selectedIcon: Icons.check_rounded,
+            );
+          }).toList(),
+          value: settings.readingFontSize,
+          onChanged: settings.setReadingFontSize,
         ),
         const SizedBox(height: AppSpacing.lg),
         _SettingLabel(text: '行距'),
         const SizedBox(height: AppSpacing.sm),
-        SegmentedButton<ReadingLineHeight>(
-          segments: ReadingLineHeight.values
-              .map(
-                (lineHeight) => ButtonSegment(
-                  value: lineHeight,
-                  label: Text(lineHeight.label),
-                ),
-              )
-              .toList(),
-          selected: {settings.readingLineHeight},
-          onSelectionChanged: (selection) {
-            settings.setReadingLineHeight(selection.first);
-          },
+        GlassSegmentedControl<ReadingLineHeight>(
+          segments: ReadingLineHeight.values.map((lineHeight) {
+            return GlassSegment(
+              value: lineHeight,
+              label: lineHeight.label,
+              selectedIcon: Icons.check_rounded,
+            );
+          }).toList(),
+          value: settings.readingLineHeight,
+          onChanged: settings.setReadingLineHeight,
         ),
       ],
     );

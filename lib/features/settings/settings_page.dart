@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/reading_settings_panel.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -132,27 +133,7 @@ class _AppearanceEntryText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<AppSettingsController>();
-    final palette = context.palette;
-    final themeLabel = switch (settings.themeMode) {
-      ThemeMode.system => '跟随系统',
-      ThemeMode.light => '浅色',
-      ThemeMode.dark => '深色',
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('外观', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          '$themeLabel · 首页${settings.libraryViewMode.label}',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: palette.muted,
-                letterSpacing: 0,
-              ),
-        ),
-      ],
-    );
+    return Text('外观', style: Theme.of(context).textTheme.titleMedium);
   }
 }
 
@@ -185,28 +166,29 @@ class AppearancePage extends StatelessWidget {
                     subtitle: '跟随系统，或手动选择浅色/深色界面。',
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  SegmentedButton<ThemeMode>(
+                  GlassSegmentedControl<ThemeMode>(
                     segments: const [
-                      ButtonSegment(
+                      GlassSegment(
                         value: ThemeMode.system,
-                        label: Text('系统'),
-                        icon: Icon(Icons.phone_android_rounded),
+                        label: '系统',
+                        icon: Icons.phone_android_rounded,
+                        selectedIcon: Icons.check_rounded,
                       ),
-                      ButtonSegment(
+                      GlassSegment(
                         value: ThemeMode.light,
-                        label: Text('浅色'),
-                        icon: Icon(Icons.light_mode_rounded),
+                        label: '浅色',
+                        icon: Icons.light_mode_rounded,
+                        selectedIcon: Icons.check_rounded,
                       ),
-                      ButtonSegment(
+                      GlassSegment(
                         value: ThemeMode.dark,
-                        label: Text('深色'),
-                        icon: Icon(Icons.dark_mode_rounded),
+                        label: '深色',
+                        icon: Icons.dark_mode_rounded,
+                        selectedIcon: Icons.check_rounded,
                       ),
                     ],
-                    selected: {settings.themeMode},
-                    onSelectionChanged: (selection) {
-                      settings.setThemeMode(selection.first);
-                    },
+                    value: settings.themeMode,
+                    onChanged: settings.setThemeMode,
                   ),
                 ],
               ),
@@ -222,19 +204,19 @@ class AppearancePage extends StatelessWidget {
                     subtitle: '选择首页文档以列表或书架方式展示。',
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  SegmentedButton<LibraryViewMode>(
-                    segments: LibraryViewMode.values
-                        .map(
-                          (viewMode) => ButtonSegment(
-                            value: viewMode,
-                            label: Text(viewMode.label),
-                          ),
-                        )
-                        .toList(),
-                    selected: {settings.libraryViewMode},
-                    onSelectionChanged: (selection) {
-                      settings.setLibraryViewMode(selection.first);
-                    },
+                  GlassSegmentedControl<LibraryViewMode>(
+                    segments: LibraryViewMode.values.map((viewMode) {
+                      return GlassSegment(
+                        value: viewMode,
+                        label: viewMode.label,
+                        icon: viewMode == LibraryViewMode.list
+                            ? Icons.view_list_rounded
+                            : Icons.grid_view_rounded,
+                        selectedIcon: Icons.check_rounded,
+                      );
+                    }).toList(),
+                    value: settings.libraryViewMode,
+                    onChanged: settings.setLibraryViewMode,
                   ),
                 ],
               ),
@@ -317,28 +299,7 @@ class _ReadingSettingsEntryText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<AppSettingsController>();
-    final palette = context.palette;
-    final summary =
-        '${settings.readingTheme.label} · ${settings.readingMargin.label}边距 · '
-        '${settings.readingFontSize.label}字号 · ${settings.readingLineHeight.label}行距';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('阅读体验', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          summary,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: palette.muted,
-                letterSpacing: 0,
-              ),
-        ),
-      ],
-    );
+    return Text('阅读体验', style: Theme.of(context).textTheme.titleMedium);
   }
 }
 
@@ -494,21 +455,7 @@ class _AboutEntryText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('关于应用', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          '应用信息、版本更新与联系信息',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: palette.muted,
-                letterSpacing: 0,
-              ),
-        ),
-      ],
-    );
+    return Text('关于应用', style: Theme.of(context).textTheme.titleMedium);
   }
 }
 
@@ -522,7 +469,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=101';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=102';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
