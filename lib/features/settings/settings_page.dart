@@ -469,7 +469,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=102';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=103';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -479,6 +479,7 @@ class _AboutPageState extends State<AboutPage> {
   );
 
   bool _isChecking = false;
+  bool _isClearingCache = false;
   PackageInfo? _packageInfo;
 
   @override
@@ -674,6 +675,83 @@ class _AboutPageState extends State<AboutPage> {
     await _channel.invokeMethod('installApk', {'path': filePath});
   }
 
+  Future<void> _clearCache() async {
+    if (_isClearingCache) return;
+    setState(() => _isClearingCache = true);
+    try {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      var clearedBytes = 0;
+      final tempDir = await getTemporaryDirectory();
+      if (await tempDir.exists()) {
+        clearedBytes += await _deleteDirectoryContents(tempDir);
+      }
+
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final downloadedApk = File('${documentsDir.path}/jianxi_reader.apk');
+      if (await downloadedApk.exists()) {
+        clearedBytes += await downloadedApk.length();
+        await downloadedApk.delete();
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已清理缓存：${_formatBytes(clearedBytes)}')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('清理缓存失败：$error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isClearingCache = false);
+      }
+    }
+  }
+
+  Future<int> _deleteDirectoryContents(Directory directory) async {
+    var deletedBytes = 0;
+    await for (final entity in directory.list(followLinks: false)) {
+      if (entity is File) {
+        final size = await entity.length();
+        await entity.delete();
+        deletedBytes += size;
+      } else if (entity is Directory) {
+        deletedBytes += await _directorySize(entity);
+        await entity.delete(recursive: true);
+      } else if (entity is Link) {
+        await entity.delete();
+      }
+    }
+    return deletedBytes;
+  }
+
+  Future<int> _directorySize(Directory directory) async {
+    var size = 0;
+    await for (final entity in directory.list(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is File) {
+        size += await entity.length();
+      }
+    }
+    return size;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    if (mb < 1024) return '${mb.toStringAsFixed(1)} MB';
+    final gb = mb / 1024;
+    return '${gb.toStringAsFixed(1)} GB';
+  }
+
   HttpClient _createUpdateClient() {
     final client = HttpClient();
     client.badCertificateCallback =
@@ -841,6 +919,36 @@ class _AboutPageState extends State<AboutPage> {
                             )
                           : const Icon(Icons.refresh_rounded),
                       label: Text(_isChecking ? '检查中' : '检查更新'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CardTitle(
+                    icon: Icons.cleaning_services_outlined,
+                    title: '缓存清理',
+                    subtitle: _isClearingCache
+                        ? '正在清理临时缓存。'
+                        : '清理临时图片缓存和已下载的更新包。',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isClearingCache ? null : _clearCache,
+                      icon: _isClearingCache
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.delete_sweep_outlined),
+                      label: Text(_isClearingCache ? '清理中' : '清理缓存'),
                     ),
                   ),
                 ],

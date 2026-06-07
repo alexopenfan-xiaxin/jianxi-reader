@@ -62,7 +62,7 @@ void main() {
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
       version: '2.0.1',
-      buildNumber: '102',
+      buildNumber: '103',
       buildSignature: '',
     );
   });
@@ -241,9 +241,11 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 2.0.1 (102)'), findsOneWidget);
+    expect(find.text('版本 2.0.1 (103)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
+    expect(find.text('缓存清理'), findsOneWidget);
+    expect(find.text('清理缓存'), findsOneWidget);
     expect(find.text('支持格式：Markdown、HTML'), findsNothing);
     expect(find.text('点击加入QQ交流群'), findsOneWidget);
     expect(

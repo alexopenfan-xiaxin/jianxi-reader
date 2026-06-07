@@ -210,21 +210,6 @@ class _Header extends StatelessWidget {
                 letterSpacing: 0,
               ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xs,
-          children: [
-            _HeaderMetric(
-              icon: Icons.library_books_rounded,
-              label: '${controller.allDocuments.length} 个文档',
-            ),
-            _HeaderMetric(
-              icon: Icons.filter_alt_outlined,
-              label: '${controller.documents.length} 个显示',
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -242,47 +227,6 @@ class _Header extends StatelessWidget {
     if (context.mounted) {
       await controller.loadDocuments();
     }
-  }
-}
-
-class _HeaderMetric extends StatelessWidget {
-  const _HeaderMetric({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        border: Border.all(color: palette.hairline.withOpacity(0.65)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: palette.muted),
-            const SizedBox(width: AppSpacing.xxs),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: palette.muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -695,7 +639,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
       },
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.sm),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _openDocument(context),
@@ -711,7 +655,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                 end: Alignment.bottomRight,
                 colors: [cover.start, cover.end],
               ),
-              borderRadius: BorderRadius.circular(AppRadii.sm),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
               border: Border.all(color: cover.border.withOpacity(0.55)),
             ),
             child: Stack(

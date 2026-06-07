@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../design_tokens.dart';
 
@@ -49,6 +50,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
               .toInt();
           final nextValue = segments[nextIndex].value;
           if (nextValue != value) {
+            HapticFeedback.selectionClick();
             onChanged(nextValue);
           }
         }

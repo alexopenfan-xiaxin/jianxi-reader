@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/design_tokens.dart';
@@ -200,8 +201,10 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                         details.primaryVelocity != null &&
                             details.primaryVelocity! < -280);
             if (shouldMoveRight) {
+              HapticFeedback.selectionClick();
               widget.onChanged(1);
             } else if (shouldMoveLeft) {
+              HapticFeedback.selectionClick();
               widget.onChanged(0);
             }
             setState(() {

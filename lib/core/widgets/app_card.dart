@@ -44,7 +44,7 @@ class _AppCardState extends State<AppCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final borderRadius = BorderRadius.circular(AppRadii.sm);
+    final borderRadius = BorderRadius.circular(AppRadii.lg);
 
     return AnimatedBuilder(
       animation: _scaleAnim,
