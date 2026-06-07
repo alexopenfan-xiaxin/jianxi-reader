@@ -108,14 +108,14 @@ class _AppShellState extends State<AppShell> {
         children: [
           Positioned.fill(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
+              duration: AppMotion.slow,
+              switchInCurve: AppMotion.emphasized,
+              switchOutCurve: AppMotion.exit,
               transitionBuilder: (child, animation) {
                 return FadeTransition(
                   opacity: CurvedAnimation(
                     parent: animation,
-                    curve: Curves.easeOutCubic,
+                    curve: AppMotion.emphasized,
                   ),
                   child: child,
                 );
@@ -225,8 +225,8 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                 AnimatedPositioned(
                   duration: _isDragging
                       ? Duration.zero
-                      : const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
+                      : AppMotion.normal,
+                  curve: AppMotion.emphasized,
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,
@@ -293,7 +293,7 @@ Future<void> _openExternalReader(BuildContext context, DocumentEntry document) {
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curve = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
+          curve: AppMotion.emphasized,
         );
         return SlideTransition(
           position: Tween<Offset>(
@@ -303,7 +303,7 @@ Future<void> _openExternalReader(BuildContext context, DocumentEntry document) {
           child: FadeTransition(opacity: curve, child: child),
         );
       },
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: AppMotion.slow,
     ),
   );
 }

@@ -23,7 +23,7 @@ abstract class DocumentLibraryService {
 
   Future<void> removeDocument(DocumentEntry document);
 
-  Future<void> markDocumentOpened(DocumentEntry document);
+  Future<DateTime> markDocumentOpened(DocumentEntry document);
 
   Future<double> loadReadingOffset(DocumentEntry document);
 
@@ -35,7 +35,20 @@ abstract class DocumentLibraryService {
 
   Future<void> deleteTag(String name);
 
-  Future<void> updateDocumentTags(DocumentEntry document, List<String> tags);
+  Future<DocumentTagUpdate> updateDocumentTags(
+    DocumentEntry document,
+    List<String> tags,
+  );
+}
+
+class DocumentTagUpdate {
+  const DocumentTagUpdate({
+    required this.documentTags,
+    required this.allTags,
+  });
+
+  final List<String> documentTags;
+  final List<String> allTags;
 }
 
 class DocumentFileService implements DocumentLibraryService {
@@ -322,12 +335,14 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   @override
-  Future<void> markDocumentOpened(DocumentEntry document) async {
+  Future<DateTime> markDocumentOpened(DocumentEntry document) async {
     final preferences = await SharedPreferences.getInstance();
+    final openedAt = DateTime.now();
     await preferences.setInt(
       _recentOpenedKey(document.path),
-      DateTime.now().millisecondsSinceEpoch,
+      openedAt.millisecondsSinceEpoch,
     );
+    return openedAt;
   }
 
   @override
@@ -380,7 +395,7 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   @override
-  Future<void> updateDocumentTags(
+  Future<DocumentTagUpdate> updateDocumentTags(
     DocumentEntry document,
     List<String> tags,
   ) async {
@@ -395,6 +410,7 @@ class DocumentFileService implements DocumentLibraryService {
     allTags.sort();
     await preferences.setStringList(_tagsKey, allTags);
     await preferences.setStringList(_documentTagsKey(document.path), cleanTags);
+    return DocumentTagUpdate(documentTags: cleanTags, allTags: allTags);
   }
 
   static DateTime? _recentOpenedAt(SharedPreferences preferences, String path) {

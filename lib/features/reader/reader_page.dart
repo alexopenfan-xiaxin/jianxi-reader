@@ -13,6 +13,7 @@ import '../../core/widgets/reading_settings_panel.dart';
 import '../library/document_actions.dart';
 import '../library/document_entry.dart';
 import '../library/library_controller.dart';
+import 'document_search_controller.dart';
 import 'html_document_view.dart';
 import 'markdown_viewer.dart';
 
@@ -31,12 +32,16 @@ class _ReaderPageState extends State<ReaderPage> {
   late DocumentEntry _document;
   late LibraryController _libraryController;
   final _scrollController = ScrollController();
+  final _searchController = DocumentSearchController();
+  final _searchTextController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   Timer? _saveReadingOffsetDebounce;
   double _restoreReadingOffset = 0;
   bool _showGlass = false;
   bool _hasRestoredMarkdownOffset = false;
   bool _skipSaveReadingOffset = false;
   bool _isPreparingDocument = true;
+  bool _isSearching = false;
   String? _prepareError;
 
   @override
@@ -45,6 +50,7 @@ class _ReaderPageState extends State<ReaderPage> {
     _document = widget.document;
     _libraryController = context.read<LibraryController>();
     _scrollController.addListener(_handleScroll);
+    _searchController.addListener(_handleSearchStateChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDocument());
   }
 
@@ -56,6 +62,10 @@ class _ReaderPageState extends State<ReaderPage> {
         !_skipSaveReadingOffset) {
       unawaited(_saveReadingOffset(_scrollController.offset));
     }
+    _searchController.removeListener(_handleSearchStateChanged);
+    _searchController.dispose();
+    _searchTextController.dispose();
+    _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -68,6 +78,12 @@ class _ReaderPageState extends State<ReaderPage> {
     }
     if (!_isPreparingDocument && _document.type == DocumentType.markdown) {
       _scheduleSaveReadingOffset(_scrollController.offset);
+    }
+  }
+
+  void _handleSearchStateChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -105,39 +121,77 @@ class _ReaderPageState extends State<ReaderPage> {
                 ),
               )
             : null,
-        title: Text(
-          _document.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: readingPalette.foreground,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+        title: _isSearching
+            ? _ReaderSearchField(
+                controller: _searchTextController,
+                focusNode: _searchFocusNode,
+                foreground: readingPalette.foreground,
+                onChanged: _searchController.updateQuery,
+              )
+            : AnimatedOpacity(
+                opacity: _showGlass ? 1 : 0,
+                duration: AppMotion.fast,
+                child: Text(
+                  _document.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: readingPalette.foreground,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
+                ),
               ),
-        ),
-        actions: [
-          IconButton(
-            tooltip: '阅读显示',
-            onPressed: () => showReadingDisplaySheet(context),
-            icon: const Icon(Icons.text_fields_rounded),
-          ),
-          PopupMenuButton<_ReaderMenuAction>(
-            tooltip: '文档操作',
-            onSelected: _handleAction,
-            itemBuilder: (context) {
-              return const <PopupMenuEntry<_ReaderMenuAction>>[
-                PopupMenuItem(
-                  value: _ReaderMenuAction.rename,
-                  child: Text('重命名'),
+        actions: _isSearching
+            ? [
+                _ReaderSearchCount(controller: _searchController),
+                IconButton(
+                  tooltip: '上一个',
+                  onPressed: _searchController.hasMatches
+                      ? _searchController.previous
+                      : null,
+                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
                 ),
-                PopupMenuItem(
-                  value: _ReaderMenuAction.remove,
-                  child: Text('移出'),
+                IconButton(
+                  tooltip: '下一个',
+                  onPressed:
+                      _searchController.hasMatches ? _searchController.next : null,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 ),
-              ];
-            },
-          ),
-        ],
+                IconButton(
+                  tooltip: '关闭搜索',
+                  onPressed: _closeSearch,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ]
+            : [
+                IconButton(
+                  tooltip: '文档内搜索',
+                  onPressed: _openSearch,
+                  icon: const Icon(Icons.search_rounded),
+                ),
+                IconButton(
+                  tooltip: '阅读显示',
+                  onPressed: () => showReadingDisplaySheet(context),
+                  icon: const Icon(Icons.text_fields_rounded),
+                ),
+                PopupMenuButton<_ReaderMenuAction>(
+                  tooltip: '文档操作',
+                  onSelected: _handleAction,
+                  itemBuilder: (context) {
+                    return const <PopupMenuEntry<_ReaderMenuAction>>[
+                      PopupMenuItem(
+                        value: _ReaderMenuAction.rename,
+                        child: Text('重命名'),
+                      ),
+                      PopupMenuItem(
+                        value: _ReaderMenuAction.remove,
+                        child: Text('移出'),
+                      ),
+                    ];
+                  },
+                ),
+              ],
       ),
       body: Column(
         children: [
@@ -172,19 +226,20 @@ class _ReaderPageState extends State<ReaderPage> {
       readingPalette: readingPalette,
       initialReadingOffset: _restoreReadingOffset,
       onReadingOffsetChanged: _scheduleSaveReadingOffset,
+      searchController: _searchController,
     );
   }
 
   Future<void> _prepareDocument() async {
     try {
       final refreshed = await _libraryController.refreshDocument(_document);
-      await _libraryController.markDocumentOpened(refreshed);
+      final opened = await _libraryController.markDocumentOpened(refreshed);
       final readingOffset = await _libraryController.loadReadingOffset(
         refreshed,
       );
       if (mounted) {
         setState(() {
-          _document = refreshed;
+          _document = opened;
           _restoreReadingOffset = readingOffset;
           _hasRestoredMarkdownOffset = false;
           _prepareError = null;
@@ -258,6 +313,22 @@ class _ReaderPageState extends State<ReaderPage> {
     return _libraryController.saveReadingOffset(_document, offset);
   }
 
+  void _openSearch() {
+    setState(() => _isSearching = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _closeSearch() {
+    _searchTextController.clear();
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() => _isSearching = false);
+  }
+
   Future<void> _handleAction(_ReaderMenuAction action) async {
     switch (action) {
       case _ReaderMenuAction.rename:
@@ -307,6 +378,69 @@ class _ReaderProgressBar extends StatelessWidget {
   }
 }
 
+class _ReaderSearchField extends StatelessWidget {
+  const _ReaderSearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.foreground,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final Color foreground;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: foreground,
+            letterSpacing: 0,
+          ),
+      decoration: const InputDecoration(
+        hintText: '搜索当前文档',
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        filled: false,
+        isDense: true,
+        contentPadding: EdgeInsets.zero,
+      ),
+    );
+  }
+}
+
+class _ReaderSearchCount extends StatelessWidget {
+  const _ReaderSearchCount({required this.controller});
+
+  final DocumentSearchController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = controller.hasQuery
+        ? '${controller.hasMatches ? controller.currentIndex + 1 : 0}/${controller.matchCount}'
+        : '0/0';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).appBarTheme.foregroundColor,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ReaderContent extends StatelessWidget {
   const _ReaderContent({
     required this.document,
@@ -314,6 +448,7 @@ class _ReaderContent extends StatelessWidget {
     required this.readingPalette,
     required this.initialReadingOffset,
     required this.onReadingOffsetChanged,
+    required this.searchController,
     this.scrollController,
     this.topPadding = 0,
   });
@@ -323,6 +458,7 @@ class _ReaderContent extends StatelessWidget {
   final ReadingPalette readingPalette;
   final double initialReadingOffset;
   final ValueChanged<double> onReadingOffsetChanged;
+  final DocumentSearchController searchController;
   final ScrollController? scrollController;
   final double topPadding;
 
@@ -342,6 +478,7 @@ class _ReaderContent extends StatelessWidget {
           horizontalPadding: settings.readingHorizontalPaddingValue,
           scrollController: scrollController,
           topPadding: topPadding,
+          searchController: searchController,
         ),
       DocumentType.html => HtmlDocumentView(
           file: file,
@@ -352,6 +489,7 @@ class _ReaderContent extends StatelessWidget {
           topPadding: topPadding,
           initialScrollOffset: initialReadingOffset,
           onScrollOffsetChanged: onReadingOffsetChanged,
+          searchController: searchController,
         ),
     };
   }

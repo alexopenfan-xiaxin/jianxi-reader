@@ -73,8 +73,8 @@ class GlassSegmentedControl<T> extends StatelessWidget {
               children: [
                 Positioned.fill(child: _GlassTrack(palette: palette)),
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
+                  duration: AppMotion.fast,
+                  curve: AppMotion.emphasized,
                   left: effectiveIndex * itemWidth,
                   top: 0,
                   bottom: 0,

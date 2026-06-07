@@ -4,6 +4,7 @@ import 'package:jianxi_reader/app.dart';
 import 'package:jianxi_reader/core/document_file_service.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
 import 'package:jianxi_reader/features/library/document_entry.dart';
+import 'package:jianxi_reader/features/library/library_controller.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +15,7 @@ class FakeDocumentService implements DocumentLibraryService {
   final List<DocumentEntry> _documents;
   final List<DocumentEntry> _pickedDocuments;
   final Map<String, double> _readingOffsets = {};
+  int scanCount = 0;
 
   @override
   Future<List<DocumentEntry>> pickAndImportDocuments() async {
@@ -29,7 +31,10 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
-  Future<List<DocumentEntry>> scanLibrary() async => List.of(_documents);
+  Future<List<DocumentEntry>> scanLibrary() async {
+    scanCount++;
+    return List.of(_documents);
+  }
 
   @override
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async => document;
@@ -65,7 +70,14 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
-  Future<void> markDocumentOpened(DocumentEntry document) async {}
+  Future<DateTime> markDocumentOpened(DocumentEntry document) async {
+    final openedAt = DateTime(2026, 6, 7, 12);
+    final index = _documents.indexWhere((entry) => entry.path == document.path);
+    if (index != -1) {
+      _documents[index] = _copyDocument(document, recentOpenedAt: openedAt);
+    }
+    return openedAt;
+  }
 
   @override
   Future<double> loadReadingOffset(DocumentEntry document) async {
@@ -93,12 +105,13 @@ class FakeDocumentService implements DocumentLibraryService {
   Future<void> deleteTag(String name) async {}
 
   @override
-  Future<void> updateDocumentTags(
+  Future<DocumentTagUpdate> updateDocumentTags(
     DocumentEntry document,
     List<String> tags,
   ) async {
     final index = _documents.indexWhere((entry) => entry.path == document.path);
     _documents[index] = _copyDocument(document, tags: tags);
+    return DocumentTagUpdate(documentTags: tags, allTags: await loadTags());
   }
 }
 
@@ -108,9 +121,29 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '2.1.2',
-      buildNumber: '112',
+      version: '1.2.0',
+      buildNumber: '120',
       buildSignature: '',
+    );
+  });
+
+  test('marking a document opened does not rescan the library', () async {
+    final service = FakeDocumentService([
+      _document('article.md', modifiedAt: DateTime(2026)),
+    ]);
+    final controller = LibraryController(documentService: service);
+
+    await controller.loadDocuments();
+    final scansAfterLoad = service.scanCount;
+    final opened = await controller.markDocumentOpened(
+      controller.allDocuments.single,
+    );
+
+    expect(service.scanCount, scansAfterLoad);
+    expect(opened.recentOpenedAt, DateTime(2026, 6, 7, 12));
+    expect(
+      controller.allDocuments.single.recentOpenedAt,
+      DateTime(2026, 6, 7, 12),
     );
   });
 
@@ -121,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('empty_library')), findsOneWidget);
-    expect(find.text('还没有文档'), findsOneWidget);
+    expect(find.text('未有简牍'), findsOneWidget);
     expect(find.byKey(const ValueKey('import_button')), findsOneWidget);
   });
 
@@ -398,7 +431,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 2.1.2 (112)'), findsOneWidget);
+    expect(find.text('版本 1.2.0 (120)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('缓存清理'), findsOneWidget);
@@ -431,14 +464,18 @@ DocumentEntry _document(
   );
 }
 
-DocumentEntry _copyDocument(DocumentEntry document, {List<String>? tags}) {
+DocumentEntry _copyDocument(
+  DocumentEntry document, {
+  DateTime? recentOpenedAt,
+  List<String>? tags,
+}) {
   return DocumentEntry(
     path: document.path,
     name: document.name,
     type: document.type,
     sizeBytes: document.sizeBytes,
     modifiedAt: document.modifiedAt,
-    recentOpenedAt: document.recentOpenedAt,
+    recentOpenedAt: recentOpenedAt ?? document.recentOpenedAt,
     isReferenced: document.isReferenced,
     tags: tags ?? document.tags,
   );

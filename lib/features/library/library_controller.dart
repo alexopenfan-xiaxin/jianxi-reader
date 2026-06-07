@@ -129,8 +129,7 @@ class LibraryController extends ChangeNotifier {
     String baseName,
   ) async {
     final renamed = await documentService.renameDocument(document, baseName);
-    _allDocuments = await documentService.scanLibrary();
-    _tags = await documentService.loadTags();
+    _replaceDocument(document.path, renamed);
     _errorMessage = null;
     notifyListeners();
     return renamed;
@@ -138,26 +137,25 @@ class LibraryController extends ChangeNotifier {
 
   Future<void> removeDocument(DocumentEntry document) async {
     await documentService.removeDocument(document);
-    _allDocuments = await documentService.scanLibrary();
-    _tags = await documentService.loadTags();
+    _removeDocument(document.path);
     _errorMessage = null;
     notifyListeners();
   }
 
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
     final refreshed = await documentService.refreshDocument(document);
-    _allDocuments = await documentService.scanLibrary();
-    _tags = await documentService.loadTags();
+    _replaceDocument(document.path, refreshed);
     _errorMessage = null;
     notifyListeners();
     return refreshed;
   }
 
-  Future<void> markDocumentOpened(DocumentEntry document) async {
-    await documentService.markDocumentOpened(document);
-    _allDocuments = await documentService.scanLibrary();
-    _tags = await documentService.loadTags();
+  Future<DocumentEntry> markDocumentOpened(DocumentEntry document) async {
+    final openedAt = await documentService.markDocumentOpened(document);
+    final opened = document.copyWith(recentOpenedAt: openedAt);
+    _replaceDocument(document.path, opened);
     notifyListeners();
+    return opened;
   }
 
   Future<double> loadReadingOffset(DocumentEntry document) {
@@ -173,18 +171,29 @@ class LibraryController extends ChangeNotifier {
 
   Future<void> createTag(String name) async {
     await documentService.createTag(name);
-    _tags = await documentService.loadTags();
+    final tag = name.trim();
+    if (!_tags.contains(tag)) {
+      _tags = [..._tags, tag]..sort();
+    }
     _errorMessage = null;
     notifyListeners();
   }
 
   Future<void> deleteTag(String name) async {
     await documentService.deleteTag(name);
-    _tags = await documentService.loadTags();
-    if (_selectedTag == name) {
+    final tag = name.trim();
+    _tags = _tags.where((item) => item != tag).toList();
+    if (_selectedTag == tag) {
       _selectedTag = null;
     }
-    _allDocuments = await documentService.scanLibrary();
+    _allDocuments = _allDocuments.map((document) {
+      if (!document.tags.contains(tag)) {
+        return document;
+      }
+      return document.copyWith(
+        tags: document.tags.where((item) => item != tag).toList(),
+      );
+    }).toList();
     _errorMessage = null;
     notifyListeners();
   }
@@ -193,9 +202,12 @@ class LibraryController extends ChangeNotifier {
     DocumentEntry document,
     List<String> tags,
   ) async {
-    await documentService.updateDocumentTags(document, tags);
-    _tags = await documentService.loadTags();
-    _allDocuments = await documentService.scanLibrary();
+    final update = await documentService.updateDocumentTags(document, tags);
+    _tags = update.allTags;
+    _replaceDocument(
+      document.path,
+      document.copyWith(tags: update.documentTags),
+    );
     _errorMessage = null;
     notifyListeners();
   }
@@ -233,5 +245,26 @@ class LibraryController extends ChangeNotifier {
             right.name.toLowerCase(),
           ),
     };
+  }
+
+  void _replaceDocument(String oldPath, DocumentEntry replacement) {
+    final index = _allDocuments.indexWhere(
+      (document) => document.path == oldPath,
+    );
+    if (index == -1) {
+      _allDocuments = [..._allDocuments, replacement];
+      return;
+    }
+    _allDocuments = [
+      ..._allDocuments.take(index),
+      replacement,
+      ..._allDocuments.skip(index + 1),
+    ];
+  }
+
+  void _removeDocument(String path) {
+    _allDocuments = _allDocuments
+        .where((document) => document.path != path)
+        .toList();
   }
 }

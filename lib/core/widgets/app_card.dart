@@ -27,7 +27,7 @@ class _AppCardState extends State<AppCard>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 120),
+      duration: AppMotion.fast,
       vsync: this,
     );
     _scaleAnim = Tween<double>(begin: 1.0, end: 0.985).animate(

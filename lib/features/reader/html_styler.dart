@@ -148,22 +148,22 @@ class HtmlStyler {
 </head>
 <body>
   <main class="reader-shell">
-    ${_stripUnsafeShell(rawHtml)}
+    ${_sanitizeHtml(rawHtml)}
   </main>
 </body>
 </html>
 ''';
   }
 
-  static String _stripUnsafeShell(String rawHtml) {
-    final withoutScripts = rawHtml.replaceAll(
+  static String _sanitizeHtml(String rawHtml) {
+    var sanitized = rawHtml.replaceAll(
       RegExp(
         r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
         caseSensitive: false,
       ),
       '',
     );
-    return withoutScripts.replaceAll(
+    sanitized = sanitized.replaceAll(
       RegExp(
         r"<meta[^>]*http-equiv=["
         "']?refresh["
@@ -172,6 +172,40 @@ class HtmlStyler {
       ),
       '',
     );
+    sanitized = sanitized.replaceAll(
+      RegExp(
+        r'<(iframe|object|embed)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>',
+        caseSensitive: false,
+      ),
+      '',
+    );
+    sanitized = sanitized.replaceAll(
+      RegExp(r'\s+on[a-zA-Z]+\s*=\s*"[^"]*"', caseSensitive: false),
+      '',
+    );
+    sanitized = sanitized.replaceAll(
+      RegExp(r"\s+on[a-zA-Z]+\s*=\s*'[^']*'", caseSensitive: false),
+      '',
+    );
+    sanitized = sanitized.replaceAll(
+      RegExp(r'\s+on[a-zA-Z]+\s*=\s*[^\s>]+', caseSensitive: false),
+      '',
+    );
+    sanitized = sanitized.replaceAllMapped(
+      RegExp(
+        r'\s+(href|src)\s*=\s*"javascript:[^"]*"',
+        caseSensitive: false,
+      ),
+      (match) => ' ${match.group(1)}="#"',
+    );
+    sanitized = sanitized.replaceAllMapped(
+      RegExp(
+        r"\s+(href|src)\s*=\s*'javascript:[^']*'",
+        caseSensitive: false,
+      ),
+      (match) => " ${match.group(1)}='#'",
+    );
+    return sanitized;
   }
 
   static String escapedTitle(String title) {

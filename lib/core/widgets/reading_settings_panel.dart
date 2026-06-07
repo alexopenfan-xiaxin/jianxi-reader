@@ -28,7 +28,7 @@ class ReadingSettingsPanel extends StatelessWidget {
       children: [
         if (showPreview) ...[
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: AppMotion.normal,
             width: double.infinity,
             padding: EdgeInsets.symmetric(
               horizontal: settings.readingHorizontalPaddingValue,
@@ -39,14 +39,27 @@ class ReadingSettingsPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.sm),
               border: Border.all(color: readingPalette.border),
             ),
-            child: Text(
-              '简兮阅读器\n这是一段阅读预览文本，用来查看当前主题、字号、行距和页边距。',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontSize: settings.readingFontSizeValue,
-                    height: settings.readingLineHeightValue,
-                    color: readingPalette.foreground,
-                    letterSpacing: 0,
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '简兮简兮，方将万舞。\n\n这是一段 Markdown 正文预览。\n可观察当前主题、字号、行距与页边距。',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontSize: settings.readingFontSizeValue,
+                        height: settings.readingLineHeightValue,
+                        color: readingPalette.foreground,
+                        letterSpacing: 0,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  '预览仅影响阅读页，不改变原文件',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: readingPalette.muted,
+                        letterSpacing: 0,
+                      ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

@@ -25,17 +25,15 @@ class LibraryPage extends StatefulWidget {
 class _LibraryPageState extends State<LibraryPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _staggerController;
+  bool _hasPlayedInitialListAnimation = false;
 
   @override
   void initState() {
     super.initState();
     _staggerController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: AppMotion.slow,
       vsync: this,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _staggerController.forward();
-    });
   }
 
   @override
@@ -50,9 +48,15 @@ class _LibraryPageState extends State<LibraryPage>
       child: Consumer<LibraryController>(
         builder: (context, controller, _) {
           final settings = context.watch<AppSettingsController>();
-          if (controller.allDocuments.isNotEmpty &&
-              _staggerController.status == AnimationStatus.dismissed) {
-            _staggerController.forward();
+          if (!_hasPlayedInitialListAnimation &&
+              controller.documents.isNotEmpty) {
+            _hasPlayedInitialListAnimation = true;
+            _staggerController.reset();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _staggerController.forward();
+              }
+            });
           }
           return Stack(
             children: [
@@ -263,12 +267,12 @@ class _FixedLibraryHeader extends StatelessWidget {
           return FadeTransition(
             opacity: CurvedAnimation(
               parent: animation,
-              curve: Curves.easeOutCubic,
+              curve: AppMotion.emphasized,
             ),
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 220),
+        transitionDuration: AppMotion.normal,
       ),
     );
   }
@@ -842,7 +846,10 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.error),
+          const _LibraryStateIllustration(
+            kind: _LibraryStateArtKind.warningPage,
+            size: 42,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
@@ -867,6 +874,137 @@ class _LoadingState extends StatelessWidget {
   }
 }
 
+enum _LibraryStateArtKind { emptyPage, searchPage, warningPage }
+
+class _LibraryStateIllustration extends StatelessWidget {
+  const _LibraryStateIllustration({
+    required this.kind,
+    this.size = 80,
+  });
+
+  final _LibraryStateArtKind kind;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(
+        painter: _LibraryStateIllustrationPainter(
+          kind: kind,
+          primary: AppColors.primary,
+          line: context.palette.ink,
+          muted: context.palette.muted,
+          error: AppColors.error,
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryStateIllustrationPainter extends CustomPainter {
+  const _LibraryStateIllustrationPainter({
+    required this.kind,
+    required this.primary,
+    required this.line,
+    required this.muted,
+    required this.error,
+  });
+
+  final _LibraryStateArtKind kind;
+  final Color primary;
+  final Color line;
+  final Color muted;
+  final Color error;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pagePaint = Paint()
+      ..color = primary.withOpacity(0.08)
+      ..style = PaintingStyle.fill;
+    final linePaint = Paint()
+      ..color = line.withOpacity(0.58)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.shortestSide * 0.035
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final accentPaint = Paint()
+      ..color = kind == _LibraryStateArtKind.warningPage ? error : primary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.shortestSide * 0.04
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final page = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        size.width * 0.22,
+        size.height * 0.14,
+        size.width * 0.50,
+        size.height * 0.66,
+      ),
+      Radius.circular(size.shortestSide * 0.08),
+    );
+    canvas.drawRRect(page, pagePaint);
+    canvas.drawRRect(page, linePaint);
+
+    final foldPath = Path()
+      ..moveTo(size.width * 0.59, size.height * 0.14)
+      ..lineTo(size.width * 0.72, size.height * 0.27)
+      ..lineTo(size.width * 0.59, size.height * 0.27)
+      ..close();
+    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.12));
+    canvas.drawPath(foldPath, linePaint);
+
+    for (final y in [0.40, 0.52, 0.64]) {
+      canvas.drawLine(
+        Offset(size.width * 0.32, size.height * y),
+        Offset(size.width * 0.62, size.height * y),
+        linePaint..color = muted.withOpacity(0.45),
+      );
+    }
+
+    switch (kind) {
+      case _LibraryStateArtKind.emptyPage:
+        canvas.drawLine(
+          Offset(size.width * 0.36, size.height * 0.86),
+          Offset(size.width * 0.66, size.height * 0.86),
+          accentPaint,
+        );
+      case _LibraryStateArtKind.searchPage:
+        canvas.drawCircle(
+          Offset(size.width * 0.70, size.height * 0.68),
+          size.shortestSide * 0.13,
+          accentPaint,
+        );
+        canvas.drawLine(
+          Offset(size.width * 0.79, size.height * 0.77),
+          Offset(size.width * 0.90, size.height * 0.88),
+          accentPaint,
+        );
+      case _LibraryStateArtKind.warningPage:
+        canvas.drawLine(
+          Offset(size.width * 0.80, size.height * 0.56),
+          Offset(size.width * 0.80, size.height * 0.70),
+          accentPaint,
+        );
+        canvas.drawCircle(
+          Offset(size.width * 0.80, size.height * 0.78),
+          size.shortestSide * 0.015,
+          Paint()..color = error,
+        );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LibraryStateIllustrationPainter oldDelegate) {
+    return oldDelegate.kind != kind ||
+        oldDelegate.primary != primary ||
+        oldDelegate.line != line ||
+        oldDelegate.muted != muted ||
+        oldDelegate.error != error;
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -880,26 +1018,16 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(AppRadii.md),
-              ),
-              child: Icon(
-                Icons.auto_stories_rounded,
-                color: AppColors.primary.withOpacity(0.56),
-                size: 36,
-              ),
+            const _LibraryStateIllustration(
+              kind: _LibraryStateArtKind.emptyPage,
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text('还没有文档', style: Theme.of(context).textTheme.titleLarge),
+            Text('未有简牍', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: AppSpacing.sm),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Text(
-                '导入后会记住文件位置；重新进入阅读页时会读取原文件的最新内容。',
+                '选择一个 Markdown 或 HTML 文档开始阅读',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: palette.muted,
@@ -915,7 +1043,7 @@ class _EmptyState extends StatelessWidget {
                 _importFirstDocument(context, controller);
               },
               icon: const Icon(Icons.add_rounded),
-              label: const Text('导入第一个文档'),
+              label: const Text('导入文档'),
             ),
           ],
         ),
@@ -943,22 +1071,13 @@ class _NoResultsState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(AppRadii.md),
-              ),
-              child: Icon(
-                Icons.search_off_rounded,
-                color: AppColors.primary.withOpacity(0.56),
-                size: 28,
-              ),
+            const _LibraryStateIllustration(
+              kind: _LibraryStateArtKind.searchPage,
+              size: 72,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              '没有匹配的文档',
+              '未寻得匹配文档',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: palette.muted,
                   ),
@@ -1022,7 +1141,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
       vsync: this,
     );
     _pressAnimation = Tween<double>(begin: 1.0, end: 0.965).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _pressController, curve: AppMotion.emphasized),
     );
   }
 
@@ -1285,7 +1404,7 @@ class _DocumentTileState extends State<_DocumentTile>
       vsync: this,
     );
     _hoverAnim = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _hoverController, curve: AppMotion.emphasized),
     );
   }
 
@@ -1836,7 +1955,7 @@ Future<void> _openReader(BuildContext context, DocumentEntry document) {
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curve = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
+          curve: AppMotion.emphasized,
         );
         return FadeTransition(
           opacity: curve,
@@ -1852,7 +1971,7 @@ Future<void> _openReader(BuildContext context, DocumentEntry document) {
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 260),
+      transitionDuration: AppMotion.normal,
     ),
   );
 }

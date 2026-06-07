@@ -130,6 +130,16 @@ class AppSpacing {
   static const xxl = 48.0;
 }
 
+class AppMotion {
+  static const fast = Duration(milliseconds: 160);
+  static const normal = Duration(milliseconds: 240);
+  static const slow = Duration(milliseconds: 320);
+
+  static const emphasized = Curves.easeOutCubic;
+  static const standard = Curves.easeInOutCubic;
+  static const exit = Curves.easeInCubic;
+}
+
 extension AppThemeTokens on BuildContext {
   AppPalette get palette => Theme.of(this).extension<AppPalette>()!;
 }

@@ -42,6 +42,8 @@ class JianxiReaderApp extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: settings.themeMode,
+            themeAnimationDuration: AppMotion.normal,
+            themeAnimationCurve: AppMotion.standard,
             home: const AppShell(),
           );
         },

@@ -25,6 +25,28 @@ class DocumentEntry {
   final bool isReferenced;
   final List<String> tags;
 
+  DocumentEntry copyWith({
+    String? path,
+    String? name,
+    DocumentType? type,
+    int? sizeBytes,
+    DateTime? modifiedAt,
+    DateTime? recentOpenedAt,
+    bool? isReferenced,
+    List<String>? tags,
+  }) {
+    return DocumentEntry(
+      path: path ?? this.path,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      modifiedAt: modifiedAt ?? this.modifiedAt,
+      recentOpenedAt: recentOpenedAt ?? this.recentOpenedAt,
+      isReferenced: isReferenced ?? this.isReferenced,
+      tags: List.unmodifiable(tags ?? this.tags),
+    );
+  }
+
   static Future<DocumentEntry> fromFile(
     File file, {
     DateTime? recentOpenedAt,
