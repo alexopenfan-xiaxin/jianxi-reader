@@ -124,9 +124,9 @@ class _GlassTrack extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: palette.card.withOpacity(0.70),
+              color: palette.card.withValues(alpha: 0.70),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withOpacity(0.42)),
+              border: Border.all(color: palette.hairline.withValues(alpha: 0.42)),
             ),
           ),
         ),
@@ -145,7 +145,7 @@ class _GlassThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.primary.withValues(alpha: 0.14),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -157,9 +157,9 @@ class _GlassThumb extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.18),
+              color: AppColors.primary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
             ),
           ),
         ),
@@ -193,7 +193,7 @@ class _GlassSegmentButton<T> extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         splashFactory: NoSplash.splashFactory,
-        highlightColor: AppColors.primary.withOpacity(0.04),
+        highlightColor: AppColors.primary.withValues(alpha: 0.04),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),

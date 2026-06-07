@@ -55,9 +55,9 @@ class _FixedSettingsHeader extends StatelessWidget {
     final palette = context.palette;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withOpacity(0.92),
+        color: palette.parchment.withValues(alpha: 0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
+          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
         ),
       ),
       child: ClipRect(
@@ -104,12 +104,12 @@ class _SettingsHomeIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.primary.withValues(alpha: 0.14),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -136,12 +136,12 @@ class _SettingsHomeIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final knobPaint = Paint()..color = primary.withOpacity(0.92);
+    final knobPaint = Paint()..color = primary.withValues(alpha: 0.92);
     final trackPaint = Paint()
-      ..color = line.withOpacity(0.58)
+      ..color = line.withValues(alpha: 0.58)
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
-    final glowPaint = Paint()..color = primary.withOpacity(0.15);
+    final glowPaint = Paint()..color = primary.withValues(alpha: 0.15);
 
     final rows = <double>[0.34, 0.50, 0.66];
     final knobs = <double>[0.58, 0.42, 0.64];
@@ -194,15 +194,15 @@ class _SettingsCompanionIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bodyPaint = Paint()..color = primary.withOpacity(0.10);
+    final bodyPaint = Paint()..color = primary.withValues(alpha: 0.10);
     final linePaint = Paint()
-      ..color = line.withOpacity(0.70)
+      ..color = line.withValues(alpha: 0.70)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final accentPaint = Paint()
-      ..color = primary.withOpacity(0.82)
+      ..color = primary.withValues(alpha: 0.82)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
@@ -227,12 +227,12 @@ class _SettingsCompanionIconPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.43, size.height * 0.53),
       1.8,
-      Paint()..color = line.withOpacity(0.80),
+      Paint()..color = line.withValues(alpha: 0.80),
     );
     canvas.drawCircle(
       Offset(size.width * 0.57, size.height * 0.53),
       1.8,
-      Paint()..color = line.withOpacity(0.80),
+      Paint()..color = line.withValues(alpha: 0.80),
     );
     canvas.drawArc(
       Rect.fromCenter(
@@ -304,9 +304,9 @@ class _AppearanceIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
       ),
       child: const Icon(
         Icons.palette_outlined,
@@ -468,10 +468,10 @@ class _ReadingSettingsIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.10),
+          color: AppColors.primary.withValues(alpha: 0.10),
         ),
       ),
       child: const Icon(
@@ -549,7 +549,7 @@ class _CardTitle extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
           child: Icon(icon, size: 18, color: AppColors.primary),
@@ -626,9 +626,9 @@ class _AboutIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
       ),
       child: const Icon(
         Icons.info_outline_rounded,
@@ -658,7 +658,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=120';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=121';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -802,7 +802,7 @@ class _AboutPageState extends State<AboutPage> {
         return;
       }
 
-      final total = response.contentLength ?? 0;
+      final total = response.contentLength;
       final file = File(filePath);
       final sink = file.openWrite();
       var received = 0;
@@ -1009,10 +1009,10 @@ class _AboutPageState extends State<AboutPage> {
                         width: 54,
                         height: 54,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
+                          color: AppColors.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(AppRadii.sm),
                           border: Border.all(
-                            color: AppColors.primary.withOpacity(0.12),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                           ),
                         ),
                         child: const Icon(

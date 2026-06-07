@@ -65,7 +65,7 @@ class IndentedOrderedListPlugin extends BlockParserPlugin {
       if (match == null) {
         return false;
       }
-      if (match.group(1)!.length > 0) {
+      if (match.group(1)!.isNotEmpty) {
         return true;
       }
     }

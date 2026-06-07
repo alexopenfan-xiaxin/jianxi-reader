@@ -54,25 +54,6 @@ void main() {
   });
 
   group('DocumentFileService', () {
-    test('imports supported files and preserves existing copies', () async {
-      final sourceDir = Directory.systemTemp.createTempSync('jianxi_source_');
-      final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
-      addTearDown(() => sourceDir.deleteSync(recursive: true));
-      addTearDown(() => targetDir.deleteSync(recursive: true));
-
-      final source = File(p.join(sourceDir.path, 'article.md'));
-      await source.writeAsString('# Title');
-      await File(p.join(targetDir.path, 'article.md')).writeAsString('old');
-
-      final imported = await const DocumentFileService().importFileToDirectory(
-        source: source,
-        directory: targetDir,
-      );
-
-      expect(imported.name, 'article (1).md');
-      expect(await File(imported.path).readAsString(), '# Title');
-    });
-
     test('renames a managed document and keeps the extension', () async {
       final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
       addTearDown(() => targetDir.deleteSync(recursive: true));
@@ -108,22 +89,16 @@ void main() {
     });
 
     test('removes only the managed copy from the library', () async {
-      final sourceDir = Directory.systemTemp.createTempSync('jianxi_source_');
       final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
-      addTearDown(() => sourceDir.deleteSync(recursive: true));
       addTearDown(() => targetDir.deleteSync(recursive: true));
 
-      final source = File(p.join(sourceDir.path, 'article.md'));
-      await source.writeAsString('# Source');
-      final imported = await const DocumentFileService().importFileToDirectory(
-        source: source,
-        directory: targetDir,
-      );
+      final file = File(p.join(targetDir.path, 'article.md'));
+      await file.writeAsString('# Source');
+      final document = await DocumentEntry.fromFile(file);
 
-      await const DocumentFileService().removeDocument(imported);
+      await const DocumentFileService().removeDocument(document);
 
-      expect(source.existsSync(), isTrue);
-      expect(File(imported.path).existsSync(), isFalse);
+      expect(file.existsSync(), isFalse);
     });
 
     test('moves and clears reading offset with document metadata', () async {

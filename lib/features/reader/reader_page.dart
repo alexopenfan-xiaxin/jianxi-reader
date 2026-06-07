@@ -116,7 +116,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                   child: Container(
-                    color: readingPalette.background.withOpacity(0.80),
+                    color: readingPalette.background.withValues(alpha: 0.80),
                   ),
                 ),
               )
@@ -370,7 +370,7 @@ class _ReaderProgressBar extends StatelessWidget {
         return LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.transparent,
-          color: AppColors.primary.withOpacity(0.70),
+          color: AppColors.primary.withValues(alpha: 0.70),
           minHeight: 3,
         );
       },
@@ -574,10 +574,10 @@ class _ReadingDisplaySheet extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(AppRadii.sm),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.12),
+                        color: AppColors.primary.withValues(alpha: 0.12),
                       ),
                     ),
                     child: const Icon(

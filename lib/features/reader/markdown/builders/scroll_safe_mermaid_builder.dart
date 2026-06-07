@@ -64,7 +64,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
   void _setScale(double value) {
     final nextScale = value.clamp(_minScale, _maxScale).toDouble();
     setState(() => _scale = nextScale);
-    _transformCtrl.value = Matrix4.identity()..scale(nextScale);
+    _transformCtrl.value = Matrix4.diagonal3Values(nextScale, nextScale, nextScale);
   }
 
   void _syncScaleFromGesture() {
@@ -95,7 +95,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
         decoration: BoxDecoration(
           color: Color(_style.backgroundColor),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
         ),
         clipBehavior: Clip.antiAlias,
         child: diagram,
@@ -108,7 +108,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
       decoration: BoxDecoration(
         color: Color(_style.backgroundColor),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Listener(
@@ -164,10 +164,10 @@ class _MermaidZoomControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.88),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppRadii.pill),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.28),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.28),
         ),
       ),
       child: Row(

@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
-import '../../../../core/design_tokens.dart';
 
 class HighlightNode extends MarkdownNode {
   const HighlightNode(this.text);
@@ -75,7 +74,7 @@ class HighlightBuilder extends MarkdownWidgetBuilder {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEB3B).withOpacity(0.35),
+        color: const Color(0xFFFFEB3B).withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(highlightNode.text, style: baseStyle),

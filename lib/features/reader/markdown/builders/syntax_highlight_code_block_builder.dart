@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
-import '../../../../core/design_tokens.dart';
 import '../../document_search_controller.dart';
 
 class SyntaxHighlightCodeBlockBuilder extends MarkdownWidgetBuilder {
@@ -99,7 +98,7 @@ class _SyntaxHighlightCodeBlockWidgetState
   static Future<void>? _initFuture;
   static HighlighterTheme? _lightTheme;
   static HighlighterTheme? _darkTheme;
-  static final _highlightCache = LinkedHashMap<_HighlightCacheKey, TextSpan>();
+  static final _highlightCache = <_HighlightCacheKey, TextSpan>{};
   static const _highlightCacheLimit = 80;
 
   bool _highlightReady = false;
@@ -330,7 +329,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                           color: Theme.of(context)
                               .colorScheme
                               .primaryContainer
-                              .withOpacity(0.3),
+                              .withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -369,8 +368,8 @@ class _SyntaxHighlightCodeBlockWidgetState
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: _copied
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
@@ -384,7 +383,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                                   : Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                             ),
                             if (_copied) ...[
                               const SizedBox(width: 4),

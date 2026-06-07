@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   irondash_engine_context
   super_native_extensions
   url_launcher_windows

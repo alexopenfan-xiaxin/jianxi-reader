@@ -71,11 +71,11 @@ class _AppCardState extends State<AppCard>
               : null,
           borderRadius: borderRadius,
           splashFactory: NoSplash.splashFactory,
-          highlightColor: AppColors.primary.withOpacity(0.05),
+          highlightColor: AppColors.primary.withValues(alpha: 0.05),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(
-                color: palette.hairline.withOpacity(0.72),
+                color: palette.hairline.withValues(alpha: 0.72),
               ),
               borderRadius: borderRadius,
             ),
