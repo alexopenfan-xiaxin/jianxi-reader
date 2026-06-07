@@ -51,6 +51,8 @@ lib/
 - `SmoothMarkdown` uses `selectable: true` for text selection
 - All navigation uses `PageRouteBuilder` with 300ms `easeOutCubic` slide
 - HTTP requests use `dart:io` `HttpClient` with `badCertificateCallback` (server uses self-signed cert)
+- Target Flutter compatibility is **Flutter 3.32.5** unless the user explicitly says otherwise. Do not use APIs introduced after that version; for example, `Color.withValues(alpha:)` is not available on 3.32.5, so use a compatible alternative such as `withOpacity(...)` when adjusting alpha.
+- After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
 
 ## Build & Run
 ```bash
