@@ -13,7 +13,7 @@ import 'file_rules.dart';
 abstract class DocumentLibraryService {
   Future<List<DocumentEntry>> scanLibrary();
 
-  Future<DocumentEntry?> pickAndImportDocument();
+  Future<List<DocumentEntry>> pickAndImportDocuments();
 
   Future<DocumentEntry> importExternalUri(Uri uri);
 
@@ -35,6 +35,7 @@ class DocumentFileService implements DocumentLibraryService {
   static const _recentOpenedPrefix = 'document.recentOpened.';
   static const _referencedPathsKey = 'referenced.paths';
   static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
+  static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
 
   @override
   Future<List<DocumentEntry>> scanLibrary() async {
@@ -60,7 +61,20 @@ class DocumentFileService implements DocumentLibraryService {
     // 2. Add referenced (original path) files
     final referencedPaths =
         preferences.getStringList(_referencedPathsKey) ?? [];
-    for (final path in referencedPaths) {
+    var pathsChanged = false;
+    for (final originalPath in referencedPaths) {
+      final migratedPath = await _migratePrefixedReferencedMirror(
+        preferences,
+        originalPath,
+      );
+      final path = migratedPath ?? originalPath;
+      if (path != originalPath) {
+        final index = referencedPaths.indexOf(originalPath);
+        if (index != -1) {
+          referencedPaths[index] = path;
+          pathsChanged = true;
+        }
+      }
       final refreshedPath =
           await _refreshReferencedMirror(preferences, path) ?? path;
       final file = File(refreshedPath);
@@ -74,16 +88,19 @@ class DocumentFileService implements DocumentLibraryService {
         ),
       );
     }
+    if (pathsChanged) {
+      await preferences.setStringList(_referencedPathsKey, referencedPaths);
+    }
 
     return entries;
   }
 
   @override
-  Future<DocumentEntry?> pickAndImportDocument() async {
+  Future<List<DocumentEntry>> pickAndImportDocuments() async {
     if (Platform.isAndroid) {
       try {
-        final androidDocument = await _pickAndroidReferencedDocument();
-        return androidDocument;
+        final androidDocuments = await _pickAndroidReferencedDocuments();
+        return androidDocuments;
       } on MissingPluginException {
         debugPrint(
           '[DocumentFileService] Android document picker channel unavailable',
@@ -94,35 +111,39 @@ class DocumentFileService implements DocumentLibraryService {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['md', 'html'],
-      allowMultiple: false,
+      allowMultiple: true,
       withData: false,
     );
 
     if (result == null) {
-      return null;
+      return const [];
     }
 
-    final sourcePath = result.files.single.path;
-    if (sourcePath == null || sourcePath.isEmpty) {
-      throw const FileSystemException('系统文件选择器没有返回可读取的路径');
-    }
-
-    final source = File(sourcePath);
-    if (!source.existsSync()) {
-      throw FileSystemException('文件不存在', sourcePath);
-    }
-    if (!DocumentFileRules.isSupportedPath(sourcePath)) {
-      throw FileSystemException('仅支持 Markdown 和 HTML 文档', sourcePath);
-    }
-
+    final imported = <DocumentEntry>[];
     final preferences = await SharedPreferences.getInstance();
     final paths = preferences.getStringList(_referencedPathsKey) ?? [];
-    if (!paths.contains(sourcePath)) {
-      paths.add(sourcePath);
-      await preferences.setStringList(_referencedPathsKey, paths);
-    }
+    for (final pickedFile in result.files) {
+      final sourcePath = pickedFile.path;
+      if (sourcePath == null || sourcePath.isEmpty) {
+        throw const FileSystemException('系统文件选择器没有返回可读取的路径');
+      }
 
-    return DocumentEntry.fromFile(source, isReferenced: true);
+      final source = File(sourcePath);
+      if (!source.existsSync()) {
+        throw FileSystemException('文件不存在', sourcePath);
+      }
+      if (!DocumentFileRules.isSupportedPath(sourcePath)) {
+        throw FileSystemException('仅支持 Markdown 和 HTML 文档', sourcePath);
+      }
+
+      if (!paths.contains(sourcePath)) {
+        paths.add(sourcePath);
+      }
+      imported.add(await DocumentEntry.fromFile(source, isReferenced: true));
+    }
+    await preferences.setStringList(_referencedPathsKey, paths);
+
+    return imported;
   }
 
   @override
@@ -333,35 +354,44 @@ class DocumentFileService implements DocumentLibraryService {
     }
   }
 
-  Future<DocumentEntry?> _pickAndroidReferencedDocument() async {
-    final picked = await _documentAccessChannel.invokeMapMethod<String, Object?>(
-      'pickDocument',
+  Future<List<DocumentEntry>> _pickAndroidReferencedDocuments() async {
+    final picked = await _documentAccessChannel.invokeListMethod<Object?>(
+      'pickDocuments',
     );
-    if (picked == null) {
-      return null;
-    }
-
-    final path = picked['path'] as String?;
-    final sourceUri = picked['uri'] as String?;
-    if (path == null || path.isEmpty || sourceUri == null || sourceUri.isEmpty) {
-      throw const FileSystemException('系统文件选择器没有返回可读取的路径');
-    }
-    if (!DocumentFileRules.isSupportedPath(path)) {
-      final pickedFile = File(path);
-      if (pickedFile.existsSync()) {
-        await pickedFile.delete();
-      }
-      throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
+    if (picked == null || picked.isEmpty) {
+      return const [];
     }
 
     final preferences = await SharedPreferences.getInstance();
-    await _rememberReferencedDocument(
-      preferences: preferences,
-      path: path,
-      sourceUri: sourceUri,
-    );
+    final documents = <DocumentEntry>[];
+    for (final item in picked) {
+      final metadata = item is Map ? item : const <String, Object?>{};
+      final path = metadata['path'] as String?;
+      final sourceUri = metadata['uri'] as String?;
+      if (path == null ||
+          path.isEmpty ||
+          sourceUri == null ||
+          sourceUri.isEmpty) {
+        throw const FileSystemException('系统文件选择器没有返回可读取的路径');
+      }
+      if (!DocumentFileRules.isSupportedPath(path)) {
+        final pickedFile = File(path);
+        if (pickedFile.existsSync()) {
+          await pickedFile.delete();
+        }
+        throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
+      }
 
-    return DocumentEntry.fromFile(File(path), isReferenced: true);
+      await _rememberReferencedDocument(
+        preferences: preferences,
+        path: path,
+        sourceUri: sourceUri,
+      );
+      documents.add(
+        await DocumentEntry.fromFile(File(path), isReferenced: true),
+      );
+    }
+    return documents;
   }
 
   Future<DocumentEntry> _importAndroidExternalUri(Uri uri) async {
@@ -455,6 +485,45 @@ class DocumentFileService implements DocumentLibraryService {
         '[DocumentFileService] refresh referenced document failed: $error',
       );
       return File(path).existsSync() ? path : null;
+    }
+  }
+
+  Future<String?> _migratePrefixedReferencedMirror(
+    SharedPreferences preferences,
+    String path,
+  ) async {
+    final sourceUri = preferences.getString(_referencedSourceUriKey(path));
+    if (sourceUri == null || sourceUri.isEmpty) {
+      return null;
+    }
+    final file = File(path);
+    if (!file.existsSync()) {
+      return null;
+    }
+    final match = _prefixedMirrorNamePattern.firstMatch(p.basename(path));
+    final restoredName = match?.group(1);
+    if (restoredName == null ||
+        restoredName.isEmpty ||
+        !DocumentFileRules.isSupportedPath(restoredName)) {
+      return null;
+    }
+
+    try {
+      final parent = file.parent;
+      final destinationDirectory = Directory(
+        p.join(parent.path, DateTime.now().microsecondsSinceEpoch.toString()),
+      );
+      await destinationDirectory.create(recursive: true);
+      final destinationPath = p.join(destinationDirectory.path, restoredName);
+      final migratedFile = await file.rename(destinationPath);
+      await _moveDocumentMetadata(preferences, path, migratedFile.path);
+      await _moveReferencedSourceUri(preferences, path, migratedFile.path);
+      return migratedFile.path;
+    } catch (error) {
+      debugPrint(
+        '[DocumentFileService] migrate referenced mirror name failed: $error',
+      );
+      return null;
     }
   }
 }

@@ -3,10 +3,10 @@ import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/design_tokens.dart';
+import '../../core/haptic_service.dart';
 import '../library/document_entry.dart';
 import '../library/library_controller.dart';
 import '../library/library_page.dart';
@@ -201,11 +201,9 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                         details.primaryVelocity != null &&
                             details.primaryVelocity! < -280);
             if (shouldMoveRight) {
-              HapticFeedback.selectionClick();
-              widget.onChanged(1);
+              _selectIndex(1);
             } else if (shouldMoveLeft) {
-              HapticFeedback.selectionClick();
-              widget.onChanged(0);
+              _selectIndex(0);
             }
             setState(() {
               _dragOffset = 0;
@@ -251,7 +249,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                               _dragOffset = 0;
                               _isDragging = false;
                             });
-                            widget.onChanged(0);
+                            _selectIndex(0);
                           },
                         ),
                         _FloatingNavItem(
@@ -264,7 +262,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                               _dragOffset = 0;
                               _isDragging = false;
                             });
-                            widget.onChanged(1);
+                            _selectIndex(1);
                           },
                         ),
                       ],
@@ -277,6 +275,13 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
         ),
       ),
     );
+  }
+
+  void _selectIndex(int index) {
+    if (index != widget.currentIndex) {
+      HapticService.selectionClick();
+      widget.onChanged(index);
+    }
   }
 }
 

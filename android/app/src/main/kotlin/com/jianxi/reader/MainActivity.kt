@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.view.HapticFeedbackConstants
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -14,6 +15,7 @@ import java.io.IOException
 class MainActivity : FlutterActivity() {
     private val APK_CHANNEL = "com.jianxi.reader/apk_install"
     private val DOCUMENT_CHANNEL = "com.jianxi.reader/document_access"
+    private val HAPTIC_CHANNEL = "com.jianxi.reader/haptics"
     private val DOCUMENT_PICK_REQUEST = 21013
     private var pendingDocumentPickResult: MethodChannel.Result? = null
 
@@ -42,7 +44,7 @@ class MainActivity : FlutterActivity() {
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOCUMENT_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "pickDocument" -> pickDocument(result)
+                "pickDocument", "pickDocuments" -> pickDocument(result)
                 "refreshDocument" -> {
                     val uri = call.argument<String>("uri")
                     val path = call.argument<String>("path")
@@ -71,6 +73,15 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAPTIC_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "selectionClick" -> {
+                    performSelectionHaptic()
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -91,19 +102,22 @@ class MainActivity : FlutterActivity() {
                 return
             }
 
-            val uri = data?.data
-            if (uri == null) {
+            val uris = documentUrisFromResult(data)
+            if (uris.isEmpty()) {
                 result.error("NO_URI", "Document picker did not return a uri", null)
                 return
             }
 
-            persistReadPermission(uri, data)
             try {
-                val name = queryDisplayName(uri) ?: "document"
-                val file = nextDocumentMirrorFile(name)
-                val metadata = copyUriToFile(uri, file).toMutableMap()
-                metadata["uri"] = uri.toString()
-                result.success(metadata)
+                val documents = uris.map { uri ->
+                    persistReadPermission(uri, data)
+                    val name = documentNameForUri(uri)
+                    val file = nextDocumentMirrorFile(name)
+                    val metadata = copyUriToFile(uri, file).toMutableMap()
+                    metadata["uri"] = uri.toString()
+                    metadata
+                }
+                result.success(documents)
             } catch (error: Exception) {
                 result.error("COPY_FAILED", error.message, null)
             }
@@ -132,6 +146,7 @@ class MainActivity : FlutterActivity() {
             )
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
         try {
             startActivityForResult(intent, DOCUMENT_PICK_REQUEST)
@@ -173,6 +188,26 @@ class MainActivity : FlutterActivity() {
             "size" to file.length(),
             "modifiedAt" to file.lastModified()
         )
+    }
+
+    private fun documentUrisFromResult(data: Intent?): List<Uri> {
+        val uris = mutableListOf<Uri>()
+        val clipData = data?.clipData
+        if (clipData != null) {
+            for (index in 0 until clipData.itemCount) {
+                clipData.getItemAt(index).uri?.let { uri ->
+                    if (!uris.contains(uri)) {
+                        uris.add(uri)
+                    }
+                }
+            }
+        }
+        data?.data?.let { uri ->
+            if (!uris.contains(uri)) {
+                uris.add(uri)
+            }
+        }
+        return uris
     }
 
     private fun importExternalUri(uri: Uri): Map<String, Any?> {
@@ -235,8 +270,13 @@ class MainActivity : FlutterActivity() {
     private fun nextDocumentMirrorFile(displayName: String): File {
         val directory = File(filesDir, "referenced_documents")
         val cleanName = sanitizeFileName(displayName).ifEmpty { "document" }
-        val candidate = File(directory, "${System.currentTimeMillis()}_$cleanName")
-        return candidate
+        var candidateDirectory = File(directory, "doc-${System.nanoTime()}")
+        var index = 1
+        while (candidateDirectory.exists()) {
+            candidateDirectory = File(directory, "doc-${System.nanoTime()}-$index")
+            index += 1
+        }
+        return File(candidateDirectory, cleanName)
     }
 
     private fun sanitizeFileName(name: String): String {
@@ -265,6 +305,13 @@ class MainActivity : FlutterActivity() {
             }
         }
         return 0L
+    }
+
+    private fun performSelectionHaptic() {
+        window.decorView.performHapticFeedback(
+            HapticFeedbackConstants.CLOCK_TICK,
+            HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+        )
     }
 
     private fun canRequestPackageInstalls(): Boolean {

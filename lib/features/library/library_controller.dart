@@ -64,18 +64,18 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
-  Future<DocumentEntry?> importExternalDocument() async {
+  Future<List<DocumentEntry>> importExternalDocuments() async {
     _isImporting = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final imported = await documentService.pickAndImportDocument();
+      final imported = await documentService.pickAndImportDocuments();
       _allDocuments = await documentService.scanLibrary();
       return imported;
     } catch (error) {
       _errorMessage = '导入外部文档失败：$error';
-      return null;
+      return const [];
     } finally {
       _isImporting = false;
       notifyListeners();

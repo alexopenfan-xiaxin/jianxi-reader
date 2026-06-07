@@ -1,9 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../design_tokens.dart';
+import '../haptic_service.dart';
 
 class GlassSegment<T> {
   const GlassSegment({
@@ -42,17 +42,22 @@ class GlassSegmentedControl<T> extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemWidth = constraints.maxWidth / segments.length;
+        var activeValue = value;
+
+        void selectValue(T nextValue) {
+          if (nextValue != activeValue) {
+            activeValue = nextValue;
+            HapticService.selectionClick();
+            onChanged(nextValue);
+          }
+        }
 
         void selectFromLocalPosition(Offset localPosition) {
           final nextIndex = (localPosition.dx / itemWidth)
               .floor()
               .clamp(0, segments.length - 1)
               .toInt();
-          final nextValue = segments[nextIndex].value;
-          if (nextValue != value) {
-            HapticFeedback.selectionClick();
-            onChanged(nextValue);
-          }
+          selectValue(segments[nextIndex].value);
         }
 
         return GestureDetector(
@@ -87,7 +92,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                           child: _GlassSegmentButton<T>(
                             segment: segments[index],
                             selected: index == effectiveIndex,
-                            onTap: () => onChanged(segments[index].value),
+                            onTap: () => selectValue(segments[index].value),
                           ),
                         ),
                     ],

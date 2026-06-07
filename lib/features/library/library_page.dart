@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
+import '../../core/haptic_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../reader/reader_page.dart';
 import 'document_actions.dart';
@@ -219,11 +220,18 @@ class _Header extends StatelessWidget {
     LibraryController controller,
   ) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final document = await controller.importExternalDocument();
-    if (!context.mounted || document == null) {
+    final documents = await controller.importExternalDocuments();
+    if (!context.mounted || documents.isEmpty) {
       return;
     }
-    await _openReader(context, document);
+    HapticService.selectionClick();
+    if (documents.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 ${documents.length} 个文档')),
+      );
+      return;
+    }
+    await _openReader(context, documents.single);
     if (context.mounted) {
       await controller.loadDocuments();
     }
@@ -519,9 +527,16 @@ class _EmptyState extends StatelessWidget {
     BuildContext context,
     LibraryController controller,
   ) async {
-    final document = await controller.importExternalDocument();
-    if (!context.mounted || document == null) return;
-    await _openReader(context, document);
+    final documents = await controller.importExternalDocuments();
+    if (!context.mounted || documents.isEmpty) return;
+    HapticService.selectionClick();
+    if (documents.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 ${documents.length} 个文档')),
+      );
+      return;
+    }
+    await _openReader(context, documents.single);
     if (context.mounted) {
       await controller.loadDocuments();
     }

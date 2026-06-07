@@ -8,12 +8,17 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeDocumentService implements DocumentLibraryService {
-  FakeDocumentService(this._documents);
+  FakeDocumentService(this._documents, {List<DocumentEntry>? pickedDocuments})
+      : _pickedDocuments = pickedDocuments ?? const [];
 
   final List<DocumentEntry> _documents;
+  final List<DocumentEntry> _pickedDocuments;
 
   @override
-  Future<DocumentEntry?> pickAndImportDocument() async => null;
+  Future<List<DocumentEntry>> pickAndImportDocuments() async {
+    _documents.addAll(_pickedDocuments);
+    return List.of(_pickedDocuments);
+  }
 
   @override
   Future<DocumentEntry> importExternalUri(Uri uri) async {
@@ -61,8 +66,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '2.0.2',
-      buildNumber: '103',
+      version: '2.0.3',
+      buildNumber: '104',
       buildSignature: '',
     );
   });
@@ -97,6 +102,31 @@ void main() {
 
     expect(find.text('alpha.md'), findsOneWidget);
     expect(find.text('beta.html'), findsNothing);
+  });
+
+  testWidgets('imports multiple documents and keeps original names', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService(
+          [],
+          pickedDocuments: [
+            _document('alpha.md', modifiedAt: DateTime(2026)),
+            _document('beta.html', type: DocumentType.html),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('import_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('alpha.md'), findsOneWidget);
+    expect(find.text('beta.html'), findsOneWidget);
+    expect(find.text('已导入 2 个文档'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^\d{10,}_')), findsNothing);
   });
 
   testWidgets('changes the home view mode from appearance settings', (
@@ -241,7 +271,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 2.0.2 (103)'), findsOneWidget);
+    expect(find.text('版本 2.0.3 (104)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('缓存清理'), findsOneWidget);
