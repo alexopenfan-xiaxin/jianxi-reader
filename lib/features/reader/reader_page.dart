@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -28,8 +29,13 @@ class ReaderPage extends StatefulWidget {
 
 class _ReaderPageState extends State<ReaderPage> {
   late DocumentEntry _document;
+  late LibraryController _libraryController;
   final _scrollController = ScrollController();
+  Timer? _saveReadingOffsetDebounce;
+  double _restoreReadingOffset = 0;
   bool _showGlass = false;
+  bool _hasRestoredMarkdownOffset = false;
+  bool _skipSaveReadingOffset = false;
   bool _isPreparingDocument = true;
   String? _prepareError;
 
@@ -37,12 +43,19 @@ class _ReaderPageState extends State<ReaderPage> {
   void initState() {
     super.initState();
     _document = widget.document;
+    _libraryController = context.read<LibraryController>();
     _scrollController.addListener(_handleScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDocument());
   }
 
   @override
   void dispose() {
+    _saveReadingOffsetDebounce?.cancel();
+    if (_scrollController.hasClients &&
+        !_isPreparingDocument &&
+        !_skipSaveReadingOffset) {
+      unawaited(_saveReadingOffset(_scrollController.offset));
+    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -52,6 +65,9 @@ class _ReaderPageState extends State<ReaderPage> {
     final nextShowGlass = _scrollController.offset > 20;
     if (nextShowGlass != _showGlass && mounted) {
       setState(() => _showGlass = nextShowGlass);
+    }
+    if (!_isPreparingDocument && _document.type == DocumentType.markdown) {
+      _scheduleSaveReadingOffset(_scrollController.offset);
     }
   }
 
@@ -154,20 +170,31 @@ class _ReaderPageState extends State<ReaderPage> {
       topPadding: topPadding,
       settings: settings,
       readingPalette: readingPalette,
+      initialReadingOffset: _restoreReadingOffset,
+      onReadingOffsetChanged: _scheduleSaveReadingOffset,
     );
   }
 
   Future<void> _prepareDocument() async {
     try {
-      final controller = context.read<LibraryController>();
-      final refreshed = await controller.refreshDocument(_document);
-      await controller.markDocumentOpened(refreshed);
+      final refreshed = await _libraryController.refreshDocument(_document);
+      await _libraryController.markDocumentOpened(refreshed);
+      final readingOffset = await _libraryController.loadReadingOffset(
+        refreshed,
+      );
       if (mounted) {
         setState(() {
           _document = refreshed;
+          _restoreReadingOffset = readingOffset;
+          _hasRestoredMarkdownOffset = false;
           _prepareError = null;
           _isPreparingDocument = false;
         });
+        if (refreshed.type == DocumentType.markdown) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _restoreMarkdownOffset(attempt: 0),
+          );
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -177,6 +204,58 @@ class _ReaderPageState extends State<ReaderPage> {
         });
       }
     }
+  }
+
+  void _restoreMarkdownOffset({required int attempt}) {
+    if (!mounted ||
+        _hasRestoredMarkdownOffset ||
+        _document.type != DocumentType.markdown) {
+      return;
+    }
+    if (_restoreReadingOffset <= 0) {
+      _hasRestoredMarkdownOffset = true;
+      return;
+    }
+    if (!_scrollController.hasClients) {
+      _retryRestoreMarkdownOffset(attempt);
+      return;
+    }
+
+    final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0 && attempt < 8) {
+      _retryRestoreMarkdownOffset(attempt);
+      return;
+    }
+    final target = _restoreReadingOffset.clamp(0.0, position.maxScrollExtent);
+    _scrollController.jumpTo(target);
+    _hasRestoredMarkdownOffset = true;
+  }
+
+  void _retryRestoreMarkdownOffset(int attempt) {
+    if (attempt >= 8) {
+      _hasRestoredMarkdownOffset = true;
+      return;
+    }
+    Future<void>.delayed(const Duration(milliseconds: 120), () {
+      _restoreMarkdownOffset(attempt: attempt + 1);
+    });
+  }
+
+  void _scheduleSaveReadingOffset(double offset) {
+    if (_skipSaveReadingOffset) {
+      return;
+    }
+    _saveReadingOffsetDebounce?.cancel();
+    _saveReadingOffsetDebounce = Timer(const Duration(milliseconds: 700), () {
+      unawaited(_saveReadingOffset(offset));
+    });
+  }
+
+  Future<void> _saveReadingOffset(double offset) {
+    if (_skipSaveReadingOffset) {
+      return Future<void>.value();
+    }
+    return _libraryController.saveReadingOffset(_document, offset);
   }
 
   Future<void> _handleAction(_ReaderMenuAction action) async {
@@ -189,6 +268,8 @@ class _ReaderPageState extends State<ReaderPage> {
       case _ReaderMenuAction.remove:
         final removed = await removeDocumentFromLibrary(context, _document);
         if (removed && mounted) {
+          _skipSaveReadingOffset = true;
+          _saveReadingOffsetDebounce?.cancel();
           Navigator.of(context).pop();
         }
     }
@@ -231,6 +312,8 @@ class _ReaderContent extends StatelessWidget {
     required this.document,
     required this.settings,
     required this.readingPalette,
+    required this.initialReadingOffset,
+    required this.onReadingOffsetChanged,
     this.scrollController,
     this.topPadding = 0,
   });
@@ -238,6 +321,8 @@ class _ReaderContent extends StatelessWidget {
   final DocumentEntry document;
   final AppSettingsController settings;
   final ReadingPalette readingPalette;
+  final double initialReadingOffset;
+  final ValueChanged<double> onReadingOffsetChanged;
   final ScrollController? scrollController;
   final double topPadding;
 
@@ -265,6 +350,8 @@ class _ReaderContent extends StatelessWidget {
           readingPalette: readingPalette,
           horizontalPadding: settings.readingHorizontalPaddingValue,
           topPadding: topPadding,
+          initialScrollOffset: initialReadingOffset,
+          onScrollOffsetChanged: onReadingOffsetChanged,
         ),
     };
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ class HtmlDocumentView extends StatefulWidget {
     required this.lineHeight,
     required this.readingPalette,
     required this.horizontalPadding,
+    required this.initialScrollOffset,
+    required this.onScrollOffsetChanged,
     this.topPadding = 0,
     super.key,
   });
@@ -22,6 +25,8 @@ class HtmlDocumentView extends StatefulWidget {
   final double lineHeight;
   final ReadingPalette readingPalette;
   final double horizontalPadding;
+  final double initialScrollOffset;
+  final ValueChanged<double> onScrollOffsetChanged;
   final double topPadding;
 
   @override
@@ -30,7 +35,9 @@ class HtmlDocumentView extends StatefulWidget {
 
 class _HtmlDocumentViewState extends State<HtmlDocumentView> {
   late final WebViewController _controller;
+  Timer? _scrollOffsetTimer;
   bool _isLoading = true;
+  bool _hasRestoredScrollOffset = false;
 
   @override
   void initState() {
@@ -43,6 +50,8 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
           onPageFinished: (_) {
             if (mounted) {
               setState(() => _isLoading = false);
+              _restoreScrollOffset();
+              _startScrollOffsetTimer();
             }
           },
         ),
@@ -58,12 +67,21 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
         oldWidget.lineHeight != widget.lineHeight ||
         oldWidget.readingPalette != widget.readingPalette ||
         oldWidget.horizontalPadding != widget.horizontalPadding) {
+      _hasRestoredScrollOffset = false;
       _controller.setBackgroundColor(widget.readingPalette.background);
       _loadHtml();
     }
   }
 
+  @override
+  void dispose() {
+    _scrollOffsetTimer?.cancel();
+    unawaited(_reportScrollOffset());
+    super.dispose();
+  }
+
   Future<void> _loadHtml() async {
+    _scrollOffsetTimer?.cancel();
     if (mounted) {
       setState(() => _isLoading = true);
     }
@@ -81,6 +99,36 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
       return;
     }
     await _controller.loadHtmlString(html, baseUrl: baseUrl);
+  }
+
+  void _startScrollOffsetTimer() {
+    _scrollOffsetTimer?.cancel();
+    _scrollOffsetTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _reportScrollOffset(),
+    );
+  }
+
+  Future<void> _restoreScrollOffset() async {
+    if (_hasRestoredScrollOffset || widget.initialScrollOffset <= 0) {
+      _hasRestoredScrollOffset = true;
+      return;
+    }
+    try {
+      await _controller.scrollTo(0, widget.initialScrollOffset.round());
+      _hasRestoredScrollOffset = true;
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] restore scroll offset failed: $error');
+    }
+  }
+
+  Future<void> _reportScrollOffset() async {
+    try {
+      final position = await _controller.getScrollPosition();
+      widget.onScrollOffsetChanged(position.dy);
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] read scroll offset failed: $error');
+    }
   }
 
   @override

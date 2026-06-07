@@ -125,5 +125,25 @@ void main() {
       expect(source.existsSync(), isTrue);
       expect(File(imported.path).existsSync(), isFalse);
     });
+
+    test('moves and clears reading offset with document metadata', () async {
+      final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
+      addTearDown(() => targetDir.deleteSync(recursive: true));
+
+      final originalFile = File(p.join(targetDir.path, 'article.md'));
+      await originalFile.writeAsString('# Title');
+      final document = await DocumentEntry.fromFile(originalFile);
+      const service = DocumentFileService();
+
+      await service.saveReadingOffset(document, 128.5);
+      expect(await service.loadReadingOffset(document), 128.5);
+
+      final renamed = await service.renameDocument(document, 'renamed article');
+      expect(await service.loadReadingOffset(document), 0);
+      expect(await service.loadReadingOffset(renamed), 128.5);
+
+      await service.removeDocument(renamed);
+      expect(await service.loadReadingOffset(renamed), 0);
+    });
   });
 }

@@ -651,13 +651,13 @@ class _SearchTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? const Color(0xFF1D1D1F) : context.palette.ink;
+    final foreground = selected ? AppColors.primary : context.palette.ink;
     return ActionChip(
       onPressed: onTap,
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
       label: Text(label),
       backgroundColor: selected
-          ? const Color(0xFFFFCC00).withOpacity(0.18)
+          ? AppColors.primary.withOpacity(0.12)
           : context.palette.dividerSoft,
       labelStyle: TextStyle(
         color: foreground,
@@ -757,7 +757,7 @@ class _SortSheet extends StatelessWidget {
                           child: const Text(
                             '取消',
                             style: TextStyle(
-                              color: Color(0xFFE3B600),
+                              color: AppColors.primary,
                               fontWeight: FontWeight.w700,
                               fontSize: 18,
                             ),
@@ -817,7 +817,7 @@ class _SortOptionTile extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: selected
-                      ? const Color(0xFFE3B600)
+                      ? AppColors.primary
                       : context.palette.hairline,
                   width: selected ? 5 : 2,
                 ),
@@ -1783,13 +1783,13 @@ class _SmallTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFCC00).withOpacity(0.12),
+        color: AppColors.primary.withOpacity(0.10),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF9A7900),
+              color: AppColors.primary,
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0,

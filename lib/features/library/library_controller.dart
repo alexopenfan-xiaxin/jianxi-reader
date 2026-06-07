@@ -160,6 +160,17 @@ class LibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<double> loadReadingOffset(DocumentEntry document) {
+    return documentService.loadReadingOffset(document);
+  }
+
+  Future<void> saveReadingOffset(
+    DocumentEntry document,
+    double offset,
+  ) {
+    return documentService.saveReadingOffset(document, offset);
+  }
+
   Future<void> createTag(String name) async {
     await documentService.createTag(name);
     _tags = await documentService.loadTags();

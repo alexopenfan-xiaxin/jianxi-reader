@@ -13,6 +13,7 @@ class FakeDocumentService implements DocumentLibraryService {
 
   final List<DocumentEntry> _documents;
   final List<DocumentEntry> _pickedDocuments;
+  final Map<String, double> _readingOffsets = {};
 
   @override
   Future<List<DocumentEntry>> pickAndImportDocuments() async {
@@ -50,16 +51,31 @@ class FakeDocumentService implements DocumentLibraryService {
       tags: document.tags,
     );
     _documents[index] = renamed;
+    final offset = _readingOffsets.remove(document.path);
+    if (offset != null) {
+      _readingOffsets[renamed.path] = offset;
+    }
     return renamed;
   }
 
   @override
   Future<void> removeDocument(DocumentEntry document) async {
     _documents.removeWhere((entry) => entry.path == document.path);
+    _readingOffsets.remove(document.path);
   }
 
   @override
   Future<void> markDocumentOpened(DocumentEntry document) async {}
+
+  @override
+  Future<double> loadReadingOffset(DocumentEntry document) async {
+    return _readingOffsets[document.path] ?? 0;
+  }
+
+  @override
+  Future<void> saveReadingOffset(DocumentEntry document, double offset) async {
+    _readingOffsets[document.path] = offset;
+  }
 
   @override
   Future<List<String>> loadTags() async {
@@ -92,8 +108,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: '简兮阅读器',
       packageName: 'com.jianxi.reader',
-      version: '2.1.1',
-      buildNumber: '111',
+      version: '2.1.2',
+      buildNumber: '112',
       buildSignature: '',
     );
   });
@@ -382,7 +398,7 @@ void main() {
     await tester.tap(find.text('关于应用'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本 2.1.1 (111)'), findsOneWidget);
+    expect(find.text('版本 2.1.2 (112)'), findsOneWidget);
     expect(find.text('应用更新'), findsOneWidget);
     expect(find.text('检查更新'), findsOneWidget);
     expect(find.text('缓存清理'), findsOneWidget);
