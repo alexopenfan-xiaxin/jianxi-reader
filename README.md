@@ -62,8 +62,8 @@
 
 | 层级 | 选型 |
 |------|------|
-| 框架 | Flutter 3.32 |
-| 语言 | Dart 3.8 |
+| 框架 | Flutter 3.44 |
+| 语言 | Dart 3.12 |
 | 状态管理 | Provider |
 | Markdown | `flutter_smooth_markdown`（带代码高亮、Mermaid） |
 | HTML | `webview_flutter` |
