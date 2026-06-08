@@ -7,7 +7,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/alexopenfan-xiaxin/jianxi-reader?style=flat-square&labelColor=ffffff&color=007AFF" alt="最新版本" />
-  <img src="https://img.shields.io/badge/Android-5.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 10.0+" />
+  <img src="https://img.shields.io/badge/Android-10.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 10.0+" />
   <img src="https://img.shields.io/badge/Flutter-3.44-40D0FD?style=flat-square&logo=flutter&logoColor=white" alt="Flutter" />
   <img src="https://img.shields.io/badge/License-MIT-FF3B30?style=flat-square" alt="MIT" />
   <img src="https://img.shields.io/github/stars/alexopenfan-xiaxin/jianxi-reader?style=flat-square&color=FF9500&labelColor=ffffff" alt="Stars" />
