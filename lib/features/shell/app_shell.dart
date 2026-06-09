@@ -309,9 +309,9 @@ class _LiquidBottomNav extends StatefulWidget {
 }
 
 class _LiquidBottomNavState extends State<_LiquidBottomNav> {
-  static const _itemWidth = LiquidGlassTokens.bottomBarItemWidth;
-  static const _itemHeight = LiquidGlassTokens.bottomBarHeight;
-  static const _outerPadding = LiquidGlassTokens.bottomBarPadding;
+  static const _itemWidth = LiquidGlassTokens.floatingBottomBarItemWidth;
+  static const _itemHeight = LiquidGlassTokens.floatingBottomBarHeight;
+  static const _outerPadding = LiquidGlassTokens.floatingBottomBarPadding;
   static const _navWidth = _itemWidth * 2 + _outerPadding * 2;
   static const _dragThreshold = _itemWidth * 0.35;
 
@@ -324,6 +324,14 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
     final selectedLeft = _outerPadding + widget.currentIndex * _itemWidth +
         clampedDrag;
     final dragProgress = (clampedDrag.abs() / _itemWidth).clamp(0.0, 1.0);
+    final dragDirection = clampedDrag == 0 ? 0.0 : clampedDrag.sign;
+    final panelOffset = dragDirection *
+        LiquidGlassTokens.floatingBottomBarPanelOffsetMax *
+        Curves.easeOutCubic.transform(dragProgress);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final indicatorColor =
+        (dark ? Colors.white : Colors.black).withOpacity(0.10);
+    final indicatorBorder = Colors.white.withOpacity(dark ? 0.18 : 0.38);
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
@@ -398,21 +406,19 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,
-                  height: LiquidGlassTokens.bottomBarIndicatorHeight -
-                      _outerPadding * 2,
+                  height: LiquidGlassTokens.floatingBottomBarIndicatorHeight,
                   child: Transform.scale(
-                    scaleX: 1 + dragProgress * 0.08,
-                    scaleY: 1 - dragProgress * 0.03,
+                    scaleX: 1 + dragProgress * 0.20,
+                    scaleY: 1 - dragProgress * 0.06,
                     child: LiquidGlassSurface(
                       blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
-                      color: AppColors.primary.withOpacity(0.10),
-                      borderColor: AppColors.primary.withOpacity(0.22),
-                      tintPrimary: true,
+                      color: indicatorColor,
+                      borderColor: indicatorBorder,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.18),
-                          blurRadius: 18,
-                          offset: const Offset(0, 7),
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 1),
                         ),
                       ],
                       child: const SizedBox.expand(),
@@ -422,24 +428,27 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.all(_outerPadding),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _LiquidBottomNavItem(
-                          selected: widget.currentIndex == 0,
-                          icon: Icons.home_outlined,
-                          selectedIcon: Icons.home_rounded,
-                          label: '首页',
-                          onTap: () => _selectFromTap(0),
-                        ),
-                        _LiquidBottomNavItem(
-                          selected: widget.currentIndex == 1,
-                          icon: Icons.settings_outlined,
-                          selectedIcon: Icons.settings_rounded,
-                          label: '设置',
-                          onTap: () => _selectFromTap(1),
-                        ),
-                      ],
+                    child: Transform.translate(
+                      offset: Offset(panelOffset, 0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _LiquidBottomNavItem(
+                            selected: widget.currentIndex == 0,
+                            icon: Icons.home_outlined,
+                            selectedIcon: Icons.home_rounded,
+                            label: '首页',
+                            onTap: () => _selectFromTap(0),
+                          ),
+                          _LiquidBottomNavItem(
+                            selected: widget.currentIndex == 1,
+                            icon: Icons.settings_outlined,
+                            selectedIcon: Icons.settings_rounded,
+                            label: '设置',
+                            onTap: () => _selectFromTap(1),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -486,6 +495,7 @@ class _LiquidBottomNavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final foreground = selected ? AppColors.primary : palette.muted;
+    final unselectedForeground = palette.muted;
     return Semantics(
       selected: selected,
       button: true,
@@ -509,15 +519,33 @@ class _LiquidBottomNavItem extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedSwitcher(
-                    duration: AppMotion.fast,
-                    switchInCurve: AppMotion.emphasized,
-                    switchOutCurve: AppMotion.exit,
-                    child: Icon(
-                      selected ? selectedIcon : icon,
-                      key: ValueKey(selected),
-                      color: foreground,
-                      size: 22,
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedOpacity(
+                          opacity: selected ? 0 : 1,
+                          duration: AppMotion.fast,
+                          curve: AppMotion.emphasized,
+                          child: Icon(
+                            icon,
+                            color: unselectedForeground,
+                            size: 22,
+                          ),
+                        ),
+                        AnimatedOpacity(
+                          opacity: selected ? 1 : 0,
+                          duration: AppMotion.fast,
+                          curve: AppMotion.emphasized,
+                          child: Icon(
+                            selectedIcon,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 2),

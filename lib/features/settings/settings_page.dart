@@ -402,7 +402,7 @@ class AppearancePage extends StatelessWidget {
                   const _CardTitle(
                     icon: Icons.auto_awesome_rounded,
                     title: '视觉模式',
-                    subtitle: '经典模式保持当前界面，液态玻璃模式启用 BiliPai 调校的玻璃拟态。',
+                    subtitle: '经典模式保持当前界面，液态玻璃模式启用玻璃拟态界面。',
                   ),
                   const SizedBox(height: AppSpacing.md),
                   GlassSegmentedControl<AppVisualMode>(
@@ -740,7 +740,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=130';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=131';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',

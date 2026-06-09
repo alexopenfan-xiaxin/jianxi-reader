@@ -9,6 +9,11 @@ class LiquidGlassTokens {
   static const bottomBarIndicatorHeight = 56.0;
   static const bottomBarPadding = 3.0;
   static const bottomBarItemWidth = 116.0;
+  static const floatingBottomBarHeight = 64.0;
+  static const floatingBottomBarPadding = 4.0;
+  static const floatingBottomBarItemWidth = 76.0;
+  static const floatingBottomBarIndicatorHeight = 56.0;
+  static const floatingBottomBarPanelOffsetMax = 5.0;
   static const blurSigma = 24.0;
   static const bilipaiTunedBlurSigma = 4.0;
   static const materialAlphaLight = 0.38;
