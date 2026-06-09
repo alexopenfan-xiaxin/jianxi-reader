@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -93,7 +93,7 @@ class _FixedSettingsHeader extends StatelessWidget {
           borderRadius: BorderRadius.zero,
           color: liquidGlassHeaderColor(context),
           borderColor: Colors.transparent,
-          blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+          blurSigma: LiquidGlassTokens.effectBlurSigma,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -137,7 +137,7 @@ PreferredSizeWidget _settingsPageAppBar(BuildContext context, String title) {
             borderRadius: BorderRadius.zero,
             color: liquidGlassHeaderColor(context),
             borderColor: Colors.transparent,
-            blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+            blurSigma: LiquidGlassTokens.effectBlurSigma,
             child: const SizedBox.expand(),
           )
         : null,
@@ -740,7 +740,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=131';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=132';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -782,7 +782,7 @@ class _AboutPageState extends State<AboutPage> {
         if (!mounted) return;
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
+          builder: (ctx) => LiquidGlassDialog(
             title: const Text('发现新版本'),
             content: Text(
               newVersion == null || newVersion.isEmpty
@@ -844,7 +844,7 @@ class _AboutPageState extends State<AboutPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => LiquidGlassDialog(
         title: const Text('下载更新'),
         content: SizedBox(
           width: double.maxFinite,
@@ -922,7 +922,7 @@ class _AboutPageState extends State<AboutPage> {
       if (!canInstall) {
         final open = await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
+          builder: (ctx) => LiquidGlassDialog(
             title: const Text('安装权限'),
             content: const Text('安装更新需要开启「安装未知应用」权限。是否前往设置？'),
             actions: [

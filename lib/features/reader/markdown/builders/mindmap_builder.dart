@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
 import '../../../../core/design_tokens.dart';
@@ -282,7 +282,7 @@ class _MindmapNodeWidget extends StatelessWidget {
             depth == 0 ? 0.06 : 0.03,
           )!;
     final borderColor = depth == 0
-        ? AppColors.primary.withValues(alpha: 0.3)
+        ? AppColors.primary.withOpacity(0.3)
         : palette.hairline;
 
     Widget label = Container(
@@ -317,8 +317,8 @@ class _MindmapNodeWidget extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            color: AppColors.primary.withOpacity(0.1),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           ),
           child: label,
         ),
@@ -341,7 +341,7 @@ class _MindmapConnector extends StatelessWidget {
         width: 12,
         height: 1.5,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.4),
+          color: AppColors.primary.withOpacity(0.4),
           borderRadius: BorderRadius.circular(1),
         ),
       ),

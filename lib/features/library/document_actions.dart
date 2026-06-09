@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../../core/design_tokens.dart';
+import '../../core/widgets/liquid_glass.dart';
 import 'document_entry.dart';
 import 'library_controller.dart';
 
@@ -64,25 +65,34 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
   @override
   Widget build(BuildContext context) {
     final extension = p.extension(widget.document.name);
+    final isLiquidGlass = liquidGlassEnabled(context);
+    final textField = TextField(
+      controller: _controller,
+      autofocus: true,
+      enabled: !_isSaving,
+      decoration: InputDecoration(
+        labelText: '文件名',
+        suffixText: extension,
+        errorText: _errorText,
+        border: isLiquidGlass ? InputBorder.none : null,
+        enabledBorder: isLiquidGlass ? InputBorder.none : null,
+        focusedBorder: isLiquidGlass ? InputBorder.none : null,
+        filled: isLiquidGlass ? false : null,
+        isDense: isLiquidGlass,
+      ),
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _save(),
+    );
 
-    return AlertDialog(
+    return LiquidGlassDialog(
       title: const Text('重命名文档'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            enabled: !_isSaving,
-            decoration: InputDecoration(
-              labelText: '文件名',
-              suffixText: extension,
-              errorText: _errorText,
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-          ),
+          isLiquidGlass
+              ? LiquidGlassTextFieldFrame(child: textField)
+              : textField,
           const SizedBox(height: AppSpacing.sm),
           Text(
             '扩展名保持不变',

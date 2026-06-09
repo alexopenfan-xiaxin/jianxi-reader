@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
@@ -387,7 +387,7 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
               children: [
                 Positioned.fill(
                   child: LiquidGlassSurface(
-                    blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+                    blurSigma: LiquidGlassTokens.effectBlurSigma,
                     color: liquidGlassContainerColor(context),
                     borderColor: Colors.white.withOpacity(0.34),
                     boxShadow: [
@@ -411,7 +411,7 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                     scaleX: 1 + dragProgress * 0.20,
                     scaleY: 1 - dragProgress * 0.06,
                     child: LiquidGlassSurface(
-                      blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+                      blurSigma: LiquidGlassTokens.effectBlurSigma,
                       color: indicatorColor,
                       borderColor: indicatorBorder,
                       boxShadow: [

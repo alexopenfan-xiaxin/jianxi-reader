@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/app_settings_controller.dart';
 import '../../../core/design_tokens.dart';
 import '../../../core/emoji_service.dart';
+import '../../../core/widgets/liquid_glass.dart';
 import '../document_search_controller.dart';
 import 'builders/clickable_link_builder.dart';
 import 'builders/emoji_builder.dart';
@@ -411,7 +412,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   void _handleLinkTap(BuildContext context, String url) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => LiquidGlassDialog(
         title: const Text('打开链接'),
         content: SingleChildScrollView(
           child: Text(url, style: Theme.of(ctx).textTheme.bodyMedium),

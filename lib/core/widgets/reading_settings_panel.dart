@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 import 'glass_segmented_control.dart';
+import 'liquid_glass.dart';
 
 class ReadingSettingsPanel extends StatelessWidget {
   final bool showPreview;
@@ -27,40 +28,9 @@ class ReadingSettingsPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showPreview) ...[
-          AnimatedContainer(
-            duration: AppMotion.normal,
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: settings.readingHorizontalPaddingValue,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: readingPalette.background,
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-              border: Border.all(color: readingPalette.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '简兮简兮，方将万舞。\n\n这是一段 Markdown 正文预览。\n可观察当前主题、字号、行距与页边距。',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontSize: settings.readingFontSizeValue,
-                        height: settings.readingLineHeightValue,
-                        color: readingPalette.foreground,
-                        letterSpacing: 0,
-                      ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  '预览仅影响阅读页，不改变原文件',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: readingPalette.muted,
-                        letterSpacing: 0,
-                      ),
-                ),
-              ],
-            ),
+          _ReadingPreviewPanel(
+            settings: settings,
+            readingPalette: readingPalette,
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
@@ -120,6 +90,70 @@ class ReadingSettingsPanel extends StatelessWidget {
           onChanged: settings.setReadingLineHeight,
         ),
       ],
+    );
+  }
+}
+
+class _ReadingPreviewPanel extends StatelessWidget {
+  const _ReadingPreviewPanel({
+    required this.settings,
+    required this.readingPalette,
+  });
+
+  final AppSettingsController settings;
+  final ReadingPalette readingPalette;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '简兮简兮，方将万舞。\n\n这是一段 Markdown 正文预览。\n可观察当前主题、字号、行距与页边距。',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontSize: settings.readingFontSizeValue,
+                height: settings.readingLineHeightValue,
+                color: readingPalette.foreground,
+                letterSpacing: 0,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          '预览仅影响阅读页，不改变原文件',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: readingPalette.muted,
+                letterSpacing: 0,
+              ),
+        ),
+      ],
+    );
+
+    if (settings.liquidGlassEnabled) {
+      return LiquidGlassPanel(
+        padding: EdgeInsets.symmetric(
+          horizontal: settings.readingHorizontalPaddingValue,
+          vertical: AppSpacing.md,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        color: readingPalette.background.withOpacity(0.42),
+        borderColor: readingPalette.border.withOpacity(0.55),
+        child: content,
+      );
+    }
+
+    return AnimatedContainer(
+      duration: AppMotion.normal,
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: settings.readingHorizontalPaddingValue,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: readingPalette.background,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: readingPalette.border),
+      ),
+      child: content,
     );
   }
 }
