@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +8,7 @@ import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/liquid_glass.dart';
 import '../reader/reader_page.dart';
 import 'document_actions.dart';
 import 'document_entry.dart';
@@ -194,65 +195,93 @@ class _FixedLibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final liquidGlass =
+        context.watch<AppSettingsController>().liquidGlassEnabled;
+    final headerContent = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          const _LibraryHomeIcon(),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '首页',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${controller.allDocuments.length} 个文档',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: palette.muted,
+                        letterSpacing: 0,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          _HeaderIconButton(
+            tooltip: '搜索文档',
+            icon: Icons.search_rounded,
+            onPressed: () => _openSearchPage(context),
+          ),
+          const SizedBox(width: 2),
+          _HeaderIconButton(
+            tooltip: '文档排序',
+            icon: Icons.format_list_bulleted_rounded,
+            onPressed: () => _showSortSheet(context),
+          ),
+        ],
+      ),
+    );
+
+    if (liquidGlass) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: palette.hairline.withOpacity(0.28)),
+          ),
+        ),
+        child: LiquidGlassSurface(
+          borderRadius: BorderRadius.zero,
+          color: liquidGlassHeaderColor(context),
+          borderColor: Colors.transparent,
+          blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          child: headerContent,
+        ),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withValues(alpha: 0.92),
+        color: palette.parchment.withOpacity(0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
+          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                const _LibraryHomeIcon(),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '首页',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${controller.allDocuments.length} 个文档',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: palette.muted,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                _HeaderIconButton(
-                  tooltip: '搜索文档',
-                  icon: Icons.search_rounded,
-                  onPressed: () => _openSearchPage(context),
-                ),
-                const SizedBox(width: 2),
-                _HeaderIconButton(
-                  tooltip: '文档排序',
-                  icon: Icons.format_list_bulleted_rounded,
-                  onPressed: () => _showSortSheet(context),
-                ),
-              ],
-            ),
-          ),
+          child: headerContent,
         ),
       ),
     );
@@ -283,7 +312,7 @@ class _FixedLibraryHeader extends StatelessWidget {
       useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.36),
+      barrierColor: Colors.black.withOpacity(0.36),
       builder: (context) => const _SortSheet(),
     );
   }
@@ -299,12 +328,12 @@ class _LibraryHomeIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.10),
+        color: AppColors.primary.withOpacity(0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.14),
+            color: AppColors.primary.withOpacity(0.14),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -334,14 +363,14 @@ class _DocumentTypeIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final backPaint = Paint()..color = primary.withValues(alpha: 0.18);
-    final paperPaint = Paint()..color = paper.withValues(alpha: 0.92);
+    final backPaint = Paint()..color = primary.withOpacity(0.18);
+    final paperPaint = Paint()..color = paper.withOpacity(0.92);
     final outlinePaint = Paint()
-      ..color = primary.withValues(alpha: 0.70)
+      ..color = primary.withOpacity(0.70)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8;
     final linePaint = Paint()
-      ..color = line.withValues(alpha: 0.62)
+      ..color = line.withOpacity(0.62)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     final backRect = RRect.fromRectAndRadius(
@@ -361,7 +390,7 @@ class _DocumentTypeIconPainter extends CustomPainter {
       ..lineTo(size.width * 0.76, size.height * 0.44)
       ..lineTo(size.width * 0.61, size.height * 0.44)
       ..close();
-    canvas.drawPath(foldPath, Paint()..color = primary.withValues(alpha: 0.18));
+    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.18));
     canvas.drawLine(
       Offset(size.width * 0.61, size.height * 0.30),
       Offset(size.width * 0.75, size.height * 0.44),
@@ -430,13 +459,13 @@ class _FloatingImportButton extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: enabled ? 0.30 : 0.12),
+            color: AppColors.primary.withOpacity(enabled ? 0.30 : 0.12),
             blurRadius: enabled ? 34 : 18,
             spreadRadius: enabled ? 1 : 0,
             offset: const Offset(0, 11),
           ),
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: enabled ? 0.18 : 0.08),
+            color: AppColors.primary.withOpacity(enabled ? 0.18 : 0.08),
             blurRadius: enabled ? 14 : 8,
             offset: const Offset(0, 3),
           ),
@@ -448,9 +477,9 @@ class _FloatingImportButton extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
             child: Material(
-              color: AppColors.primary.withValues(alpha: fillOpacity),
+              color: AppColors.primary.withOpacity(fillOpacity),
               shape: CircleBorder(
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.34)),
+                side: BorderSide(color: Colors.white.withOpacity(0.34)),
               ),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -661,7 +690,7 @@ class _SearchTagChip extends StatelessWidget {
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
       label: Text(label),
       backgroundColor: selected
-          ? AppColors.primary.withValues(alpha: 0.12)
+          ? AppColors.primary.withOpacity(0.12)
           : context.palette.dividerSoft,
       labelStyle: TextStyle(
         color: foreground,
@@ -722,7 +751,7 @@ class _SortSheet extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: context.palette.card.withValues(alpha: 0.92),
+                  color: context.palette.card.withOpacity(0.92),
                   borderRadius: BorderRadius.circular(42),
                 ),
                 child: SafeArea(
@@ -920,10 +949,10 @@ class _LibraryStateIllustrationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pagePaint = Paint()
-      ..color = primary.withValues(alpha: 0.08)
+      ..color = primary.withOpacity(0.08)
       ..style = PaintingStyle.fill;
     final linePaint = Paint()
-      ..color = line.withValues(alpha: 0.58)
+      ..color = line.withOpacity(0.58)
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.shortestSide * 0.035
       ..strokeCap = StrokeCap.round
@@ -952,14 +981,14 @@ class _LibraryStateIllustrationPainter extends CustomPainter {
       ..lineTo(size.width * 0.72, size.height * 0.27)
       ..lineTo(size.width * 0.59, size.height * 0.27)
       ..close();
-    canvas.drawPath(foldPath, Paint()..color = primary.withValues(alpha: 0.12));
+    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.12));
     canvas.drawPath(foldPath, linePaint);
 
     for (final y in [0.40, 0.52, 0.64]) {
       canvas.drawLine(
         Offset(size.width * 0.32, size.height * y),
         Offset(size.width * 0.62, size.height * y),
-        linePaint..color = muted.withValues(alpha: 0.45),
+        linePaint..color = muted.withOpacity(0.45),
       );
     }
 
@@ -1178,7 +1207,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                 colors: [cover.start, cover.end],
               ),
               borderRadius: BorderRadius.circular(AppRadii.lg),
-              border: Border.all(color: cover.border.withValues(alpha: 0.55)),
+              border: Border.all(color: cover.border.withOpacity(0.55)),
             ),
             child: Stack(
               children: [
@@ -1188,7 +1217,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                   bottom: 0,
                   child: Container(
                     width: 18,
-                    color: cover.spine.withValues(alpha: 0.72),
+                    color: cover.spine.withOpacity(0.72),
                   ),
                 ),
                 Padding(
@@ -1223,7 +1252,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: cover.foreground.withValues(alpha: 0.78),
+                              color: cover.foreground.withOpacity(0.78),
                               fontSize: 12,
                               height: 1.35,
                               letterSpacing: 0,
@@ -1284,9 +1313,9 @@ class _ShelfTypeMark extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
+        color: Colors.white.withOpacity(0.18),
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1523,7 +1552,7 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
     context: context,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.14),
+    barrierColor: Colors.black.withOpacity(0.14),
     builder: (context) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -1538,10 +1567,10 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
             filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: context.palette.card.withValues(alpha: 0.72),
+                color: context.palette.card.withOpacity(0.72),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: context.palette.hairline.withValues(alpha: 0.28),
+                  color: context.palette.hairline.withOpacity(0.28),
                 ),
               ),
               child: SafeArea(
@@ -1673,7 +1702,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
               filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: context.palette.card.withValues(alpha: 0.78),
+                  color: context.palette.card.withOpacity(0.78),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
@@ -1902,7 +1931,7 @@ class _SmallTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.10),
+        color: AppColors.primary.withOpacity(0.10),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
@@ -1932,10 +1961,10 @@ class _TypeBadge extends StatelessWidget {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.07),
+        color: badgeColor.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         border: Border.all(
-          color: badgeColor.withValues(alpha: 0.18),
+          color: badgeColor.withOpacity(0.18),
         ),
       ),
       child: Icon(

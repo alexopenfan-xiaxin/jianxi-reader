@@ -1,9 +1,12 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 import '../haptic_service.dart';
+import 'liquid_glass.dart';
 
 class GlassSegment<T> {
   const GlassSegment({
@@ -34,6 +37,8 @@ class GlassSegmentedControl<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final liquidGlass =
+        context.watch<AppSettingsController>().liquidGlassEnabled;
     final selectedIndex = segments.indexWhere((segment) {
       return segment.value == value;
     });
@@ -68,20 +73,27 @@ class GlassSegmentedControl<T> extends StatelessWidget {
             selectFromLocalPosition(details.localPosition);
           },
           child: SizedBox(
-            height: 48,
+            height: liquidGlass ? LiquidGlassTokens.bottomBarHeight : 48,
             child: Stack(
               children: [
-                Positioned.fill(child: _GlassTrack(palette: palette)),
+                Positioned.fill(
+                  child: _GlassTrack(
+                    palette: palette,
+                    liquidGlass: liquidGlass,
+                  ),
+                ),
                 AnimatedPositioned(
-                  duration: AppMotion.fast,
+                  duration: liquidGlass ? AppMotion.normal : AppMotion.fast,
                   curve: AppMotion.emphasized,
                   left: effectiveIndex * itemWidth,
                   top: 0,
                   bottom: 0,
                   width: itemWidth,
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: _GlassThumb(),
+                  child: Padding(
+                    padding: EdgeInsets.all(
+                      liquidGlass ? LiquidGlassTokens.bottomBarPadding : 4,
+                    ),
+                    child: _GlassThumb(liquidGlass: liquidGlass),
                   ),
                 ),
                 Positioned.fill(
@@ -108,12 +120,29 @@ class GlassSegmentedControl<T> extends StatelessWidget {
 }
 
 class _GlassTrack extends StatelessWidget {
-  const _GlassTrack({required this.palette});
+  const _GlassTrack({required this.palette, required this.liquidGlass});
 
   final AppPalette palette;
+  final bool liquidGlass;
 
   @override
   Widget build(BuildContext context) {
+    if (liquidGlass) {
+      return LiquidGlassSurface(
+        blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+        color: liquidGlassContainerColor(context),
+        borderColor: Colors.white.withOpacity(0.34),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        child: const SizedBox.expand(),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -124,9 +153,9 @@ class _GlassTrack extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: palette.card.withValues(alpha: 0.70),
+              color: palette.card.withOpacity(0.70),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withValues(alpha: 0.42)),
+              border: Border.all(color: palette.hairline.withOpacity(0.42)),
             ),
           ),
         ),
@@ -136,16 +165,35 @@ class _GlassTrack extends StatelessWidget {
 }
 
 class _GlassThumb extends StatelessWidget {
-  const _GlassThumb();
+  const _GlassThumb({required this.liquidGlass});
+
+  final bool liquidGlass;
 
   @override
   Widget build(BuildContext context) {
+    if (liquidGlass) {
+      return LiquidGlassSurface(
+        blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+        color: AppColors.primary.withOpacity(0.10),
+        borderColor: AppColors.primary.withOpacity(0.22),
+        tintPrimary: true,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
+        ],
+        child: const SizedBox.expand(),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.14),
+            color: AppColors.primary.withOpacity(0.14),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -157,9 +205,9 @@ class _GlassThumb extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.18),
+              color: AppColors.primary.withOpacity(0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+              border: Border.all(color: AppColors.primary.withOpacity(0.25)),
             ),
           ),
         ),
@@ -193,7 +241,7 @@ class _GlassSegmentButton<T> extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         splashFactory: NoSplash.splashFactory,
-        highlightColor: AppColors.primary.withValues(alpha: 0.04),
+        highlightColor: AppColors.primary.withOpacity(0.04),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),

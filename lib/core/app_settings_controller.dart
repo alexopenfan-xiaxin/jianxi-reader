@@ -53,6 +53,15 @@ enum LibraryViewMode {
   final String label;
 }
 
+enum AppVisualMode {
+  classic('经典'),
+  liquidGlass('液态玻璃');
+
+  const AppVisualMode(this.label);
+
+  final String label;
+}
+
 class ReadingPalette {
   const ReadingPalette({
     required this.background,
@@ -103,6 +112,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _readingThemeKey = 'settings.readingTheme';
   static const _readingMarginKey = 'settings.readingMargin';
   static const _libraryViewModeKey = 'settings.libraryViewMode';
+  static const _visualModeKey = 'settings.visualMode';
 
   ThemeMode _themeMode = ThemeMode.system;
   ReadingFontSize _readingFontSize = ReadingFontSize.comfortable;
@@ -110,6 +120,7 @@ class AppSettingsController extends ChangeNotifier {
   ReadingTheme _readingTheme = ReadingTheme.defaultTheme;
   ReadingMargin _readingMargin = ReadingMargin.comfortable;
   LibraryViewMode _libraryViewMode = LibraryViewMode.list;
+  AppVisualMode _visualMode = AppVisualMode.classic;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -122,6 +133,10 @@ class AppSettingsController extends ChangeNotifier {
   ReadingMargin get readingMargin => _readingMargin;
 
   LibraryViewMode get libraryViewMode => _libraryViewMode;
+
+  AppVisualMode get visualMode => _visualMode;
+
+  bool get liquidGlassEnabled => _visualMode == AppVisualMode.liquidGlass;
 
   double get readingFontSizeValue => _readingFontSize.value;
 
@@ -212,6 +227,9 @@ class AppSettingsController extends ChangeNotifier {
     _libraryViewMode = _libraryViewModeFromName(
       preferences.getString(_libraryViewModeKey),
     );
+    _visualMode = _visualModeFromName(
+      preferences.getString(_visualModeKey),
+    );
     notifyListeners();
   }
 
@@ -281,6 +299,17 @@ class AppSettingsController extends ChangeNotifier {
     await preferences.setString(_libraryViewModeKey, libraryViewMode.name);
   }
 
+  Future<void> setVisualMode(AppVisualMode visualMode) async {
+    if (_visualMode == visualMode) {
+      return;
+    }
+    _visualMode = visualMode;
+    notifyListeners();
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_visualModeKey, visualMode.name);
+  }
+
   static ThemeMode _themeModeFromName(String? name) {
     return ThemeMode.values.firstWhere(
       (mode) => mode.name == name,
@@ -320,6 +349,13 @@ class AppSettingsController extends ChangeNotifier {
     return LibraryViewMode.values.firstWhere(
       (viewMode) => viewMode.name == name,
       orElse: () => LibraryViewMode.list,
+    );
+  }
+
+  static AppVisualMode _visualModeFromName(String? name) {
+    return AppVisualMode.values.firstWhere(
+      (mode) => mode.name == name,
+      orElse: () => AppVisualMode.classic,
     );
   }
 }

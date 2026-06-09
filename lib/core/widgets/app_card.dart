@@ -1,6 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../app_settings_controller.dart';
 import '../design_tokens.dart';
+import 'liquid_glass.dart';
 
 class AppCard extends StatefulWidget {
   const AppCard({
@@ -44,7 +47,10 @@ class _AppCardState extends State<AppCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final borderRadius = BorderRadius.circular(AppRadii.lg);
+    final liquidGlass =
+        context.watch<AppSettingsController>().liquidGlassEnabled;
+    final radius = liquidGlass ? 14.0 : AppRadii.lg;
+    final borderRadius = BorderRadius.circular(radius);
 
     return AnimatedBuilder(
       animation: _scaleAnim,
@@ -52,37 +58,70 @@ class _AppCardState extends State<AppCard>
         scale: _scaleAnim.value,
         child: child,
       ),
-      child: Material(
-        color: palette.card,
-        borderRadius: borderRadius,
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        type: MaterialType.card,
-        child: InkWell(
-          onTap: widget.onTap,
-          onTapDown: widget.onTap != null ? (_) => _controller.forward() : null,
-          onTapUp: widget.onTap != null
-              ? (_) => _controller.reverse()
-              : null,
-          onTapCancel: widget.onTap != null
-              ? () => _controller.reverse()
-              : null,
-          borderRadius: borderRadius,
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: AppColors.primary.withValues(alpha: 0.05),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: palette.hairline.withValues(alpha: 0.72),
-              ),
+      child: liquidGlass
+          ? LiquidGlassSurface(
               borderRadius: borderRadius,
+              color: liquidGlassCardColor(context),
+              borderColor: palette.hairline.withOpacity(0.55),
+              blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: borderRadius,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: widget.onTap,
+                  onTapDown:
+                      widget.onTap != null ? (_) => _controller.forward() : null,
+                  onTapUp: widget.onTap != null
+                      ? (_) => _controller.reverse()
+                      : null,
+                  onTapCancel: widget.onTap != null
+                      ? () => _controller.reverse()
+                      : null,
+                  borderRadius: borderRadius,
+                  splashFactory: NoSplash.splashFactory,
+                  highlightColor: AppColors.primary.withOpacity(0.05),
+                  child: Padding(padding: widget.padding, child: widget.child),
+                ),
+              ),
+            )
+          : Material(
+              color: palette.card,
+              borderRadius: borderRadius,
+              clipBehavior: Clip.antiAlias,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              type: MaterialType.card,
+              child: InkWell(
+                onTap: widget.onTap,
+                onTapDown:
+                    widget.onTap != null ? (_) => _controller.forward() : null,
+                onTapUp:
+                    widget.onTap != null ? (_) => _controller.reverse() : null,
+                onTapCancel:
+                    widget.onTap != null ? () => _controller.reverse() : null,
+                borderRadius: borderRadius,
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: AppColors.primary.withOpacity(0.05),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: palette.hairline.withOpacity(0.72),
+                    ),
+                    borderRadius: borderRadius,
+                  ),
+                  child: Padding(padding: widget.padding, child: widget.child),
+                ),
+              ),
             ),
-            child: Padding(padding: widget.padding, child: widget.child),
-          ),
-        ),
-      ),
     );
   }
 }

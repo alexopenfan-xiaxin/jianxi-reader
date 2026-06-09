@@ -1,12 +1,14 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/haptic_service.dart';
+import '../../core/widgets/liquid_glass.dart';
 import '../library/document_entry.dart';
 import '../library/library_controller.dart';
 import '../library/library_page.dart';
@@ -166,6 +168,14 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsController>();
+    if (settings.liquidGlassEnabled) {
+      return _LiquidBottomNav(
+        currentIndex: widget.currentIndex,
+        onChanged: widget.onChanged,
+      );
+    }
+
     final selectedLeft = _outerPadding +
         widget.currentIndex * _itemWidth +
         _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
@@ -285,6 +295,259 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
   }
 }
 
+class _LiquidBottomNav extends StatefulWidget {
+  const _LiquidBottomNav({
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_LiquidBottomNav> createState() => _LiquidBottomNavState();
+}
+
+class _LiquidBottomNavState extends State<_LiquidBottomNav> {
+  static const _itemWidth = LiquidGlassTokens.bottomBarItemWidth;
+  static const _itemHeight = LiquidGlassTokens.bottomBarHeight;
+  static const _outerPadding = LiquidGlassTokens.bottomBarPadding;
+  static const _navWidth = _itemWidth * 2 + _outerPadding * 2;
+  static const _dragThreshold = _itemWidth * 0.35;
+
+  double _dragOffset = 0;
+  bool _isDragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final clampedDrag = _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
+    final selectedLeft = _outerPadding + widget.currentIndex * _itemWidth +
+        clampedDrag;
+    final dragProgress = (clampedDrag.abs() / _itemWidth).clamp(0.0, 1.0);
+
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        heightFactor: 1,
+        child: GestureDetector(
+          onHorizontalDragUpdate: (details) {
+            setState(() {
+              _isDragging = true;
+              final nextOffset = _dragOffset + details.delta.dx;
+              _dragOffset = widget.currentIndex == 0
+                  ? nextOffset.clamp(0, _itemWidth).toDouble()
+                  : nextOffset.clamp(-_itemWidth, 0).toDouble();
+            });
+          },
+          onHorizontalDragEnd: (details) {
+            final shouldMoveRight =
+                widget.currentIndex == 0 &&
+                    (_dragOffset > _dragThreshold ||
+                        details.primaryVelocity != null &&
+                            details.primaryVelocity! > 280);
+            final shouldMoveLeft =
+                widget.currentIndex == 1 &&
+                    (_dragOffset < -_dragThreshold ||
+                        details.primaryVelocity != null &&
+                            details.primaryVelocity! < -280);
+            if (shouldMoveRight) {
+              _selectIndex(1);
+            } else if (shouldMoveLeft) {
+              _selectIndex(0);
+            }
+            setState(() {
+              _dragOffset = 0;
+              _isDragging = false;
+            });
+          },
+          onHorizontalDragCancel: () {
+            setState(() {
+              _dragOffset = 0;
+              _isDragging = false;
+            });
+          },
+          child: SizedBox(
+            width: _navWidth,
+            height: _itemHeight,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: LiquidGlassSurface(
+                    blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+                    color: liquidGlassContainerColor(context),
+                    borderColor: Colors.white.withOpacity(0.34),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.10),
+                        blurRadius: 22,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: _isDragging ? Duration.zero : AppMotion.normal,
+                  curve: AppMotion.emphasized,
+                  left: selectedLeft,
+                  top: _outerPadding,
+                  width: _itemWidth,
+                  height: LiquidGlassTokens.bottomBarIndicatorHeight -
+                      _outerPadding * 2,
+                  child: Transform.scale(
+                    scaleX: 1 + dragProgress * 0.08,
+                    scaleY: 1 - dragProgress * 0.03,
+                    child: LiquidGlassSurface(
+                      blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+                      color: AppColors.primary.withOpacity(0.10),
+                      borderColor: AppColors.primary.withOpacity(0.22),
+                      tintPrimary: true,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.18),
+                          blurRadius: 18,
+                          offset: const Offset(0, 7),
+                        ),
+                      ],
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(_outerPadding),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _LiquidBottomNavItem(
+                          selected: widget.currentIndex == 0,
+                          icon: Icons.home_outlined,
+                          selectedIcon: Icons.home_rounded,
+                          label: '首页',
+                          onTap: () => _selectFromTap(0),
+                        ),
+                        _LiquidBottomNavItem(
+                          selected: widget.currentIndex == 1,
+                          icon: Icons.settings_outlined,
+                          selectedIcon: Icons.settings_rounded,
+                          label: '设置',
+                          onTap: () => _selectFromTap(1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _selectFromTap(int index) {
+    setState(() {
+      _dragOffset = 0;
+      _isDragging = false;
+    });
+    _selectIndex(index);
+  }
+
+  void _selectIndex(int index) {
+    if (index != widget.currentIndex) {
+      HapticService.selectionClick();
+      widget.onChanged(index);
+    }
+  }
+}
+
+class _LiquidBottomNavItem extends StatelessWidget {
+  const _LiquidBottomNavItem({
+    required this.selected,
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final foreground = selected ? AppColors.primary : palette.muted;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+          child: SizedBox(
+            width: _LiquidBottomNavState._itemWidth,
+            height: _LiquidBottomNavState._itemHeight -
+                _LiquidBottomNavState._outerPadding * 2,
+            child: AnimatedScale(
+              scale: selected ? 1.02 : 1,
+              duration: AppMotion.fast,
+              curve: AppMotion.emphasized,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedSwitcher(
+                    duration: AppMotion.fast,
+                    switchInCurve: AppMotion.emphasized,
+                    switchOutCurve: AppMotion.exit,
+                    child: Icon(
+                      selected ? selectedIcon : icon,
+                      key: ValueKey(selected),
+                      color: foreground,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  AnimatedDefaultTextStyle(
+                    duration: AppMotion.fast,
+                    curve: AppMotion.emphasized,
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                          color: foreground,
+                          fontSize: 11,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          height: 1.12,
+                          letterSpacing: 0,
+                        ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> _openExternalReader(BuildContext context, DocumentEntry document) {
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
@@ -319,7 +582,7 @@ class _NavGlassBase extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withOpacity(0.10),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
@@ -331,10 +594,10 @@ class _NavGlassBase extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: palette.card.withValues(alpha: 0.72),
+              color: palette.card.withOpacity(0.72),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
-                color: palette.hairline.withValues(alpha: 0.38),
+                color: palette.hairline.withOpacity(0.38),
               ),
             ),
           ),
@@ -354,7 +617,7 @@ class _SelectedNavCapsule extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.20),
+            color: AppColors.primary.withOpacity(0.20),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -366,10 +629,10 @@ class _SelectedNavCapsule extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.18),
+              color: AppColors.primary.withOpacity(0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.22),
+                color: AppColors.primary.withOpacity(0.22),
               ),
             ),
           ),

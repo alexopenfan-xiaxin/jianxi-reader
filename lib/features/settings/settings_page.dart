@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -13,6 +13,7 @@ import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/glass_segmented_control.dart';
+import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/reading_settings_panel.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -53,45 +54,94 @@ class _FixedSettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final liquidGlass =
+        context.watch<AppSettingsController>().liquidGlassEnabled;
+    final headerContent = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          const _SettingsHomeIcon(),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '设置',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ),
+          const _SettingsCompanionIcon(),
+        ],
+      ),
+    );
+
+    if (liquidGlass) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: palette.hairline.withOpacity(0.28)),
+          ),
+        ),
+        child: LiquidGlassSurface(
+          borderRadius: BorderRadius.zero,
+          color: liquidGlassHeaderColor(context),
+          borderColor: Colors.transparent,
+          blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          child: headerContent,
+        ),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withValues(alpha: 0.92),
+        color: palette.parchment.withOpacity(0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
+          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                const _SettingsHomeIcon(),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '设置',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                ),
-                const _SettingsCompanionIcon(),
-              ],
-            ),
-          ),
+          child: headerContent,
         ),
       ),
     );
   }
+}
+
+PreferredSizeWidget _settingsPageAppBar(BuildContext context, String title) {
+  final palette = context.palette;
+  final settings = context.watch<AppSettingsController>();
+  return AppBar(
+    title: Text(title),
+    backgroundColor:
+        settings.liquidGlassEnabled ? Colors.transparent : palette.parchment,
+    scrolledUnderElevation: 0,
+    surfaceTintColor: Colors.transparent,
+    flexibleSpace: settings.liquidGlassEnabled
+        ? LiquidGlassSurface(
+            borderRadius: BorderRadius.zero,
+            color: liquidGlassHeaderColor(context),
+            borderColor: Colors.transparent,
+            blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+            child: const SizedBox.expand(),
+          )
+        : null,
+  );
 }
 
 class _SettingsHomeIcon extends StatelessWidget {
@@ -104,12 +154,12 @@ class _SettingsHomeIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.10),
+        color: AppColors.primary.withOpacity(0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.14),
+            color: AppColors.primary.withOpacity(0.14),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -136,12 +186,12 @@ class _SettingsHomeIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final knobPaint = Paint()..color = primary.withValues(alpha: 0.92);
+    final knobPaint = Paint()..color = primary.withOpacity(0.92);
     final trackPaint = Paint()
-      ..color = line.withValues(alpha: 0.58)
+      ..color = line.withOpacity(0.58)
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
-    final glowPaint = Paint()..color = primary.withValues(alpha: 0.15);
+    final glowPaint = Paint()..color = primary.withOpacity(0.15);
 
     final rows = <double>[0.34, 0.50, 0.66];
     final knobs = <double>[0.58, 0.42, 0.64];
@@ -194,15 +244,15 @@ class _SettingsCompanionIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bodyPaint = Paint()..color = primary.withValues(alpha: 0.10);
+    final bodyPaint = Paint()..color = primary.withOpacity(0.10);
     final linePaint = Paint()
-      ..color = line.withValues(alpha: 0.70)
+      ..color = line.withOpacity(0.70)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final accentPaint = Paint()
-      ..color = primary.withValues(alpha: 0.82)
+      ..color = primary.withOpacity(0.82)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
@@ -227,12 +277,12 @@ class _SettingsCompanionIconPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.43, size.height * 0.53),
       1.8,
-      Paint()..color = line.withValues(alpha: 0.80),
+      Paint()..color = line.withOpacity(0.80),
     );
     canvas.drawCircle(
       Offset(size.width * 0.57, size.height * 0.53),
       1.8,
-      Paint()..color = line.withValues(alpha: 0.80),
+      Paint()..color = line.withOpacity(0.80),
     );
     canvas.drawArc(
       Rect.fromCenter(
@@ -304,9 +354,9 @@ class _AppearanceIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
       ),
       child: const Icon(
         Icons.palette_outlined,
@@ -335,7 +385,7 @@ class AppearancePage extends StatelessWidget {
     final palette = context.palette;
     return Scaffold(
       backgroundColor: palette.parchment,
-      appBar: AppBar(title: const Text('外观')),
+      appBar: _settingsPageAppBar(context, '外观'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -345,6 +395,38 @@ class AppearancePage extends StatelessWidget {
             AppSpacing.xl,
           ),
           children: [
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _CardTitle(
+                    icon: Icons.auto_awesome_rounded,
+                    title: '视觉模式',
+                    subtitle: '经典模式保持当前界面，液态玻璃模式启用 BiliPai 调校的玻璃拟态。',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GlassSegmentedControl<AppVisualMode>(
+                    segments: const [
+                      GlassSegment(
+                        value: AppVisualMode.classic,
+                        label: '经典',
+                        icon: Icons.layers_outlined,
+                        selectedIcon: Icons.check_rounded,
+                      ),
+                      GlassSegment(
+                        value: AppVisualMode.liquidGlass,
+                        label: '液态玻璃',
+                        icon: Icons.blur_on_rounded,
+                        selectedIcon: Icons.check_rounded,
+                      ),
+                    ],
+                    value: settings.visualMode,
+                    onChanged: settings.setVisualMode,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,10 +550,10 @@ class _ReadingSettingsIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.10),
+          color: AppColors.primary.withOpacity(0.10),
         ),
       ),
       child: const Icon(
@@ -500,7 +582,7 @@ class ReadingSettingsPage extends StatelessWidget {
     final palette = context.palette;
     return Scaffold(
       backgroundColor: palette.parchment,
-      appBar: AppBar(title: const Text('阅读体验')),
+      appBar: _settingsPageAppBar(context, '阅读体验'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -549,7 +631,7 @@ class _CardTitle extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
           child: Icon(icon, size: 18, color: AppColors.primary),
@@ -626,9 +708,9 @@ class _AboutIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
       ),
       child: const Icon(
         Icons.info_outline_rounded,
@@ -658,7 +740,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=121';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=130';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -989,7 +1071,7 @@ class _AboutPageState extends State<AboutPage> {
 
     return Scaffold(
       backgroundColor: palette.parchment,
-      appBar: AppBar(title: const Text('关于应用')),
+      appBar: _settingsPageAppBar(context, '关于应用'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -1009,10 +1091,10 @@ class _AboutPageState extends State<AboutPage> {
                         width: 54,
                         height: 54,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.10),
+                          color: AppColors.primary.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(AppRadii.sm),
                           border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: AppColors.primary.withOpacity(0.12),
                           ),
                         ),
                         child: const Icon(
