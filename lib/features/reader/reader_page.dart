@@ -1,6 +1,5 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +8,7 @@ import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/reading_settings_panel.dart';
 import '../library/document_actions.dart';
 import '../library/document_entry.dart';
@@ -112,13 +112,17 @@ class _ReaderPageState extends State<ReaderPage> {
         foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
         flexibleSpace: _showGlass
-            ? ClipRRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                  child: Container(
-                    color: readingPalette.background.withValues(alpha: 0.80),
-                  ),
+            ? LiquidGlassSurface(
+                borderRadius: BorderRadius.zero,
+                color: readingPalette.background.withOpacity(
+                  settings.liquidGlassEnabled ? 0.42 : 0.80,
                 ),
+                borderColor: Colors.transparent,
+                blurSigma: settings.liquidGlassEnabled
+                    ? LiquidGlassTokens.bilipaiTunedBlurSigma
+                    : 18,
+                innerHighlight: settings.liquidGlassEnabled,
+                child: const SizedBox.expand(),
               )
             : null,
         title: _isSearching
@@ -370,7 +374,7 @@ class _ReaderProgressBar extends StatelessWidget {
         return LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.transparent,
-          color: AppColors.primary.withValues(alpha: 0.70),
+          color: AppColors.primary.withOpacity(0.70),
           minHeight: 3,
         );
       },
@@ -574,10 +578,10 @@ class _ReadingDisplaySheet extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(AppRadii.sm),
                       border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.12),
+                        color: AppColors.primary.withOpacity(0.12),
                       ),
                     ),
                     child: const Icon(
