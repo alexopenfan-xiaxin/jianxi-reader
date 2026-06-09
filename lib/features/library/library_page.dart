@@ -258,7 +258,7 @@ class _FixedLibraryHeader extends StatelessWidget {
           borderRadius: BorderRadius.zero,
           color: liquidGlassHeaderColor(context),
           borderColor: Colors.transparent,
-          blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+          blurSigma: LiquidGlassTokens.effectBlurSigma,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -454,6 +454,37 @@ class _FloatingImportButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = !importing;
     final fillOpacity = enabled ? 0.42 : 0.26;
+    final button = Material(
+      color: liquidGlassEnabled(context)
+          ? Colors.transparent
+          : AppColors.primary.withOpacity(fillOpacity),
+      shape: CircleBorder(
+        side: BorderSide(color: Colors.white.withOpacity(0.34)),
+      ),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: enabled ? onPressed : null,
+        child: SizedBox(
+          width: 60,
+          height: 60,
+          child: Center(
+            child: importing
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(
+                    Icons.add_rounded,
+                    size: 32,
+                    color: Colors.white,
+                  ),
+          ),
+        ),
+      ),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -473,40 +504,21 @@ class _FloatingImportButton extends StatelessWidget {
       ),
       child: Tooltip(
         message: '导入文档',
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: Material(
-              color: AppColors.primary.withOpacity(fillOpacity),
-              shape: CircleBorder(
-                side: BorderSide(color: Colors.white.withOpacity(0.34)),
-              ),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: enabled ? onPressed : null,
-                child: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: Center(
-                    child: importing
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.add_rounded,
-                            size: 32,
-                            color: Colors.white,
-                          ),
-                  ),
+        child: liquidGlassEnabled(context)
+            ? LiquidGlassSurface(
+                borderRadius: BorderRadius.circular(30),
+                color: AppColors.primary.withOpacity(fillOpacity),
+                borderColor: Colors.white.withOpacity(0.34),
+                blurSigma: LiquidGlassTokens.effectBlurSigma,
+                tintPrimary: true,
+                child: button,
+              )
+            : ClipOval(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  child: button,
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -541,6 +553,7 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final isLiquidGlass = liquidGlassEnabled(context);
     return Scaffold(
       backgroundColor: palette.parchment,
       body: SafeArea(
@@ -557,41 +570,26 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: palette.dividerSoft,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                        ),
-                        child: TextField(
-                          key: const ValueKey('library_search_field'),
-                          controller: _controller,
-                          autofocus: true,
-                          onChanged: controller.updateSearchQuery,
-                          decoration: InputDecoration(
-                            hintText: '搜索文档',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.sm,
+                      child: isLiquidGlass
+                          ? LiquidGlassTextFieldFrame(
+                              height: 52,
+                              child: _LibrarySearchTextField(
+                                controller: _controller,
+                                libraryController: controller,
+                              ),
+                            )
+                          : Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: palette.dividerSoft,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadii.pill),
+                              ),
+                              child: _LibrarySearchTextField(
+                                controller: _controller,
+                                libraryController: controller,
+                              ),
                             ),
-                            suffixIcon: controller.searchQuery.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: '清除搜索',
-                                    onPressed: () {
-                                      _controller.clear();
-                                      controller.updateSearchQuery('');
-                                    },
-                                    icon: const Icon(Icons.close_rounded),
-                                  ),
-                          ),
-                        ),
-                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     TextButton(
@@ -671,6 +669,48 @@ class _SearchTagWrap extends StatelessWidget {
   }
 }
 
+class _LibrarySearchTextField extends StatelessWidget {
+  const _LibrarySearchTextField({
+    required this.controller,
+    required this.libraryController,
+  });
+
+  final TextEditingController controller;
+  final LibraryController libraryController;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: const ValueKey('library_search_field'),
+      controller: controller,
+      autofocus: true,
+      onChanged: libraryController.updateSearchQuery,
+      decoration: InputDecoration(
+        hintText: '搜索文档',
+        prefixIcon: const Icon(Icons.search_rounded),
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        filled: false,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        suffixIcon: libraryController.searchQuery.isEmpty
+            ? null
+            : IconButton(
+                tooltip: '清除搜索',
+                onPressed: () {
+                  controller.clear();
+                  libraryController.updateSearchQuery('');
+                },
+                icon: const Icon(Icons.close_rounded),
+              ),
+      ),
+    );
+  }
+}
+
 class _SearchTagChip extends StatelessWidget {
   const _SearchTagChip({
     required this.label,
@@ -685,6 +725,14 @@ class _SearchTagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.primary : context.palette.ink;
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassChip(
+        label: label,
+        selected: selected,
+        icon: Icons.label_outline_rounded,
+        onTap: onTap,
+      );
+    }
     return ActionChip(
       onPressed: onTap,
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
@@ -738,6 +786,54 @@ class _SortSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LibraryController>(
       builder: (context, controller, _) {
+        final content = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '文档排序',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            for (final mode in LibrarySortMode.values)
+              _SortOptionTile(
+                mode: mode,
+                selected: controller.sortMode == mode,
+                onTap: () {
+                  controller.updateSortMode(mode);
+                  Navigator.of(context).pop();
+                },
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                '取消',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        );
+
+        if (liquidGlassEnabled(context)) {
+          return LiquidGlassSheetPanel(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xl,
+              AppSpacing.xl,
+              AppSpacing.md,
+            ),
+            borderRadius: BorderRadius.circular(42),
+            child: content,
+          );
+        }
+
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
@@ -745,61 +841,21 @@ class _SortSheet extends StatelessWidget {
             AppSpacing.lg,
             AppSpacing.lg,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(42),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.palette.card.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(42),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(42),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.md,
                 ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      AppSpacing.xl,
-                      AppSpacing.xl,
-                      AppSpacing.md,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '文档排序',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0,
-                                  ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        for (final mode in LibrarySortMode.values)
-                          _SortOptionTile(
-                            mode: mode,
-                            selected: controller.sortMode == mode,
-                            onTap: () {
-                              controller.updateSortMode(mode);
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text(
-                            '取消',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: content,
               ),
             ),
           ),
@@ -822,6 +878,57 @@ class _SortOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final row = Row(
+      children: [
+        Expanded(
+          child: Text(
+            mode.label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+          ),
+        ),
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppColors.primary : context.palette.hairline,
+              width: selected ? 5 : 2,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (liquidGlassEnabled(context)) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          borderRadius: BorderRadius.circular(18),
+          color: selected
+              ? AppColors.primary.withOpacity(0.10)
+              : liquidGlassContainerColor(context, alpha: 0.18),
+          borderColor: selected
+              ? AppColors.primary.withOpacity(0.22)
+              : Colors.white.withOpacity(0.28),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(18),
+              splashFactory: NoSplash.splashFactory,
+              child: SizedBox(height: 62, child: row),
+            ),
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.md),
@@ -832,32 +939,7 @@ class _SortOptionTile extends StatelessWidget {
             bottom: BorderSide(color: context.palette.hairline),
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                mode.label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                    ),
-              ),
-            ),
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected
-                      ? AppColors.primary
-                      : context.palette.hairline,
-                  width: selected ? 5 : 2,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: row,
       ),
     );
   }
@@ -1554,65 +1636,42 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withOpacity(0.14),
     builder: (context) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: context.palette.card.withOpacity(0.72),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: context.palette.hairline.withOpacity(0.28),
-                ),
+      return LiquidGlassSheetPanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xs,
               ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.md,
-                        AppSpacing.lg,
-                        AppSpacing.xs,
-                      ),
-                      child: Text(
-                        document.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    _GlassMenuTile(
-                      icon: Icons.drive_file_rename_outline_rounded,
-                      title: '重命名',
-                      action: _DocumentMenuAction.rename,
-                    ),
-                    _GlassMenuTile(
-                      icon: Icons.label_outline_rounded,
-                      title: '设置标签',
-                      action: _DocumentMenuAction.tags,
-                    ),
-                    _GlassMenuTile(
-                      icon: Icons.remove_circle_outline_rounded,
-                      title: '移出',
-                      action: _DocumentMenuAction.remove,
-                      destructive: true,
-                    ),
-                  ],
-                ),
+              child: Text(
+                document.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-          ),
+            _GlassMenuTile(
+              icon: Icons.drive_file_rename_outline_rounded,
+              title: '重命名',
+              action: _DocumentMenuAction.rename,
+            ),
+            _GlassMenuTile(
+              icon: Icons.label_outline_rounded,
+              title: '设置标签',
+              action: _DocumentMenuAction.tags,
+            ),
+            _GlassMenuTile(
+              icon: Icons.remove_circle_outline_rounded,
+              title: '移出',
+              action: _DocumentMenuAction.remove,
+              destructive: true,
+            ),
+          ],
         ),
       );
     },
@@ -1690,6 +1749,120 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
   Widget build(BuildContext context) {
     return Consumer<LibraryController>(
       builder: (context, controller, _) {
+        final isLiquidGlass = liquidGlassEnabled(context);
+        final tagField = TextField(
+          key: const ValueKey('tag_name_field'),
+          controller: _tagController,
+          decoration: InputDecoration(
+            hintText: '新建标签',
+            border: isLiquidGlass ? InputBorder.none : null,
+            enabledBorder: isLiquidGlass ? InputBorder.none : null,
+            focusedBorder: isLiquidGlass ? InputBorder.none : null,
+            filled: isLiquidGlass ? false : null,
+            isDense: isLiquidGlass,
+          ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _createTag(controller),
+        );
+        final content = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '设置标签',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              widget.document.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.palette.muted,
+                    letterSpacing: 0,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final tag in controller.tags)
+                  _EditableTagChip(
+                    tag: tag,
+                    selected: _selectedTags.contains(tag),
+                    canDelete: !controller.allDocuments.any(
+                      (document) => document.tags.contains(tag),
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedTags.add(tag);
+                        } else {
+                          _selectedTags.remove(tag);
+                        }
+                      });
+                    },
+                    onDeleted: () => _deleteTag(controller, tag),
+                  ),
+                if (controller.tags.isEmpty)
+                  Text(
+                    '默认无标签。先创建标签，再为文档勾选。',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.palette.muted,
+                          letterSpacing: 0,
+                        ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: isLiquidGlass
+                      ? LiquidGlassTextFieldFrame(child: tagField)
+                      : tagField,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                FilledButton(
+                  onPressed: () => _createTag(controller),
+                  child: const Text('添加'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed:
+                        _isSaving ? null : () => Navigator.of(context).pop(),
+                    child: const Text('取消'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isSaving ? null : () => _saveTags(controller),
+                    child: Text(_isSaving ? '保存中' : '保存'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+        if (isLiquidGlass) {
+          return LiquidGlassSheetPanel(
+            margin: EdgeInsets.only(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+            ),
+            child: content,
+          );
+        }
+
         return Padding(
           padding: EdgeInsets.only(
             left: AppSpacing.lg,
@@ -1707,105 +1880,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '设置标签',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        widget.document.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: context.palette.muted,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final tag in controller.tags)
-                            _EditableTagChip(
-                              tag: tag,
-                              selected: _selectedTags.contains(tag),
-                              canDelete: !controller.allDocuments.any(
-                                (document) => document.tags.contains(tag),
-                              ),
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedTags.add(tag);
-                                  } else {
-                                    _selectedTags.remove(tag);
-                                  }
-                                });
-                              },
-                              onDeleted: () => _deleteTag(controller, tag),
-                            ),
-                          if (controller.tags.isEmpty)
-                            Text(
-                              '默认无标签。先创建标签，再为文档勾选。',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: context.palette.muted,
-                                    letterSpacing: 0,
-                                  ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              key: const ValueKey('tag_name_field'),
-                              controller: _tagController,
-                              decoration: const InputDecoration(
-                                hintText: '新建标签',
-                              ),
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) => _createTag(controller),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          FilledButton(
-                            onPressed: () => _createTag(controller),
-                            child: const Text('添加'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: _isSaving
-                                  ? null
-                                  : () => Navigator.of(context).pop(),
-                              child: const Text('取消'),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: _isSaving
-                                  ? null
-                                  : () => _saveTags(controller),
-                              child: Text(_isSaving ? '保存中' : '保存'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  child: content,
                 ),
               ),
             ),
@@ -1886,6 +1961,15 @@ class _EditableTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassChip(
+        label: tag,
+        selected: selected,
+        icon: Icons.label_outline_rounded,
+        onTap: () => onSelected(!selected),
+        onDeleted: canDelete ? onDeleted : null,
+      );
+    }
     return InputChip(
       label: Text(tag),
       selected: selected,
@@ -1928,6 +2012,9 @@ class _SmallTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassChip(label: label, selected: true);
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

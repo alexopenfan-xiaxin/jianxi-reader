@@ -129,7 +129,7 @@ class _GlassTrack extends StatelessWidget {
   Widget build(BuildContext context) {
     if (liquidGlass) {
       return LiquidGlassSurface(
-        blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+        blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
         borderColor: Colors.white.withOpacity(0.34),
         boxShadow: [
@@ -173,7 +173,7 @@ class _GlassThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     if (liquidGlass) {
       return LiquidGlassSurface(
-        blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+        blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: AppColors.primary.withOpacity(0.10),
         borderColor: AppColors.primary.withOpacity(0.22),
         tintPrimary: true,

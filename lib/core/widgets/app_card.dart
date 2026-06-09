@@ -49,6 +49,7 @@ class _AppCardState extends State<AppCard>
     final palette = context.palette;
     final liquidGlass =
         context.watch<AppSettingsController>().liquidGlassEnabled;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final radius = liquidGlass ? 14.0 : AppRadii.lg;
     final borderRadius = BorderRadius.circular(radius);
 
@@ -62,13 +63,13 @@ class _AppCardState extends State<AppCard>
           ? LiquidGlassSurface(
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
-              borderColor: palette.hairline.withOpacity(0.55),
-              blurSigma: LiquidGlassTokens.bilipaiTunedBlurSigma,
+              borderColor: Colors.white.withOpacity(dark ? 0.18 : 0.46),
+              blurSigma: LiquidGlassTokens.effectBlurSigma,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withOpacity(dark ? 0.18 : 0.10),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
               ],
               child: Material(

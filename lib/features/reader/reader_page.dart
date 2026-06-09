@@ -119,7 +119,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 ),
                 borderColor: Colors.transparent,
                 blurSigma: settings.liquidGlassEnabled
-                    ? LiquidGlassTokens.bilipaiTunedBlurSigma
+                    ? LiquidGlassTokens.effectBlurSigma
                     : 18,
                 innerHighlight: settings.liquidGlassEnabled,
                 child: const SizedBox.expand(),
@@ -130,6 +130,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 controller: _searchTextController,
                 focusNode: _searchFocusNode,
                 foreground: readingPalette.foreground,
+                liquidGlass: settings.liquidGlassEnabled,
                 onChanged: _searchController.updateQuery,
               )
             : AnimatedOpacity(
@@ -179,22 +180,34 @@ class _ReaderPageState extends State<ReaderPage> {
                   onPressed: () => showReadingDisplaySheet(context),
                   icon: const Icon(Icons.text_fields_rounded),
                 ),
-                PopupMenuButton<_ReaderMenuAction>(
-                  tooltip: '文档操作',
-                  onSelected: _handleAction,
-                  itemBuilder: (context) {
-                    return const <PopupMenuEntry<_ReaderMenuAction>>[
-                      PopupMenuItem(
-                        value: _ReaderMenuAction.rename,
-                        child: Text('重命名'),
-                      ),
-                      PopupMenuItem(
-                        value: _ReaderMenuAction.remove,
-                        child: Text('移出'),
-                      ),
-                    ];
-                  },
-                ),
+                if (settings.liquidGlassEnabled)
+                  IconButton(
+                    tooltip: '文档操作',
+                    onPressed: () async {
+                      final action = await _showReaderDocumentMenu(context);
+                      if (action != null && mounted) {
+                        await _handleAction(action);
+                      }
+                    },
+                    icon: const Icon(Icons.more_horiz_rounded),
+                  )
+                else
+                  PopupMenuButton<_ReaderMenuAction>(
+                    tooltip: '文档操作',
+                    onSelected: _handleAction,
+                    itemBuilder: (context) {
+                      return const <PopupMenuEntry<_ReaderMenuAction>>[
+                        PopupMenuItem(
+                          value: _ReaderMenuAction.rename,
+                          child: Text('重命名'),
+                        ),
+                        PopupMenuItem(
+                          value: _ReaderMenuAction.remove,
+                          child: Text('移出'),
+                        ),
+                      ];
+                    },
+                  ),
               ],
       ),
       body: Column(
@@ -351,6 +364,66 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 }
 
+Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) {
+  return showModalBottomSheet<_ReaderMenuAction>(
+    context: context,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.14),
+    builder: (context) {
+      return LiquidGlassSheetPanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            _ReaderMenuTile(
+              icon: Icons.drive_file_rename_outline_rounded,
+              title: '重命名',
+              action: _ReaderMenuAction.rename,
+            ),
+            _ReaderMenuTile(
+              icon: Icons.remove_circle_outline_rounded,
+              title: '移出',
+              action: _ReaderMenuAction.remove,
+              destructive: true,
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _ReaderMenuTile extends StatelessWidget {
+  const _ReaderMenuTile({
+    required this.icon,
+    required this.title,
+    required this.action,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final _ReaderMenuAction action;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : context.palette.ink;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              letterSpacing: 0,
+            ),
+      ),
+      onTap: () => Navigator.of(context).pop(action),
+    );
+  }
+}
+
 class _ReaderProgressBar extends StatelessWidget {
   const _ReaderProgressBar({required this.scrollController});
 
@@ -387,17 +460,19 @@ class _ReaderSearchField extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.foreground,
+    required this.liquidGlass,
     required this.onChanged,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final Color foreground;
+  final bool liquidGlass;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    final field = TextField(
       controller: controller,
       focusNode: focusNode,
       onChanged: onChanged,
@@ -415,6 +490,14 @@ class _ReaderSearchField extends StatelessWidget {
         isDense: true,
         contentPadding: EdgeInsets.zero,
       ),
+    );
+    if (!liquidGlass) {
+      return field;
+    }
+    return LiquidGlassTextFieldFrame(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: field,
     );
   }
 }
@@ -530,14 +613,21 @@ class _ReaderError extends StatelessWidget {
 }
 
 void showReadingDisplaySheet(BuildContext context) {
+  final isLiquidGlass = readLiquidGlassEnabled(context);
   showModalBottomSheet<void>(
     context: context,
-    showDragHandle: true,
+    showDragHandle: !isLiquidGlass,
     isScrollControlled: true,
-    backgroundColor: context.palette.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.md)),
-    ),
+    backgroundColor: isLiquidGlass ? Colors.transparent : context.palette.card,
+    barrierColor:
+        isLiquidGlass ? Colors.black.withOpacity(0.14) : Colors.black54,
+    shape: isLiquidGlass
+        ? null
+        : const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppRadii.md),
+            ),
+          ),
     builder: (context) => DraggableScrollableSheet(
       initialChildSize: 0.62,
       minChildSize: 0.42,
@@ -545,18 +635,80 @@ void showReadingDisplaySheet(BuildContext context) {
       expand: false,
       builder: (context, scrollController) => _ReadingDisplaySheet(
         scrollController: scrollController,
+        liquidGlass: isLiquidGlass,
       ),
     ),
   );
 }
 
 class _ReadingDisplaySheet extends StatelessWidget {
-  const _ReadingDisplaySheet({this.scrollController});
+  const _ReadingDisplaySheet({
+    required this.liquidGlass,
+    this.scrollController,
+  });
 
   final ScrollController? scrollController;
+  final bool liquidGlass;
 
   @override
   Widget build(BuildContext context) {
+    final content = SingleChildScrollView(
+      controller: scrollController,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.12),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.text_fields_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '阅读显示',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      '这些设置只影响阅读内容，不改变应用整体主题。',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: context.palette.muted,
+                            letterSpacing: 0,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const ReadingSettingsPanel(showPreview: true),
+        ],
+      ),
+    );
+
+    if (liquidGlass) {
+      return LiquidGlassSheetPanel(child: content);
+    }
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -565,59 +717,7 @@ class _ReadingDisplaySheet extends StatelessWidget {
           AppSpacing.lg,
           AppSpacing.lg,
         ),
-        child: SingleChildScrollView(
-          controller: scrollController,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(AppRadii.sm),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.12),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.text_fields_rounded,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '阅读显示',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          '这些设置只影响阅读内容，不改变应用整体主题。',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: context.palette.muted,
-                                    letterSpacing: 0,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const ReadingSettingsPanel(showPreview: true),
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
   }
