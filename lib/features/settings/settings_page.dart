@@ -740,7 +740,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=133';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=134';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -801,7 +801,7 @@ class _AboutPageState extends State<AboutPage> {
             ],
           ),
         );
-        if (confirmed == true) {
+        if (confirmed == true && await _ensureInstallPermission()) {
           await _downloadAndInstall();
         }
         return;
@@ -915,35 +915,44 @@ class _AboutPageState extends State<AboutPage> {
     }
 
     if (!mounted) return;
-    if (Platform.isAndroid) {
-      final canInstall =
-          await _channel.invokeMethod<bool>('canRequestPackageInstalls') ??
-              false;
-      if (!canInstall) {
-        final open = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => LiquidGlassDialog(
-            title: const Text('安装权限'),
-            content: const Text('安装更新需要开启「安装未知应用」权限。是否前往设置？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('去设置'),
-              ),
-            ],
-          ),
-        );
-        if (open == true) {
-          await _channel.invokeMethod('openInstallSettings');
-        }
-        return;
-      }
-    }
     await _channel.invokeMethod('installApk', {'path': filePath});
+  }
+
+  Future<bool> _ensureInstallPermission() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+
+    final canInstall =
+        await _channel.invokeMethod<bool>('canRequestPackageInstalls') ?? false;
+    if (canInstall) {
+      return true;
+    }
+
+    if (!mounted) {
+      return false;
+    }
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => LiquidGlassDialog(
+        title: const Text('安装权限'),
+        content: const Text('安装更新需要开启「安装未知应用」权限。请先前往设置开启权限，再重新检查更新。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+    if (open == true) {
+      await _channel.invokeMethod('openInstallSettings');
+    }
+    return false;
   }
 
   Future<void> _clearCache() async {
@@ -1178,19 +1187,12 @@ class _AboutPageState extends State<AboutPage> {
                         : '检查是否有可下载的新版本。',
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _isChecking ? null : _checkForUpdate,
-                      icon: _isChecking
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.refresh_rounded),
-                      label: Text(_isChecking ? '检查中' : '检查更新'),
-                    ),
+                  _AboutActionButton(
+                    busy: _isChecking,
+                    icon: Icons.refresh_rounded,
+                    label: '检查更新',
+                    busyLabel: '检查中',
+                    onPressed: _checkForUpdate,
                   ),
                 ],
               ),
@@ -1208,25 +1210,124 @@ class _AboutPageState extends State<AboutPage> {
                         : '清理临时图片缓存和已下载的更新包。',
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _isClearingCache ? null : _clearCache,
-                      icon: _isClearingCache
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.delete_sweep_outlined),
-                      label: Text(_isClearingCache ? '清理中' : '清理缓存'),
-                    ),
+                  _AboutActionButton(
+                    busy: _isClearingCache,
+                    icon: Icons.delete_sweep_outlined,
+                    label: '清理缓存',
+                    busyLabel: '清理中',
+                    onPressed: _clearCache,
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AboutActionButton extends StatelessWidget {
+  const _AboutActionButton({
+    required this.busy,
+    required this.icon,
+    required this.label,
+    required this.busyLabel,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final IconData icon;
+  final String label;
+  final String busyLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!liquidGlassEnabled(context)) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: busy ? null : onPressed,
+          icon: busy ? _ButtonProgressIcon(color: AppColors.primary) : Icon(icon),
+          label: Text(busy ? busyLabel : label),
+        ),
+      );
+    }
+
+    final palette = context.palette;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = busy ? palette.muted : AppColors.primary;
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: Opacity(
+        opacity: busy ? 0.72 : 1,
+        child: LiquidGlassSurface(
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          color: liquidGlassContainerColor(context, alpha: dark ? 0 : 0.26),
+          borderColor: dark
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.28)
+              : AppColors.primary.withOpacity(0.24),
+          blurSigma: LiquidGlassTokens.effectBlurSigma,
+          boxShadow: [
+            BoxShadow(
+              color: dark
+                  ? LiquidGlassTokens.metalFxCyan.withOpacity(0.09)
+                  : AppColors.primary.withOpacity(0.10),
+              blurRadius: 20,
+              spreadRadius: dark ? -8 : 0,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            child: InkWell(
+              onTap: busy ? null : onPressed,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              splashFactory: NoSplash.splashFactory,
+              highlightColor: AppColors.primary.withOpacity(0.05),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    busy
+                        ? _ButtonProgressIcon(color: foreground)
+                        : Icon(icon, color: foreground, size: 20),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      busy ? busyLabel : label,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ButtonProgressIcon extends StatelessWidget {
+  const _ButtonProgressIcon({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: color,
       ),
     );
   }
