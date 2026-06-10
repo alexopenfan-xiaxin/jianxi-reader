@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/reading_settings_panel.dart';
@@ -325,22 +326,7 @@ class _AppearanceEntry extends StatelessWidget {
 
   void _openAppearancePage(BuildContext context) {
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const AppearancePage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: AppMotion.emphasized),
-            ),
-            child: child,
-          );
-        },
-        transitionDuration: AppMotion.slow,
-      ),
+      appPageRoute<void>(builder: (context) => const AppearancePage()),
     );
   }
 }
@@ -521,22 +507,7 @@ class _ReadingSettingsEntry extends StatelessWidget {
 
   void _openReadingSettingsPage(BuildContext context) {
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const ReadingSettingsPage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: AppMotion.emphasized),
-            ),
-            child: child,
-          );
-        },
-        transitionDuration: AppMotion.slow,
-      ),
+      appPageRoute<void>(builder: (context) => const ReadingSettingsPage()),
     );
   }
 }
@@ -679,22 +650,7 @@ class _AboutEntry extends StatelessWidget {
 
   void _openAboutPage(BuildContext context) {
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const AboutPage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: AppMotion.emphasized),
-            ),
-            child: child,
-          );
-        },
-        transitionDuration: AppMotion.slow,
-      ),
+      appPageRoute<void>(builder: (context) => const AboutPage()),
     );
   }
 }
@@ -740,7 +696,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=135';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=136';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',

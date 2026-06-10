@@ -25,10 +25,6 @@ abstract class DocumentLibraryService {
 
   Future<DateTime> markDocumentOpened(DocumentEntry document);
 
-  Future<double> loadReadingOffset(DocumentEntry document);
-
-  Future<void> saveReadingOffset(DocumentEntry document, double offset);
-
   Future<List<String>> loadTags();
 
   Future<void> createTag(String name);
@@ -58,7 +54,6 @@ class DocumentFileService implements DocumentLibraryService {
   static const _documentAccessChannel =
       MethodChannel('com.jianxi.reader/document_access');
   static const _recentOpenedPrefix = 'document.recentOpened.';
-  static const _readingOffsetPrefix = 'document.readingOffset.';
   static const _referencedPathsKey = 'referenced.paths';
   static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
   static const _tagsKey = 'document.tags';
@@ -346,19 +341,6 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   @override
-  Future<double> loadReadingOffset(DocumentEntry document) async {
-    final preferences = await SharedPreferences.getInstance();
-    return preferences.getDouble(_readingOffsetKey(document.path)) ?? 0;
-  }
-
-  @override
-  Future<void> saveReadingOffset(DocumentEntry document, double offset) async {
-    final preferences = await SharedPreferences.getInstance();
-    final cleanOffset = offset.isFinite && offset > 0 ? offset : 0.0;
-    await preferences.setDouble(_readingOffsetKey(document.path), cleanOffset);
-  }
-
-  @override
   Future<List<String>> loadTags() async {
     final preferences = await SharedPreferences.getInstance();
     return _allTags(preferences);
@@ -425,10 +407,6 @@ class DocumentFileService implements DocumentLibraryService {
     return '$_recentOpenedPrefix$path';
   }
 
-  static String _readingOffsetKey(String path) {
-    return '$_readingOffsetPrefix$path';
-  }
-
   static String _referencedSourceUriKey(String path) {
     return '$_referencedSourceUriPrefix$path';
   }
@@ -475,7 +453,6 @@ class DocumentFileService implements DocumentLibraryService {
     String path,
   ) async {
     await preferences.remove(_recentOpenedKey(path));
-    await preferences.remove(_readingOffsetKey(path));
     await preferences.remove(_documentTagsKey(path));
   }
 
@@ -485,14 +462,10 @@ class DocumentFileService implements DocumentLibraryService {
     String newPath,
   ) async {
     final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
-    final readingOffset = preferences.getDouble(_readingOffsetKey(oldPath));
     final tags = preferences.getStringList(_documentTagsKey(oldPath));
     await _clearDocumentMetadata(preferences, oldPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
-    }
-    if (readingOffset != null) {
-      await preferences.setDouble(_readingOffsetKey(newPath), readingOffset);
     }
     if (tags != null) {
       await preferences.setStringList(_documentTagsKey(newPath), tags);

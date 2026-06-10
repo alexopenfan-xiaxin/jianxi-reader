@@ -16,8 +16,6 @@ class HtmlDocumentView extends StatefulWidget {
     required this.lineHeight,
     required this.readingPalette,
     required this.horizontalPadding,
-    required this.initialScrollOffset,
-    required this.onScrollOffsetChanged,
     this.topPadding = 0,
     this.searchController,
     super.key,
@@ -28,8 +26,6 @@ class HtmlDocumentView extends StatefulWidget {
   final double lineHeight;
   final ReadingPalette readingPalette;
   final double horizontalPadding;
-  final double initialScrollOffset;
-  final ValueChanged<double> onScrollOffsetChanged;
   final double topPadding;
   final DocumentSearchController? searchController;
 
@@ -37,8 +33,7 @@ class HtmlDocumentView extends StatefulWidget {
   State<HtmlDocumentView> createState() => _HtmlDocumentViewState();
 }
 
-class _HtmlDocumentViewState extends State<HtmlDocumentView>
-    with WidgetsBindingObserver {
+class _HtmlDocumentViewState extends State<HtmlDocumentView> {
   static const _searchScript = r'''
 (function() {
   if (window.jianxiSearch) return;
@@ -145,18 +140,14 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView>
 ''';
 
   late final WebViewController _controller;
-  Timer? _scrollOffsetTimer;
   bool _isLoading = true;
-  bool _hasRestoredScrollOffset = false;
   bool _isSearchScriptReady = false;
   bool _isApplyingSearch = false;
-  bool _isAppActive = true;
   String _lastAppliedSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     widget.searchController?.addListener(_handleSearchChanged);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -187,7 +178,6 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView>
         oldWidget.lineHeight != widget.lineHeight ||
         oldWidget.readingPalette != widget.readingPalette ||
         oldWidget.horizontalPadding != widget.horizontalPadding) {
-      _hasRestoredScrollOffset = false;
       _controller.setBackgroundColor(widget.readingPalette.background);
       _loadHtml();
     }
@@ -195,26 +185,11 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView>
 
   @override
   void dispose() {
-    _scrollOffsetTimer?.cancel();
     widget.searchController?.removeListener(_handleSearchChanged);
-    unawaited(_reportScrollOffset());
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _isAppActive = state == AppLifecycleState.resumed;
-    if (_isAppActive && !_isLoading) {
-      _startScrollOffsetTimer();
-      unawaited(_reportScrollOffset());
-    } else {
-      _scrollOffsetTimer?.cancel();
-    }
-  }
-
   Future<void> _loadHtml() async {
-    _scrollOffsetTimer?.cancel();
     _isSearchScriptReady = false;
     _lastAppliedSearchQuery = '';
     if (mounted) {
@@ -236,47 +211,9 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView>
     await _controller.loadHtmlString(html, baseUrl: baseUrl);
   }
 
-  void _startScrollOffsetTimer() {
-    if (_isLoading || !_isAppActive) {
-      return;
-    }
-    _scrollOffsetTimer?.cancel();
-    _scrollOffsetTimer = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => _reportScrollOffset(),
-    );
-  }
-
   Future<void> _finishPageLoad() async {
-    await _restoreScrollOffset();
     await _installSearchScript();
     await _runSearch();
-    _startScrollOffsetTimer();
-  }
-
-  Future<void> _restoreScrollOffset() async {
-    if (_hasRestoredScrollOffset || widget.initialScrollOffset <= 0) {
-      _hasRestoredScrollOffset = true;
-      return;
-    }
-    try {
-      await _controller.scrollTo(0, widget.initialScrollOffset.round());
-      _hasRestoredScrollOffset = true;
-    } catch (error) {
-      debugPrint('[HtmlDocumentView] restore scroll offset failed: $error');
-    }
-  }
-
-  Future<void> _reportScrollOffset() async {
-    if (_isLoading) {
-      return;
-    }
-    try {
-      final position = await _controller.getScrollPosition();
-      widget.onScrollOffsetChanged(position.dy);
-    } catch (error) {
-      debugPrint('[HtmlDocumentView] read scroll offset failed: $error');
-    }
   }
 
   void _handleSearchChanged() {

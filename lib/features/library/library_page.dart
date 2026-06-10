@@ -8,6 +8,7 @@ import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../reader/reader_page.dart';
 import 'document_actions.dart';
@@ -61,54 +62,55 @@ class _LibraryPageState extends State<LibraryPage>
           }
           return Stack(
             children: [
-              Column(
-                children: [
-                  _FixedLibraryHeader(controller: controller),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-                      behavior: HitTestBehavior.translucent,
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.sm,
-                          AppSpacing.lg,
-                          118,
-                        ),
-                        children: [
-                          if (controller.errorMessage != null) ...[
-                            _ErrorBanner(message: controller.errorMessage!),
-                            const SizedBox(height: AppSpacing.md),
-                          ],
-                          if (controller.isLoading)
-                            const _LoadingState()
-                          else if (controller.allDocuments.isEmpty)
-                            const _EmptyState()
-                          else if (controller.documents.isEmpty)
-                            const _NoResultsState()
-                          else if (settings.libraryViewMode ==
-                              LibraryViewMode.shelf)
-                            _ShelfGrid(documents: controller.documents)
-                          else
-                            ...controller.documents.asMap().entries.map(
-                                  (entry) => _StaggeredFadeIn(
-                                    index: entry.key,
-                                    controller: _staggerController,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: AppSpacing.sm,
-                                      ),
-                                      child: _DocumentTile(
-                                        document: entry.value,
-                                      ),
-                                    ),
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                  behavior: HitTestBehavior.translucent,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      82,
+                      AppSpacing.lg,
+                      118,
+                    ),
+                    children: [
+                      if (controller.errorMessage != null) ...[
+                        _ErrorBanner(message: controller.errorMessage!),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (controller.isLoading)
+                        const _LoadingState()
+                      else if (controller.allDocuments.isEmpty)
+                        const _EmptyState()
+                      else if (controller.documents.isEmpty)
+                        const _NoResultsState()
+                      else if (settings.libraryViewMode ==
+                          LibraryViewMode.shelf)
+                        _ShelfGrid(documents: controller.documents)
+                      else
+                        ...controller.documents.asMap().entries.map(
+                              (entry) => _StaggeredFadeIn(
+                                index: entry.key,
+                                controller: _staggerController,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm,
+                                  ),
+                                  child: _DocumentTile(
+                                    document: entry.value,
                                   ),
                                 ),
-                        ],
-                      ),
-                    ),
+                              ),
+                            ),
+                    ],
                   ),
-                ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _FixedLibraryHeader(controller: controller),
               ),
               Positioned(
                 right: AppSpacing.lg,
@@ -248,34 +250,26 @@ class _FixedLibraryHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sm,
-          AppSpacing.xs,
-          AppSpacing.sm,
-          AppSpacing.xs,
-        ),
-        child: LiquidGlassSurface(
-          borderRadius: BorderRadius.circular(24),
-          color: liquidGlassHeaderColor(context),
-          borderColor: Colors.white.withOpacity(0.16),
-          blurSigma: LiquidGlassTokens.effectBlurSigma,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border(
-                bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
-              ),
-            ),
-            child: headerContent,
+      return LiquidGlassSurface(
+        borderRadius: BorderRadius.circular(24),
+        color: liquidGlassHeaderColor(context),
+        borderColor: Colors.white.withOpacity(0.16),
+        blurSigma: LiquidGlassTokens.effectBlurSigma,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
+        ],
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border(
+              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+            ),
+          ),
+          child: headerContent,
         ),
       );
     }
@@ -298,20 +292,7 @@ class _FixedLibraryHeader extends StatelessWidget {
 
   void _openSearchPage(BuildContext context) {
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const _LibrarySearchPage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: AppMotion.emphasized,
-            ),
-            child: child,
-          );
-        },
-        transitionDuration: AppMotion.normal,
-      ),
+      appPageRoute<void>(builder: (context) => const _LibrarySearchPage()),
     );
   }
 
@@ -2078,30 +2059,7 @@ class _TypeBadge extends StatelessWidget {
 
 Future<void> _openReader(BuildContext context, DocumentEntry document) {
   return Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          ReaderPage(document: document),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = CurvedAnimation(
-          parent: animation,
-          curve: AppMotion.emphasized,
-        );
-        return FadeTransition(
-          opacity: curve,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.985, end: 1).animate(curve),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.08, 0.015),
-                end: Offset.zero,
-              ).animate(curve),
-              child: child,
-            ),
-          ),
-        );
-      },
-      transitionDuration: AppMotion.normal,
-    ),
+    appPageRoute<void>(builder: (context) => ReaderPage(document: document)),
   );
 }
 

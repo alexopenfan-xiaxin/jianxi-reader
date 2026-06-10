@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/haptic_service.dart';
+import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../library/document_entry.dart';
 import '../library/library_controller.dart';
@@ -578,24 +579,7 @@ class _LiquidBottomNavItem extends StatelessWidget {
 
 Future<void> _openExternalReader(BuildContext context, DocumentEntry document) {
   return Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          ReaderPage(document: document),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = CurvedAnimation(
-          parent: animation,
-          curve: AppMotion.emphasized,
-        );
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.08, 0),
-            end: Offset.zero,
-          ).animate(curve),
-          child: FadeTransition(opacity: curve, child: child),
-        );
-      },
-      transitionDuration: AppMotion.slow,
-    ),
+    appPageRoute<void>(builder: (context) => ReaderPage(document: document)),
   );
 }
 

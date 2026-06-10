@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/app_settings_controller.dart';
 import '../../../core/design_tokens.dart';
 import '../../../core/emoji_service.dart';
+import '../../../core/widgets/app_page_route.dart';
 import '../../../core/widgets/liquid_glass.dart';
 import '../document_search_controller.dart';
 import 'builders/clickable_link_builder.dart';
@@ -437,7 +438,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   void _showImagePreview(
       BuildContext context, String url, String? alt, String? title) {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      appPageRoute<void>(
         builder: (ctx) => Scaffold(
           backgroundColor: Colors.black,
           appBar: AppBar(
