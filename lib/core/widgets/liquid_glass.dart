@@ -385,49 +385,49 @@ class _MetalFxDarkRimPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
-      ..shader = Gradient.linear(
-        rect.topLeft,
-        rect.bottomRight,
-        [
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
           LiquidGlassTokens.metalFxCyan.withOpacity(0.30 * glowOpacity),
           LiquidGlassTokens.metalFxMint.withOpacity(0.24 * glowOpacity),
           LiquidGlassTokens.metalFxRose.withOpacity(0.20 * glowOpacity),
           LiquidGlassTokens.metalFxBlue.withOpacity(0.24 * glowOpacity),
         ],
-        const [0, 0.34, 0.68, 1],
-      );
+        stops: const [0, 0.34, 0.68, 1],
+      ).createShader(rect);
     canvas.drawRRect(glowRRect, glowPaint);
 
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = LiquidGlassTokens.metalFxDarkRingWidth
-      ..shader = Gradient.linear(
-        rect.topLeft,
-        rect.bottomRight,
-        [
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
           Colors.white.withOpacity(0.08),
           LiquidGlassTokens.metalFxCyan.withOpacity(0.70),
           LiquidGlassTokens.metalFxGold.withOpacity(0.62),
           LiquidGlassTokens.metalFxRose.withOpacity(0.42),
           LiquidGlassTokens.metalFxBlue.withOpacity(0.58),
         ],
-        const [0, 0.22, 0.48, 0.74, 1],
-      );
+        stops: const [0, 0.22, 0.48, 0.74, 1],
+      ).createShader(rect);
     canvas.drawRRect(rrect, ringPaint);
 
     final innerPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..shader = Gradient.linear(
-        rect.bottomLeft,
-        rect.topRight,
-        [
+      ..shader = LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
           Colors.black.withOpacity(0.0),
           Colors.white.withOpacity(0.18),
           Colors.black.withOpacity(0.16),
         ],
-        const [0, 0.46, 1],
-      );
+        stops: const [0, 0.46, 1],
+      ).createShader(rect);
     canvas.drawRRect(rrect.deflate(2.2), innerPaint);
   }
 
