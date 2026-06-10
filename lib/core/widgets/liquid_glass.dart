@@ -15,6 +15,15 @@ class LiquidGlassTokens {
   static const androidEdgeHighlightBorderWidth = 1.5;
   static const androidEdgeHighlightOpacity = 1.0;
   static const androidBlurSigma = 4.0 + androidBlurAmount * 32.0;
+  static const metalFxDarkBase = Color(0xFF0D0D0D);
+  static const metalFxCyan = Color(0xFFAAE8FF);
+  static const metalFxMint = Color(0xFFC5FE9E);
+  static const metalFxRose = Color(0xFFF7888D);
+  static const metalFxGold = Color(0xFFFFFDC3);
+  static const metalFxBlue = Color(0xFF007CFF);
+  static const metalFxDarkGlowOpacity = 0.70;
+  static const metalFxDarkReflectionOpacity = 0.34;
+  static const metalFxDarkRingWidth = 1.4;
   static const bottomBarHeight = 58.0;
   static const bottomBarIndicatorHeight = 56.0;
   static const bottomBarPadding = 3.0;
@@ -27,12 +36,12 @@ class LiquidGlassTokens {
   static const blurSigma = 24.0;
   static const effectBlurSigma = androidBlurSigma;
   static const materialAlphaLight = 0.38;
-  static const materialAlphaDark = 0.30;
+  static const materialAlphaDark = 0.58;
   static const ultraThinAlpha = 0.15;
   static const cardAlphaLight = 0.68;
-  static const cardAlphaDark = 0.42;
+  static const cardAlphaDark = 0.64;
   static const headerAlphaLight = 0.54;
-  static const headerAlphaDark = 0.36;
+  static const headerAlphaDark = 0.56;
   static const shellRefractionAmount = 24.0;
 }
 
@@ -52,6 +61,7 @@ class LiquidGlassSurface extends StatelessWidget {
     this.tintPrimary = false,
     this.chromaticEdge = true,
     this.edgeHighlight = true,
+    this.metalFxDarkEffect = true,
   });
 
   final Widget child;
@@ -65,29 +75,59 @@ class LiquidGlassSurface extends StatelessWidget {
   final bool tintPrimary;
   final bool chromaticEdge;
   final bool edgeHighlight;
+  final bool metalFxDarkEffect;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final useMetalFxDark = dark && metalFxDarkEffect;
     final resolvedColor = color ??
-        (dark
-            ? Colors.white.withOpacity(LiquidGlassTokens.materialAlphaDark)
-            : palette.card.withOpacity(LiquidGlassTokens.materialAlphaLight));
+        (useMetalFxDark
+            ? LiquidGlassTokens.metalFxDarkBase.withOpacity(
+                LiquidGlassTokens.materialAlphaDark,
+              )
+            : dark
+                ? Colors.white.withOpacity(LiquidGlassTokens.materialAlphaDark)
+                : palette.card.withOpacity(
+                    LiquidGlassTokens.materialAlphaLight,
+                  ));
     final resolvedBorder = borderColor ??
-        (dark
-            ? Colors.white.withOpacity(0.16)
-            : Colors.white.withOpacity(0.42));
+        (useMetalFxDark
+            ? LiquidGlassTokens.metalFxCyan.withOpacity(0.24)
+            : dark
+                ? Colors.white.withOpacity(0.16)
+                : Colors.white.withOpacity(0.42));
+    final resolvedShadows = useMetalFxDark
+        ? [
+            BoxShadow(
+              color: LiquidGlassTokens.metalFxCyan.withOpacity(0.13),
+              blurRadius: 28,
+              spreadRadius: -6,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: LiquidGlassTokens.metalFxRose.withOpacity(0.08),
+              blurRadius: 34,
+              spreadRadius: -10,
+              offset: const Offset(0, -3),
+            ),
+            ...boxShadow,
+          ]
+        : boxShadow;
+    final filter = useMetalFxDark
+        ? ImageFilter.blur(sigmaX: blurSigma + 1, sigmaY: blurSigma + 1)
+        : ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma);
 
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        boxShadow: boxShadow,
+        boxShadow: resolvedShadows,
       ),
       child: ClipRRect(
         borderRadius: borderRadius,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          filter: filter,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: resolvedColor,
@@ -96,8 +136,13 @@ class LiquidGlassSurface extends StatelessWidget {
             ),
             child: Stack(
               children: [
+                if (useMetalFxDark)
+                  _MetalFxDarkReflection(borderRadius: borderRadius),
                 if (chromaticEdge)
-                  _LiquidGlassChromaticEdge(borderRadius: borderRadius),
+                  _LiquidGlassChromaticEdge(
+                    borderRadius: borderRadius,
+                    darkMetal: useMetalFxDark,
+                  ),
                 if (innerHighlight)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -108,9 +153,18 @@ class LiquidGlassSurface extends StatelessWidget {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Colors.white.withOpacity(dark ? 0.20 : 0.38),
-                              Colors.white.withOpacity(0.05),
-                              Colors.black.withOpacity(dark ? 0.14 : 0.05),
+                              useMetalFxDark
+                                  ? LiquidGlassTokens.metalFxGold
+                                      .withOpacity(0.16)
+                                  : Colors.white
+                                      .withOpacity(dark ? 0.20 : 0.38),
+                              useMetalFxDark
+                                  ? Colors.white.withOpacity(0.04)
+                                  : Colors.white.withOpacity(0.05),
+                              useMetalFxDark
+                                  ? Colors.black.withOpacity(0.34)
+                                  : Colors.black
+                                      .withOpacity(dark ? 0.14 : 0.05),
                             ],
                             stops: const [0, 0.52, 1],
                           ),
@@ -119,7 +173,12 @@ class LiquidGlassSurface extends StatelessWidget {
                     ),
                   ),
                 if (edgeHighlight)
-                  _LiquidGlassEdgeHighlight(borderRadius: borderRadius),
+                  _LiquidGlassEdgeHighlight(
+                    borderRadius: borderRadius,
+                    darkMetal: useMetalFxDark,
+                  ),
+                if (useMetalFxDark)
+                  _MetalFxDarkRim(borderRadius: borderRadius),
                 if (tintPrimary)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -150,13 +209,21 @@ class LiquidGlassSurface extends StatelessWidget {
 }
 
 class _LiquidGlassChromaticEdge extends StatelessWidget {
-  const _LiquidGlassChromaticEdge({required this.borderRadius});
+  const _LiquidGlassChromaticEdge({
+    required this.borderRadius,
+    required this.darkMetal,
+  });
 
   final BorderRadius borderRadius;
+  final bool darkMetal;
 
   @override
   Widget build(BuildContext context) {
-    final intensity = LiquidGlassTokens.androidAberrationIntensity / 2;
+    final intensity = darkMetal
+        ? LiquidGlassTokens.androidAberrationIntensity * 1.25
+        : LiquidGlassTokens.androidAberrationIntensity / 2;
+    final roseOpacity = darkMetal ? 0.20 : 0.09;
+    final cyanOpacity = darkMetal ? 0.24 : 0.10;
     return Positioned.fill(
       child: IgnorePointer(
         child: Stack(
@@ -167,7 +234,8 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: const Color(0xFFFF3B5F).withOpacity(0.09),
+                    color: LiquidGlassTokens.metalFxRose
+                        .withOpacity(roseOpacity),
                     width: 1,
                   ),
                 ),
@@ -180,7 +248,8 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: const Color(0xFF34D5FF).withOpacity(0.10),
+                    color: LiquidGlassTokens.metalFxCyan
+                        .withOpacity(cyanOpacity),
                     width: 1,
                   ),
                 ),
@@ -195,13 +264,20 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
 }
 
 class _LiquidGlassEdgeHighlight extends StatelessWidget {
-  const _LiquidGlassEdgeHighlight({required this.borderRadius});
+  const _LiquidGlassEdgeHighlight({
+    required this.borderRadius,
+    required this.darkMetal,
+  });
 
   final BorderRadius borderRadius;
+  final bool darkMetal;
 
   @override
   Widget build(BuildContext context) {
     final opacity = LiquidGlassTokens.androidEdgeHighlightOpacity;
+    final brightColor =
+        darkMetal ? LiquidGlassTokens.metalFxGold : Colors.white;
+    final midColor = darkMetal ? LiquidGlassTokens.metalFxCyan : Colors.white;
     return Positioned.fill(
       child: IgnorePointer(
         child: DecoratedBox(
@@ -212,8 +288,8 @@ class _LiquidGlassEdgeHighlight extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 Colors.white.withOpacity(0),
-                Colors.white.withOpacity(0.12 * opacity),
-                Colors.white.withOpacity(0.40 * opacity),
+                midColor.withOpacity((darkMetal ? 0.18 : 0.12) * opacity),
+                brightColor.withOpacity((darkMetal ? 0.34 : 0.40) * opacity),
                 Colors.white.withOpacity(0),
               ],
               stops: const [0, 0.28, 0.66, 1],
@@ -225,6 +301,142 @@ class _LiquidGlassEdgeHighlight extends StatelessWidget {
   }
 }
 
+class _MetalFxDarkReflection extends StatelessWidget {
+  const _MetalFxDarkReflection({required this.borderRadius});
+
+  final BorderRadius borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = LiquidGlassTokens.metalFxDarkReflectionOpacity;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            gradient: RadialGradient(
+              center: const Alignment(-0.78, -0.92),
+              radius: 1.25,
+              colors: [
+                LiquidGlassTokens.metalFxCyan.withOpacity(0.28 * opacity),
+                LiquidGlassTokens.metalFxMint.withOpacity(0.18 * opacity),
+                Colors.transparent,
+              ],
+              stops: const [0, 0.32, 1],
+            ),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              gradient: RadialGradient(
+                center: const Alignment(0.86, 0.92),
+                radius: 1.1,
+                colors: [
+                  LiquidGlassTokens.metalFxRose.withOpacity(0.20 * opacity),
+                  LiquidGlassTokens.metalFxBlue.withOpacity(0.16 * opacity),
+                  Colors.transparent,
+                ],
+                stops: const [0, 0.30, 1],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetalFxDarkRim extends StatelessWidget {
+  const _MetalFxDarkRim({required this.borderRadius});
+
+  final BorderRadius borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _MetalFxDarkRimPainter(borderRadius),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetalFxDarkRimPainter extends CustomPainter {
+  const _MetalFxDarkRimPainter(this.borderRadius);
+
+  final BorderRadius borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) {
+      return;
+    }
+
+    final rect = Offset.zero & size;
+    final rrect = borderRadius
+        .toRRect(rect)
+        .deflate(LiquidGlassTokens.metalFxDarkRingWidth / 2);
+    final glowRRect = rrect.deflate(1.2);
+    final glowOpacity = LiquidGlassTokens.metalFxDarkGlowOpacity;
+
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
+      ..shader = Gradient.linear(
+        rect.topLeft,
+        rect.bottomRight,
+        [
+          LiquidGlassTokens.metalFxCyan.withOpacity(0.30 * glowOpacity),
+          LiquidGlassTokens.metalFxMint.withOpacity(0.24 * glowOpacity),
+          LiquidGlassTokens.metalFxRose.withOpacity(0.20 * glowOpacity),
+          LiquidGlassTokens.metalFxBlue.withOpacity(0.24 * glowOpacity),
+        ],
+        const [0, 0.34, 0.68, 1],
+      );
+    canvas.drawRRect(glowRRect, glowPaint);
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = LiquidGlassTokens.metalFxDarkRingWidth
+      ..shader = Gradient.linear(
+        rect.topLeft,
+        rect.bottomRight,
+        [
+          Colors.white.withOpacity(0.08),
+          LiquidGlassTokens.metalFxCyan.withOpacity(0.70),
+          LiquidGlassTokens.metalFxGold.withOpacity(0.62),
+          LiquidGlassTokens.metalFxRose.withOpacity(0.42),
+          LiquidGlassTokens.metalFxBlue.withOpacity(0.58),
+        ],
+        const [0, 0.22, 0.48, 0.74, 1],
+      );
+    canvas.drawRRect(rrect, ringPaint);
+
+    final innerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..shader = Gradient.linear(
+        rect.bottomLeft,
+        rect.topRight,
+        [
+          Colors.black.withOpacity(0.0),
+          Colors.white.withOpacity(0.18),
+          Colors.black.withOpacity(0.16),
+        ],
+        const [0, 0.46, 1],
+      );
+    canvas.drawRRect(rrect.deflate(2.2), innerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MetalFxDarkRimPainter oldDelegate) {
+    return oldDelegate.borderRadius != borderRadius;
+  }
+}
+
 Color liquidGlassContainerColor(BuildContext context, {double? alpha}) {
   final palette = context.palette;
   final dark = Theme.of(context).brightness == Brightness.dark;
@@ -232,13 +444,14 @@ Color liquidGlassContainerColor(BuildContext context, {double? alpha}) {
       (dark
           ? LiquidGlassTokens.materialAlphaDark
           : LiquidGlassTokens.materialAlphaLight);
-  return (dark ? Colors.white : palette.card).withOpacity(resolvedAlpha);
+  return (dark ? LiquidGlassTokens.metalFxDarkBase : palette.card)
+      .withOpacity(resolvedAlpha);
 }
 
 Color liquidGlassCardColor(BuildContext context) {
   final palette = context.palette;
   final dark = Theme.of(context).brightness == Brightness.dark;
-  return (dark ? Colors.white : palette.card).withOpacity(
+  return (dark ? LiquidGlassTokens.metalFxDarkBase : palette.card).withOpacity(
     dark ? LiquidGlassTokens.cardAlphaDark : LiquidGlassTokens.cardAlphaLight,
   );
 }
@@ -246,7 +459,7 @@ Color liquidGlassCardColor(BuildContext context) {
 Color liquidGlassHeaderColor(BuildContext context) {
   final palette = context.palette;
   final dark = Theme.of(context).brightness == Brightness.dark;
-  return (dark ? Colors.white : palette.card).withOpacity(
+  return (dark ? LiquidGlassTokens.metalFxDarkBase : palette.card).withOpacity(
     dark ? LiquidGlassTokens.headerAlphaDark : LiquidGlassTokens.headerAlphaLight,
   );
 }
@@ -284,15 +497,28 @@ class LiquidGlassPanel extends StatelessWidget {
       borderRadius: borderRadius,
       padding: padding,
       color: color ?? liquidGlassCardColor(context),
-      borderColor: borderColor ?? Colors.white.withOpacity(dark ? 0.18 : 0.46),
+      borderColor: borderColor ??
+          (dark
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.26)
+              : Colors.white.withOpacity(0.46)),
       blurSigma: LiquidGlassTokens.effectBlurSigma,
       boxShadow: boxShadow ??
           [
             BoxShadow(
-              color: Colors.black.withOpacity(dark ? 0.22 : 0.12),
-              blurRadius: 28,
+              color: dark
+                  ? LiquidGlassTokens.metalFxCyan.withOpacity(0.12)
+                  : Colors.black.withOpacity(0.12),
+              blurRadius: dark ? 34 : 28,
+              spreadRadius: dark ? -8 : 0,
               offset: const Offset(0, 14),
             ),
+            if (dark)
+              BoxShadow(
+                color: LiquidGlassTokens.metalFxRose.withOpacity(0.08),
+                blurRadius: 26,
+                spreadRadius: -12,
+                offset: const Offset(0, -4),
+              ),
           ],
       child: child,
     );
@@ -353,13 +579,18 @@ class LiquidGlassTextFieldFrame extends StatelessWidget {
       child: LiquidGlassSurface(
         borderRadius: borderRadius,
         padding: padding,
-        color: liquidGlassContainerColor(context, alpha: dark ? 0.24 : 0.34),
-        borderColor: Colors.white.withOpacity(dark ? 0.18 : 0.42),
+        color: liquidGlassContainerColor(context, alpha: dark ? 0.54 : 0.34),
+        borderColor: dark
+            ? LiquidGlassTokens.metalFxCyan.withOpacity(0.22)
+            : Colors.white.withOpacity(0.42),
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(dark ? 0.16 : 0.06),
-            blurRadius: 16,
+            color: dark
+                ? LiquidGlassTokens.metalFxBlue.withOpacity(0.10)
+                : Colors.black.withOpacity(0.06),
+            blurRadius: dark ? 22 : 16,
+            spreadRadius: dark ? -8 : 0,
             offset: const Offset(0, 8),
           ),
         ],
@@ -394,16 +625,23 @@ class LiquidGlassChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadii.pill),
       color: selected
           ? AppColors.primary.withOpacity(dark ? 0.18 : 0.12)
-          : liquidGlassContainerColor(context, alpha: dark ? 0.20 : 0.32),
+          : liquidGlassContainerColor(context, alpha: dark ? 0.50 : 0.32),
       borderColor: selected
-          ? AppColors.primary.withOpacity(0.24)
-          : Colors.white.withOpacity(dark ? 0.16 : 0.38),
+          ? (dark
+              ? LiquidGlassTokens.metalFxBlue.withOpacity(0.34)
+              : AppColors.primary.withOpacity(0.24))
+          : (dark
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.20)
+              : Colors.white.withOpacity(0.38)),
       blurSigma: LiquidGlassTokens.effectBlurSigma,
       tintPrimary: selected,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(dark ? 0.14 : 0.06),
-          blurRadius: 14,
+          color: dark
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.08)
+              : Colors.black.withOpacity(0.06),
+          blurRadius: dark ? 18 : 14,
+          spreadRadius: dark ? -8 : 0,
           offset: const Offset(0, 6),
         ),
       ],
