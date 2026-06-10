@@ -100,6 +100,7 @@ class _ReaderPageState extends State<ReaderPage> {
       defaultBorder: palette.hairline,
       defaultLink: AppColors.primary,
     );
+    final showGlassAppBar = settings.liquidGlassEnabled || _showGlass;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -108,10 +109,10 @@ class _ReaderPageState extends State<ReaderPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor:
-            _showGlass ? Colors.transparent : readingPalette.background,
+            showGlassAppBar ? Colors.transparent : readingPalette.background,
         foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
-        flexibleSpace: _showGlass
+        flexibleSpace: showGlassAppBar
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.zero,
                 color: readingPalette.background.withOpacity(
@@ -134,7 +135,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 onChanged: _searchController.updateQuery,
               )
             : AnimatedOpacity(
-                opacity: _showGlass ? 1 : 0,
+                opacity: showGlassAppBar ? 1 : 0,
                 duration: AppMotion.fast,
                 child: Text(
                   _document.name,

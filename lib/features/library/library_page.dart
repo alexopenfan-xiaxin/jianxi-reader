@@ -248,25 +248,34 @@ class _FixedLibraryHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: palette.hairline.withOpacity(0.28)),
-          ),
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm,
+          AppSpacing.xs,
+          AppSpacing.sm,
+          AppSpacing.xs,
         ),
         child: LiquidGlassSurface(
-          borderRadius: BorderRadius.zero,
+          borderRadius: BorderRadius.circular(24),
           color: liquidGlassHeaderColor(context),
-          borderColor: Colors.transparent,
+          borderColor: Colors.white.withOpacity(0.16),
           blurSigma: LiquidGlassTokens.effectBlurSigma,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withOpacity(0.08),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
           ],
-          child: headerContent,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border(
+                bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+              ),
+            ),
+            child: headerContent,
+          ),
         ),
       );
     }
@@ -1528,6 +1537,9 @@ class _DocumentTileState extends State<_DocumentTile>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final settings = context.watch<AppSettingsController>();
+    final forceClassicCard = settings.liquidGlassEnabled &&
+        Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _hoverAnim,
       builder: (context, child) => Transform.scale(
@@ -1537,6 +1549,7 @@ class _DocumentTileState extends State<_DocumentTile>
       child: AppCard(
         onTap: () => _openDocument(context),
         padding: const EdgeInsets.all(AppSpacing.md),
+        forceClassic: forceClassicCard,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

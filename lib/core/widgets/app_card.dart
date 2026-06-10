@@ -11,11 +11,13 @@ class AppCard extends StatefulWidget {
     super.key,
     this.padding = const EdgeInsets.all(AppSpacing.md),
     this.onTap,
+    this.forceClassic = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final bool forceClassic;
 
   @override
   State<AppCard> createState() => _AppCardState();
@@ -47,7 +49,7 @@ class _AppCardState extends State<AppCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final liquidGlass =
+    final liquidGlass = !widget.forceClassic &&
         context.watch<AppSettingsController>().liquidGlassEnabled;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final radius = liquidGlass ? 14.0 : AppRadii.lg;
