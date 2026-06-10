@@ -613,15 +613,19 @@ class LiquidGlassChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final foreground = selected ? AppColors.primary : palette.ink;
+    final foreground = selected
+        ? (dark ? const Color(0xFFF1FBFF) : AppColors.primary)
+        : palette.ink;
     return LiquidGlassSurface(
       borderRadius: BorderRadius.circular(AppRadii.pill),
       color: selected
-          ? AppColors.primary.withOpacity(dark ? 0.18 : 0.12)
+          ? (dark
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.18)
+              : AppColors.primary.withOpacity(0.12))
           : liquidGlassContainerColor(context, alpha: dark ? 0.50 : 0.32),
       borderColor: selected
           ? (dark
-              ? LiquidGlassTokens.metalFxBlue.withOpacity(0.34)
+              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.42)
               : AppColors.primary.withOpacity(0.24))
           : (dark
               ? LiquidGlassTokens.metalFxCyan.withOpacity(0.20)

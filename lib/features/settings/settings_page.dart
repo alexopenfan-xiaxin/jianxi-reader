@@ -23,14 +23,13 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
+      child: Stack(
         children: [
-          const _FixedSettingsHeader(),
-          Expanded(
+          Positioned.fill(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
-                AppSpacing.sm,
+                82,
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
@@ -42,6 +41,12 @@ class SettingsPage extends StatelessWidget {
                 _AboutEntry(),
               ],
             ),
+          ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _FixedSettingsHeader(),
           ),
         ],
       ),
@@ -84,24 +89,25 @@ class _FixedSettingsHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: palette.hairline.withOpacity(0.28)),
+      return LiquidGlassSurface(
+        borderRadius: BorderRadius.circular(24),
+        color: liquidGlassHeaderColor(context),
+        borderColor: Colors.white.withOpacity(0.16),
+        blurSigma: LiquidGlassTokens.effectBlurSigma,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-        ),
-        child: LiquidGlassSurface(
-          borderRadius: BorderRadius.zero,
-          color: liquidGlassHeaderColor(context),
-          borderColor: Colors.transparent,
-          blurSigma: LiquidGlassTokens.effectBlurSigma,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+        ],
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border(
+              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
             ),
-          ],
+          ),
           child: headerContent,
         ),
       );
@@ -127,22 +133,71 @@ class _FixedSettingsHeader extends StatelessWidget {
 PreferredSizeWidget _settingsPageAppBar(BuildContext context, String title) {
   final palette = context.palette;
   final settings = context.watch<AppSettingsController>();
+  if (settings.liquidGlassEnabled) {
+    return _LiquidSettingsAppBar(title: title);
+  }
   return AppBar(
     title: Text(title),
-    backgroundColor:
-        settings.liquidGlassEnabled ? Colors.transparent : palette.parchment,
+    backgroundColor: palette.parchment,
     scrolledUnderElevation: 0,
     surfaceTintColor: Colors.transparent,
-    flexibleSpace: settings.liquidGlassEnabled
-        ? LiquidGlassSurface(
-            borderRadius: BorderRadius.zero,
-            color: liquidGlassHeaderColor(context),
-            borderColor: Colors.transparent,
-            blurSigma: LiquidGlassTokens.effectBlurSigma,
-            child: const SizedBox.expand(),
-          )
-        : null,
   );
+}
+
+class _LiquidSettingsAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _LiquidSettingsAppBar({required this.title});
+
+  final String title;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return LiquidGlassSurface(
+      borderRadius: BorderRadius.circular(24),
+      color: liquidGlassHeaderColor(context),
+      borderColor: Colors.white.withOpacity(0.16),
+      blurSigma: LiquidGlassTokens.effectBlurSigma,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 18,
+          offset: const Offset(0, 8),
+        ),
+      ],
+      child: SafeArea(
+        bottom: false,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border(
+              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+            ),
+          ),
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: NavigationToolbar(
+              leading: IconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: const Icon(Icons.arrow_back_rounded),
+                color: palette.ink,
+                onPressed: () => Navigator.maybePop(context),
+              ),
+              middle: Text(
+                title,
+                style: Theme.of(context).appBarTheme.titleTextStyle,
+              ),
+              centerMiddle: false,
+              middleSpacing: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SettingsHomeIcon extends StatelessWidget {
@@ -696,7 +751,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=136';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=137';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
