@@ -153,6 +153,9 @@ class _StaggeredFadeIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (index >= 12) {
+      return child;
+    }
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
@@ -1394,11 +1397,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                     AppSpacing.sm,
                     AppSpacing.md,
                   ),
-                  child: Hero(
-                    tag: documentHeroTag(widget.document),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -1431,8 +1430,6 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                       ),
                       _DocumentTagRow(tags: widget.document.tags),
                     ],
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -1636,62 +1633,54 @@ class _DocumentTileState extends State<_DocumentTile>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Hero(
-                tag: documentHeroTag(widget.document),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _TypeBadge(document: widget.document),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TypeBadge(document: widget.document),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                if (widget.document.isReferenced)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: AppSpacing.xxs,
-                                    ),
-                                    child: Icon(
-                                      Icons.link_rounded,
-                                      size: 14,
-                                      color: palette.muted,
-                                    ),
-                                  ),
-                                Flexible(
-                                  child: Text(
-                                    widget.document.name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
+                            if (widget.document.isReferenced)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: AppSpacing.xxs,
                                 ),
-                              ],
+                                child: Icon(
+                                  Icons.link_rounded,
+                                  size: 14,
+                                  color: palette.muted,
+                                ),
+                              ),
+                            Flexible(
+                              child: Text(
+                                widget.document.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              _documentSummary(widget.document),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: palette.muted,
-                                        fontSize: 12,
-                                        letterSpacing: 0,
-                                      ),
-                            ),
-                            _DocumentTagRow(tags: widget.document.tags),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          _documentSummary(widget.document),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: palette.muted,
+                                fontSize: 12,
+                                letterSpacing: 0,
+                              ),
+                        ),
+                        _DocumentTagRow(tags: widget.document.tags),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
             const SizedBox(width: AppSpacing.xs),

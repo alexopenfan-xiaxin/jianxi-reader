@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -52,6 +53,16 @@ class MarkdownViewer extends StatefulWidget {
 
   @override
   State<MarkdownViewer> createState() => _MarkdownViewerState();
+}
+
+Future<Map<String, Object>> _readMarkdownSnapshot(String path) async {
+  final file = File(path);
+  final raw = await file.readAsString();
+  final modified = await file.lastModified();
+  return {
+    'data': preprocessMarkdown(raw),
+    'modified': modified.millisecondsSinceEpoch,
+  };
 }
 
 class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObserver {
@@ -134,15 +145,19 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
 
   Future<void> _loadFile() async {
     try {
-      final raw = await widget.file.readAsString();
+      final snapshot = await compute(_readMarkdownSnapshot, widget.file.path);
+      final data = snapshot['data']! as String;
+      final modified = DateTime.fromMillisecondsSinceEpoch(
+        snapshot['modified']! as int,
+      );
       if (mounted) {
         setState(() {
-          _data = preprocessMarkdown(raw);
+          _data = data;
           _error = null;
           _contentVersion++;
         });
       }
-      _lastModified = await widget.file.lastModified();
+      _lastModified = modified;
       _updateSearchMatches();
     } catch (e) {
       if (mounted) {

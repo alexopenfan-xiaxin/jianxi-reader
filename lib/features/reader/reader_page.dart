@@ -35,6 +35,8 @@ class _ReaderPageState extends State<ReaderPage> {
   final _searchTextController = TextEditingController();
   final _searchFocusNode = FocusNode();
   bool _showGlass = false;
+  bool _documentReady = false;
+  bool _entranceSettled = false;
   bool _isPreparingDocument = true;
   bool _isSearching = false;
   String? _prepareError;
@@ -46,7 +48,10 @@ class _ReaderPageState extends State<ReaderPage> {
     _libraryController = context.read<LibraryController>();
     _scrollController.addListener(_handleScroll);
     _searchController.addListener(_handleSearchStateChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDocument());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _settleEntranceAfterTransition();
+      _prepareDocument();
+    });
   }
 
   @override
@@ -123,21 +128,15 @@ class _ReaderPageState extends State<ReaderPage> {
             : AnimatedOpacity(
                 opacity: showGlassAppBar ? 1 : 0,
                 duration: AppMotion.fast,
-                child: Hero(
-                  tag: documentHeroTag(_document),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Text(
-                      _document.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: readingPalette.foreground,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
-                          ),
-                    ),
-                  ),
+                child: Text(
+                  _document.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: readingPalette.foreground,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
                 ),
               ),
         actions: _isSearching
@@ -238,6 +237,19 @@ class _ReaderPageState extends State<ReaderPage> {
     );
   }
 
+  Future<void> _settleEntranceAfterTransition() async {
+    await Future<void>.delayed(AppMotion.normal);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entranceSettled = true;
+      if (_documentReady) {
+        _isPreparingDocument = false;
+      }
+    });
+  }
+
   Future<void> _prepareDocument() async {
     try {
       final refreshed = await _libraryController.refreshDocument(_document);
@@ -246,14 +258,16 @@ class _ReaderPageState extends State<ReaderPage> {
         setState(() {
           _document = opened;
           _prepareError = null;
-          _isPreparingDocument = false;
+          _documentReady = true;
+          _isPreparingDocument = !_entranceSettled;
         });
       }
     } catch (error) {
       if (mounted) {
         setState(() {
           _prepareError = '读取文档失败：$error';
-          _isPreparingDocument = false;
+          _documentReady = true;
+          _isPreparingDocument = !_entranceSettled;
         });
       }
     }
@@ -351,47 +365,38 @@ class _ReaderMenuTile extends StatelessWidget {
   }
 }
 
-class _ReaderProgressBar extends StatefulWidget {
+class _ReaderProgressBar extends StatelessWidget {
   const _ReaderProgressBar({required this.scrollController});
 
   final ScrollController scrollController;
 
   @override
-  State<_ReaderProgressBar> createState() => _ReaderProgressBarState();
-}
-
-class _ReaderProgressBarState extends State<_ReaderProgressBar> {
-  double _lastProgress = 0;
-
-  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.scrollController,
+      animation: scrollController,
       builder: (context, _) {
-        if (!widget.scrollController.hasClients) {
+        if (!scrollController.hasClients) {
           return const SizedBox(height: 3);
         }
-        final position = widget.scrollController.position;
+        final position = scrollController.position;
         final progress = position.maxScrollExtent > 0
             ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
             : 0.0;
-        final begin = _lastProgress;
-        _lastProgress = progress;
         if (progress <= 0) {
           return const SizedBox(height: 3);
         }
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: begin, end: progress),
-          duration: AppMotion.fast,
-          curve: AppMotion.enter,
-          builder: (context, value, _) {
-            return LinearProgressIndicator(
-              value: value,
-              backgroundColor: Colors.transparent,
-              color: AppColors.primary.withOpacity(0.70),
-              minHeight: 3,
-            );
-          },
+        return SizedBox(
+          height: 3,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: progress,
+              heightFactor: 1,
+              child: ColoredBox(
+                color: AppColors.primary.withOpacity(0.70),
+              ),
+            ),
+          ),
         );
       },
     );
