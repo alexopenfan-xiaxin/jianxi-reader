@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
+import '../../core/reading_progress_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/reading_settings_panel.dart';
@@ -15,6 +17,7 @@ import '../library/library_controller.dart';
 import 'document_search_controller.dart';
 import 'html_document_view.dart';
 import 'markdown_viewer.dart';
+import 'smart_scrollbar.dart';
 
 enum _ReaderMenuAction { rename, remove }
 
@@ -41,6 +44,13 @@ class _ReaderPageState extends State<ReaderPage> {
   bool _isSearching = false;
   String? _prepareError;
 
+  // --- Reading progress ---
+  double? _savedProgressRatio;
+  bool _showProgressHint = false;
+  bool _progressHintVisible = false;
+  Timer? _saveProgressTimer;
+  Timer? _hideProgressTimer;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +66,9 @@ class _ReaderPageState extends State<ReaderPage> {
 
   @override
   void dispose() {
+    _saveProgressTimer?.cancel();
+    _hideProgressTimer?.cancel();
+    _saveProgressNow();
     _searchController.removeListener(_handleSearchStateChanged);
     _searchController.dispose();
     _searchTextController.dispose();
@@ -69,6 +82,68 @@ class _ReaderPageState extends State<ReaderPage> {
     final nextShowGlass = _scrollController.offset > 20;
     if (nextShowGlass != _showGlass && mounted) {
       setState(() => _showGlass = nextShowGlass);
+    }
+    _scheduleProgressSave();
+  }
+
+  // --- Reading progress persistence ---
+
+  void _scheduleProgressSave() {
+    _saveProgressTimer?.cancel();
+    _saveProgressTimer = Timer(
+      const Duration(milliseconds: 500),
+      _saveProgressNow,
+    );
+  }
+
+  void _saveProgressNow() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0) return;
+    final ratio = position.pixels / position.maxScrollExtent;
+    ReadingProgressService.saveProgress(_document.path, ratio);
+  }
+
+  Future<void> _loadSavedProgress() async {
+    final file = File(_document.path);
+    if (!file.existsSync()) return;
+    final fileSize = await file.length();
+    if (fileSize > ReadingProgressService.maxFileSizeBytes) return;
+    final ratio = await ReadingProgressService.loadProgress(_document.path);
+    if (ratio == null || ratio < 0.01 || !mounted) return;
+    setState(() {
+      _savedProgressRatio = ratio;
+      _showProgressHint = true;
+      _progressHintVisible = true;
+    });
+    _hideProgressTimer?.cancel();
+    _hideProgressTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _progressHintVisible = false);
+        // Remove widget after fade-out animation completes.
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _showProgressHint = false);
+        });
+      }
+    });
+  }
+
+  void _jumpToSavedProgress() {
+    final ratio = _savedProgressRatio;
+    if (ratio == null || !_scrollController.hasClients) return;
+    final target = _scrollController.position.maxScrollExtent * ratio;
+    _scrollController.animateTo(
+      target,
+      duration: AppMotion.slow,
+      curve: AppMotion.emphasized,
+    );
+    // Dismiss the hint immediately on tap.
+    _hideProgressTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _progressHintVisible = false;
+        _showProgressHint = false;
+      });
     }
   }
 
@@ -206,7 +281,21 @@ class _ReaderPageState extends State<ReaderPage> {
         children: [
           _ReaderProgressBar(scrollController: _scrollController),
           Expanded(
-            child: _buildBody(topPadding, settings, readingPalette),
+            child: Stack(
+              children: [
+                _buildBody(topPadding, settings, readingPalette),
+                if (_showProgressHint)
+                  Positioned(
+                    top: 8,
+                    right: 16,
+                    child: _ReadingProgressHint(
+                      visible: _progressHintVisible,
+                      onTap: _jumpToSavedProgress,
+                      readingPalette: readingPalette,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -227,13 +316,17 @@ class _ReaderPageState extends State<ReaderPage> {
       return _ReaderError(message: _prepareError!);
     }
 
-    return _ReaderContent(
-      document: _document,
-      scrollController: _scrollController,
-      topPadding: topPadding,
-      settings: settings,
+    return SmartScrollbar(
+      controller: _scrollController,
       readingPalette: readingPalette,
-      searchController: _searchController,
+      child: _ReaderContent(
+        document: _document,
+        scrollController: _scrollController,
+        topPadding: topPadding,
+        settings: settings,
+        readingPalette: readingPalette,
+        searchController: _searchController,
+      ),
     );
   }
 
@@ -261,6 +354,7 @@ class _ReaderPageState extends State<ReaderPage> {
           _documentReady = true;
           _isPreparingDocument = !_entranceSettled;
         });
+        _loadSavedProgress();
       }
     } catch (error) {
       if (mounted) {
@@ -521,6 +615,67 @@ class _ReaderContent extends StatelessWidget {
           searchController: searchController,
         ),
     };
+  }
+}
+
+class _ReadingProgressHint extends StatelessWidget {
+  const _ReadingProgressHint({
+    required this.visible,
+    required this.onTap,
+    required this.readingPalette,
+  });
+
+  final bool visible;
+  final VoidCallback onTap;
+  final ReadingPalette readingPalette;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: readingPalette.surface.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            border: Border.all(
+              color: readingPalette.border.withOpacity(0.40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.history_rounded,
+                size: 14,
+                color: readingPalette.foreground.withOpacity(0.65),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '上次阅读到这里',
+                style: TextStyle(
+                  color: readingPalette.foreground.withOpacity(0.80),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -102,17 +102,26 @@ class HtmlStyler {
       border: 1px solid var(--hairline) !important;
       border-radius: var(--radius-md) !important;
       box-shadow: none !important;
+      color: var(--ink) !important;
     }
-    code, kbd, samp {
+    code, kbd, samp, var {
       font-family: "SF Mono", "Cascadia Code", Consolas, monospace !important;
       font-size: 0.92em !important;
       background: var(--code-bg) !important;
       border-radius: var(--radius-sm) !important;
       padding: 0.12em 0.35em !important;
+      color: var(--ink) !important;
     }
     pre code {
       padding: 0 !important;
       background: transparent !important;
+      color: inherit !important;
+    }
+    mark {
+      background: rgba(255,204,51,.3) !important;
+      color: var(--ink) !important;
+      border-radius: 2px !important;
+      padding: 0 2px !important;
     }
     blockquote {
       padding: 14px 17px !important;
@@ -129,12 +138,14 @@ class HtmlStyler {
       background: var(--canvas) !important;
       border: 1px solid var(--hairline) !important;
       border-radius: var(--radius-md) !important;
+      color: var(--ink) !important;
     }
     th, td {
       padding: 12px !important;
       border-bottom: 1px solid var(--hairline) !important;
       text-align: left !important;
       vertical-align: top !important;
+      color: var(--ink) !important;
     }
     tr:last-child th, tr:last-child td {
       border-bottom: 0 !important;
@@ -143,6 +154,16 @@ class HtmlStyler {
       border: 0 !important;
       border-top: 1px solid var(--hairline) !important;
       margin: 32px 0 !important;
+    }
+    dt, dd {
+      color: var(--ink) !important;
+    }
+    figcaption {
+      color: var(--muted) !important;
+    }
+    ::selection {
+      background: rgba(0,102,204,.28) !important;
+      color: var(--ink) !important;
     }
   </style>
 </head>
