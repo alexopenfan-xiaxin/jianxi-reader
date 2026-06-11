@@ -286,7 +286,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 _buildBody(topPadding, settings, readingPalette),
                 if (_showProgressHint)
                   Positioned(
-                    top: 8,
+                    top: topPadding + 12,
                     right: 16,
                     child: _ReadingProgressHint(
                       visible: _progressHintVisible,

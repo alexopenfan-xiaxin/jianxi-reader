@@ -27,10 +27,11 @@ class _SmartScrollbarState extends State<SmartScrollbar> {
   /// Speed threshold in pixels-per-second to qualify as "fast scroll".
   static const double _fastScrollThreshold = 2500.0;
 
-  /// How long after the last fast-scroll event before reverting to default.
-  static const Duration _revertDelay = Duration(milliseconds: 800);
+  /// How long after the last fast-scroll / drag event before reverting.
+  static const Duration _revertDelay = Duration(seconds: 3);
 
   bool _isFastScrolling = false;
+  bool _isDraggingScrollbar = false;
   Timer? _revertTimer;
 
   double _lastOffset = 0;
@@ -59,6 +60,9 @@ class _SmartScrollbarState extends State<SmartScrollbar> {
   }
 
   void _onScroll() {
+    // While the user is dragging the scrollbar thumb, stay in fast mode.
+    if (_isDraggingScrollbar) return;
+
     if (!widget.controller.hasClients) return;
 
     final now = DateTime.now();
@@ -74,18 +78,39 @@ class _SmartScrollbarState extends State<SmartScrollbar> {
     final speed = delta / (elapsed / 1e6); // px/s
 
     if (speed > _fastScrollThreshold) {
-      _revertTimer?.cancel();
-      if (!_isFastScrolling && mounted) {
-        setState(() => _isFastScrolling = true);
-      }
-      _revertTimer = Timer(_revertDelay, _revertToDefault);
+      _enterFastMode();
     }
   }
 
+  void _enterFastMode() {
+    _revertTimer?.cancel();
+    if (!_isFastScrolling && mounted) {
+      setState(() => _isFastScrolling = true);
+    }
+    _revertTimer = Timer(_revertDelay, _revertToDefault);
+  }
+
   void _revertToDefault() {
+    // Don't revert while the user is still dragging the scrollbar.
+    if (_isDraggingScrollbar) return;
     if (_isFastScrolling && mounted) {
       setState(() => _isFastScrolling = false);
     }
+  }
+
+  void _onScrollbarDragStart() {
+    _revertTimer?.cancel();
+    _isDraggingScrollbar = true;
+    if (!_isFastScrolling && mounted) {
+      setState(() => _isFastScrolling = true);
+    }
+  }
+
+  void _onScrollbarDragEnd() {
+    _isDraggingScrollbar = false;
+    // Start the revert timer after the user releases the scrollbar.
+    _revertTimer?.cancel();
+    _revertTimer = Timer(_revertDelay, _revertToDefault);
   }
 
   @override
@@ -113,10 +138,34 @@ class _SmartScrollbarState extends State<SmartScrollbar> {
         mainAxisMargin: 0.0,
         minThumbLength: 40.0,
       ),
-      child: Scrollbar(
-        controller: widget.controller,
-        interactive: _isFastScrolling,
-        child: widget.child,
+      child: Listener(
+        onPointerDown: (event) {
+          // Detect pointer near the right edge (scrollbar area, ~16px).
+          if (_isFastScrolling) {
+            final renderBox = context.findRenderObject() as RenderBox?;
+            if (renderBox != null) {
+              final width = renderBox.size.width;
+              if (event.localPosition.dx > width - 16) {
+                _onScrollbarDragStart();
+              }
+            }
+          }
+        },
+        onPointerUp: (_) {
+          if (_isDraggingScrollbar) {
+            _onScrollbarDragEnd();
+          }
+        },
+        onPointerCancel: (_) {
+          if (_isDraggingScrollbar) {
+            _onScrollbarDragEnd();
+          }
+        },
+        child: Scrollbar(
+          controller: widget.controller,
+          interactive: _isFastScrolling,
+          child: widget.child,
+        ),
       ),
     );
   }
