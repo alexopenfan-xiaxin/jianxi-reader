@@ -64,6 +64,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   Map<String, String>? _pluginEmojiMap;
   List<int> _searchMatchOffsets = const [];
   String _searchText = '';
+  int _contentVersion = 0;
   Timer? _fileWatchTimer;
 
   @override
@@ -138,6 +139,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
         setState(() {
           _data = preprocessMarkdown(raw);
           _error = null;
+          _contentVersion++;
         });
       }
       _lastModified = await widget.file.lastModified();
@@ -171,28 +173,36 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       lineHeight: widget.lineHeight,
       readingPalette: widget.readingPalette,
     );
+    widget.searchController?.beginBuildPass();
 
     return ColoredBox(
       color: widget.readingPalette.background,
-      child: SingleChildScrollView(
-        controller: widget.scrollController,
-        padding: EdgeInsets.fromLTRB(
-          widget.horizontalPadding,
-          widget.topPadding + AppSpacing.md,
-          widget.horizontalPadding,
-          AppSpacing.xxl + kBottomNavigationBarHeight,
-        ),
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SmoothMarkdown(
-          data: _data!,
-          styleSheet: styleSheet,
-          useEnhancedComponents: false,
-          selectable: true,
-          plugins: _plugins(),
-          builderRegistry: _builderRegistry,
-          onTapLink: (url) => _handleLinkTap(context, url),
-          onTapImage: (url, alt, title) =>
-              _showImagePreview(context, url, alt, title),
+      child: AnimatedSwitcher(
+        duration: AppMotion.normal,
+        reverseDuration: AppMotion.fast,
+        switchInCurve: AppMotion.enter,
+        switchOutCurve: AppMotion.exit,
+        child: SingleChildScrollView(
+          key: ValueKey(_contentVersion),
+          controller: widget.scrollController,
+          padding: EdgeInsets.fromLTRB(
+            widget.horizontalPadding,
+            widget.topPadding + AppSpacing.md,
+            widget.horizontalPadding,
+            AppSpacing.xxl + kBottomNavigationBarHeight,
+          ),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SmoothMarkdown(
+            data: _data!,
+            styleSheet: styleSheet,
+            useEnhancedComponents: false,
+            selectable: true,
+            plugins: _plugins(),
+            builderRegistry: _builderRegistry,
+            onTapLink: (url) => _handleLinkTap(context, url),
+            onTapImage: (url, alt, title) =>
+                _showImagePreview(context, url, alt, title),
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_settings_controller.dart';
@@ -78,30 +79,11 @@ class _LibraryPageState extends State<LibraryPage>
                         _ErrorBanner(message: controller.errorMessage!),
                         const SizedBox(height: AppSpacing.md),
                       ],
-                      if (controller.isLoading)
-                        const _LoadingState()
-                      else if (controller.allDocuments.isEmpty)
-                        const _EmptyState()
-                      else if (controller.documents.isEmpty)
-                        const _NoResultsState()
-                      else if (settings.libraryViewMode ==
-                          LibraryViewMode.shelf)
-                        _ShelfGrid(documents: controller.documents)
-                      else
-                        ...controller.documents.asMap().entries.map(
-                              (entry) => _StaggeredFadeIn(
-                                index: entry.key,
-                                controller: _staggerController,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.sm,
-                                  ),
-                                  child: _DocumentTile(
-                                    document: entry.value,
-                                  ),
-                                ),
-                              ),
-                            ),
+                      _LibraryAnimatedContent(
+                        controller: controller,
+                        viewMode: settings.libraryViewMode,
+                        staggerController: _staggerController,
+                      ),
                     ],
                   ),
                 ),
@@ -180,6 +162,108 @@ class _StaggeredFadeIn extends StatelessWidget {
           opacity: t,
           child: Transform.translate(
             offset: Offset(0, 10 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+class _LibraryAnimatedContent extends StatelessWidget {
+  const _LibraryAnimatedContent({
+    required this.controller,
+    required this.viewMode,
+    required this.staggerController,
+  });
+
+  final LibraryController controller;
+  final LibraryViewMode viewMode;
+  final AnimationController staggerController;
+
+  @override
+  Widget build(BuildContext context) {
+    final contentKey = ValueKey(
+      '${controller.isLoading}:'
+      '${controller.allDocuments.length}:'
+      '${controller.documents.length}:'
+      '${viewMode.name}',
+    );
+
+    return AnimatedSwitcher(
+      duration: AppMotion.normal,
+      reverseDuration: AppMotion.fast,
+      switchInCurve: AppMotion.enter,
+      switchOutCurve: AppMotion.exit,
+      transitionBuilder: (child, animation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: AppMotion.enter,
+          reverseCurve: AppMotion.exit,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: contentKey,
+        child: _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (controller.isLoading) {
+      return const _AnimatedStateShell(child: _LoadingState());
+    }
+    if (controller.allDocuments.isEmpty) {
+      return const _AnimatedStateShell(child: _EmptyState());
+    }
+    if (controller.documents.isEmpty) {
+      return const _AnimatedStateShell(child: _NoResultsState());
+    }
+    if (viewMode == LibraryViewMode.shelf) {
+      return _ShelfGrid(documents: controller.documents);
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: controller.documents.asMap().entries.map(
+        (entry) {
+          return _StaggeredFadeIn(
+            index: entry.key,
+            controller: staggerController,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _DocumentTile(document: entry.value),
+            ),
+          );
+        },
+      ).toList(),
+    );
+  }
+}
+
+class _AnimatedStateShell extends StatelessWidget {
+  const _AnimatedStateShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: AppMotion.normal,
+      curve: AppMotion.enter,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
             child: child,
           ),
         );
@@ -1238,11 +1322,22 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
   void initState() {
     super.initState();
     _pressController = AnimationController(
-      duration: const Duration(milliseconds: 130),
+      duration: AppMotion.fast,
       vsync: this,
     );
-    _pressAnimation = Tween<double>(begin: 1.0, end: 0.965).animate(
-      CurvedAnimation(parent: _pressController, curve: AppMotion.emphasized),
+    _pressAnimation = Tween<double>(begin: 1.0, end: 0.975).animate(
+      CurvedAnimation(parent: _pressController, curve: AppMotion.press),
+    );
+  }
+
+  void _springBack() {
+    _pressController.animateWith(
+      SpringSimulation(
+        const SpringDescription(mass: 1, stiffness: 420, damping: 28),
+        _pressController.value,
+        0,
+        0,
+      ),
     );
   }
 
@@ -1268,8 +1363,8 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
           onTap: () => _openDocument(context),
           onLongPress: () => _showShelfActions(context),
           onTapDown: (_) => _pressController.forward(),
-          onTapUp: (_) => _pressController.reverse(),
-          onTapCancel: () => _pressController.reverse(),
+          onTapUp: (_) => _springBack(),
+          onTapCancel: _springBack,
           splashFactory: NoSplash.splashFactory,
           child: Ink(
             decoration: BoxDecoration(
@@ -1299,7 +1394,11 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                     AppSpacing.sm,
                     AppSpacing.md,
                   ),
-                  child: Column(
+                  child: Hero(
+                    tag: documentHeroTag(widget.document),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -1332,6 +1431,8 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                       ),
                       _DocumentTagRow(tags: widget.document.tags),
                     ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1366,7 +1467,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
   }
 
   Future<void> _showShelfActions(BuildContext context) async {
-    _pressController.reverse();
+    _springBack();
     final action = await _showGlassDocumentMenu(context, widget.document);
     if (action != null && mounted) {
       await _handleAction(context, action);
@@ -1534,46 +1635,63 @@ class _DocumentTileState extends State<_DocumentTile>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _TypeBadge(document: widget.document),
-            const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              child: Hero(
+                tag: documentHeroTag(widget.document),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.document.isReferenced)
-                        Padding(
-                          padding: const EdgeInsets.only(right: AppSpacing.xxs),
-                          child: Icon(
-                            Icons.link_rounded,
-                            size: 14,
-                            color: palette.muted,
-                          ),
-                        ),
-                      Flexible(
-                        child: Text(
-                          widget.document.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
+                      _TypeBadge(document: widget.document),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (widget.document.isReferenced)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: AppSpacing.xxs,
+                                    ),
+                                    child: Icon(
+                                      Icons.link_rounded,
+                                      size: 14,
+                                      color: palette.muted,
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    widget.document.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(
+                              _documentSummary(widget.document),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: palette.muted,
+                                        fontSize: 12,
+                                        letterSpacing: 0,
+                                      ),
+                            ),
+                            _DocumentTagRow(tags: widget.document.tags),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Text(
-                    _documentSummary(widget.document),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.muted,
-                          fontSize: 12,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                  _DocumentTagRow(tags: widget.document.tags),
-                ],
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.xs),

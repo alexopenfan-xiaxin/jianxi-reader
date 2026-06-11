@@ -237,7 +237,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                   duration: _isDragging
                       ? Duration.zero
                       : AppMotion.normal,
-                  curve: AppMotion.emphasized,
+                  curve: AppMotion.release,
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,
@@ -403,7 +403,7 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                 ),
                 AnimatedPositioned(
                   duration: _isDragging ? Duration.zero : AppMotion.normal,
-                  curve: AppMotion.emphasized,
+                  curve: AppMotion.release,
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,
@@ -514,9 +514,9 @@ class _LiquidBottomNavItem extends StatelessWidget {
             height: _LiquidBottomNavState._itemHeight -
                 _LiquidBottomNavState._outerPadding * 2,
             child: AnimatedScale(
-              scale: selected ? 1.02 : 1,
-              duration: AppMotion.fast,
-              curve: AppMotion.emphasized,
+              scale: selected ? 1.08 : 1,
+              duration: AppMotion.normal,
+              curve: AppMotion.release,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -688,25 +688,30 @@ class _FloatingNavItem extends StatelessWidget {
             height: _FloatingBottomNavState._itemHeight -
                 _FloatingBottomNavState._outerPadding * 2,
             width: _FloatingBottomNavState._itemWidth,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  selected ? selectedIcon : icon,
-                  color: foreground,
-                  size: 21,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: foreground,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0,
-                      ),
-                ),
-              ],
+            child: AnimatedScale(
+              scale: selected ? 1.06 : 1,
+              duration: AppMotion.normal,
+              curve: AppMotion.release,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    selected ? selectedIcon : icon,
+                    color: foreground,
+                    size: 21,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: foreground,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

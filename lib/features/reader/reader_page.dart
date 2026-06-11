@@ -123,15 +123,21 @@ class _ReaderPageState extends State<ReaderPage> {
             : AnimatedOpacity(
                 opacity: showGlassAppBar ? 1 : 0,
                 duration: AppMotion.fast,
-                child: Text(
-                  _document.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: readingPalette.foreground,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
+                child: Hero(
+                  tag: documentHeroTag(_document),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(
+                      _document.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: readingPalette.foreground,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                    ),
+                  ),
                 ),
               ),
         actions: _isSearching
@@ -345,31 +351,47 @@ class _ReaderMenuTile extends StatelessWidget {
   }
 }
 
-class _ReaderProgressBar extends StatelessWidget {
+class _ReaderProgressBar extends StatefulWidget {
   const _ReaderProgressBar({required this.scrollController});
 
   final ScrollController scrollController;
 
   @override
+  State<_ReaderProgressBar> createState() => _ReaderProgressBarState();
+}
+
+class _ReaderProgressBarState extends State<_ReaderProgressBar> {
+  double _lastProgress = 0;
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: scrollController,
+      animation: widget.scrollController,
       builder: (context, _) {
-        if (!scrollController.hasClients) {
+        if (!widget.scrollController.hasClients) {
           return const SizedBox(height: 3);
         }
-        final position = scrollController.position;
+        final position = widget.scrollController.position;
         final progress = position.maxScrollExtent > 0
             ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
             : 0.0;
+        final begin = _lastProgress;
+        _lastProgress = progress;
         if (progress <= 0) {
           return const SizedBox(height: 3);
         }
-        return LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.transparent,
-          color: AppColors.primary.withOpacity(0.70),
-          minHeight: 3,
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: begin, end: progress),
+          duration: AppMotion.fast,
+          curve: AppMotion.enter,
+          builder: (context, value, _) {
+            return LinearProgressIndicator(
+              value: value,
+              backgroundColor: Colors.transparent,
+              color: AppColors.primary.withOpacity(0.70),
+              minHeight: 3,
+            );
+          },
         );
       },
     );
@@ -536,6 +558,10 @@ void showReadingDisplaySheet(BuildContext context) {
     backgroundColor: isLiquidGlass ? Colors.transparent : context.palette.card,
     barrierColor:
         isLiquidGlass ? Colors.black.withOpacity(0.14) : Colors.black54,
+    sheetAnimationStyle: const AnimationStyle(
+      duration: AppMotion.normal,
+      reverseDuration: AppMotion.fast,
+    ),
     shape: isLiquidGlass
         ? null
         : const RoundedRectangleBorder(

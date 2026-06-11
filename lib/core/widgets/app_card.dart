@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:provider/provider.dart';
 
 import '../app_settings_controller.dart';
@@ -35,8 +36,19 @@ class _AppCardState extends State<AppCard>
       duration: AppMotion.fast,
       vsync: this,
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.985).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.975).animate(
+      CurvedAnimation(parent: _controller, curve: AppMotion.press),
+    );
+  }
+
+  void _springBack() {
+    _controller.animateWith(
+      SpringSimulation(
+        const SpringDescription(mass: 1, stiffness: 420, damping: 28),
+        _controller.value,
+        0,
+        0,
+      ),
     );
   }
 
@@ -83,10 +95,10 @@ class _AppCardState extends State<AppCard>
                   onTapDown:
                       widget.onTap != null ? (_) => _controller.forward() : null,
                   onTapUp: widget.onTap != null
-                      ? (_) => _controller.reverse()
+                      ? (_) => _springBack()
                       : null,
                   onTapCancel: widget.onTap != null
-                      ? () => _controller.reverse()
+                      ? _springBack
                       : null,
                   borderRadius: borderRadius,
                   splashFactory: NoSplash.splashFactory,
@@ -108,9 +120,9 @@ class _AppCardState extends State<AppCard>
                 onTapDown:
                     widget.onTap != null ? (_) => _controller.forward() : null,
                 onTapUp:
-                    widget.onTap != null ? (_) => _controller.reverse() : null,
+                    widget.onTap != null ? (_) => _springBack() : null,
                 onTapCancel:
-                    widget.onTap != null ? () => _controller.reverse() : null,
+                    widget.onTap != null ? _springBack : null,
                 borderRadius: borderRadius,
                 splashFactory: NoSplash.splashFactory,
                 highlightColor: AppColors.primary.withOpacity(0.05),

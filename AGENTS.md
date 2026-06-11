@@ -51,7 +51,7 @@ lib/
 - `SmoothMarkdown` uses `selectable: true` for text selection
 - All navigation uses `PageRouteBuilder` with 300ms `easeOutCubic` slide
 - HTTP requests use `dart:io` `HttpClient` with `badCertificateCallback` (server uses self-signed cert)
-- Target Flutter compatibility is **Flutter 3.32.5** unless the user explicitly says otherwise. Do not use APIs introduced after that version; for example, `Color.withValues(alpha:)` is not available on 3.32.5, so use a compatible alternative such as `withOpacity(...)` when adjusting alpha.
+- Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
 - After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
 - On this local machine, do not probe whether `dart` / `flutter` commands are available. Unless the user explicitly asks to run them, skip `dart format`, `flutter analyze`, builds, and Flutter tests here; rely on static review and state that these commands were skipped by local rule.
 
@@ -67,8 +67,8 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `1.9.0+90` (versionName = 1.9.0, versionCode = 90)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=90`
+- `pubspec.yaml`: `3.4.0+140` (versionName = 3.4.0, versionCode = 140)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=140`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing

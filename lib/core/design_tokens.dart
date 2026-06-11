@@ -131,10 +131,15 @@ class AppSpacing {
 }
 
 class AppMotion {
+  static const micro = Duration(milliseconds: 110);
   static const fast = Duration(milliseconds: 160);
   static const normal = Duration(milliseconds: 240);
   static const slow = Duration(milliseconds: 320);
+  static const settle = Duration(milliseconds: 420);
 
+  static const press = Curves.easeOutCubic;
+  static const release = Curves.easeOutBack;
+  static const enter = Curves.easeOutCubic;
   static const emphasized = Curves.easeOutCubic;
   static const standard = Curves.easeInOutCubic;
   static const exit = Curves.easeInCubic;

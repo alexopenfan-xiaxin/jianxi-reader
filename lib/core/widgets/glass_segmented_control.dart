@@ -84,7 +84,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                 ),
                 AnimatedPositioned(
                   duration: liquidGlass ? AppMotion.normal : AppMotion.fast,
-                  curve: AppMotion.emphasized,
+                  curve: AppMotion.release,
                   left: effectiveIndex * itemWidth,
                   top: 0,
                   bottom: 0,
