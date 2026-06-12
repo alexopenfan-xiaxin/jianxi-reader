@@ -194,7 +194,7 @@ class LiquidGlassSurface extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
