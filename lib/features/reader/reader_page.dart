@@ -37,6 +37,8 @@ class _ReaderPageState extends State<ReaderPage> {
   final _searchController = DocumentSearchController();
   final _searchTextController = TextEditingController();
   final _searchFocusNode = FocusNode();
+  final _smartScrollbarKey = GlobalKey<SmartScrollbarState>();
+  final _htmlViewKey = GlobalKey<HtmlDocumentViewState>();
   bool _showGlass = false;
   bool _documentReady = false;
   bool _entranceSettled = false;
@@ -50,6 +52,12 @@ class _ReaderPageState extends State<ReaderPage> {
   bool _progressHintVisible = false;
   Timer? _saveProgressTimer;
   Timer? _hideProgressTimer;
+
+  /// `true` when the current document is rendered via WebView (HTML).
+  bool _isHtmlDocument = false;
+
+  /// Latest scroll ratio reported by the HTML WebView JS bridge.
+  double _htmlScrollRatio = 0.0;
 
   @override
   void initState() {
@@ -86,6 +94,25 @@ class _ReaderPageState extends State<ReaderPage> {
     _scheduleProgressSave();
   }
 
+  /// Called by [HtmlDocumentView.onScroll] with the current scroll ratio.
+  void _handleHtmlScroll(double ratio) {
+    _htmlScrollRatio = ratio;
+    // Forward to SmartScrollbar for speed detection.
+    _smartScrollbarKey.currentState?.reportScroll(ratio);
+    // Update glass app bar visibility.
+    final nextShowGlass = ratio > 0.01;
+    if (nextShowGlass != _showGlass && mounted) {
+      setState(() => _showGlass = nextShowGlass);
+    }
+    _scheduleProgressSave();
+  }
+
+  /// Called once the HTML page finishes loading and JS bridges are ready.
+  void _onHtmlPageReady() {
+    // Load saved progress now that the WebView is interactive.
+    _loadSavedProgress();
+  }
+
   // --- Reading progress persistence ---
 
   void _scheduleProgressSave() {
@@ -97,10 +124,16 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   void _saveProgressNow() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (position.maxScrollExtent <= 0) return;
-    final ratio = position.pixels / position.maxScrollExtent;
+    double? ratio;
+    if (_isHtmlDocument) {
+      ratio = _htmlScrollRatio;
+    } else {
+      if (!_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (position.maxScrollExtent <= 0) return;
+      ratio = position.pixels / position.maxScrollExtent;
+    }
+    if (ratio == null) return;
     ReadingProgressService.saveProgress(_document.path, ratio);
   }
 
@@ -130,13 +163,20 @@ class _ReaderPageState extends State<ReaderPage> {
 
   void _jumpToSavedProgress() {
     final ratio = _savedProgressRatio;
-    if (ratio == null || !_scrollController.hasClients) return;
-    final target = _scrollController.position.maxScrollExtent * ratio;
-    _scrollController.animateTo(
-      target,
-      duration: AppMotion.slow,
-      curve: AppMotion.emphasized,
-    );
+    if (ratio == null) return;
+
+    if (_isHtmlDocument) {
+      _htmlViewKey.currentState?.jumpToRatio(ratio);
+    } else {
+      if (!_scrollController.hasClients) return;
+      final target = _scrollController.position.maxScrollExtent * ratio;
+      _scrollController.animateTo(
+        target,
+        duration: AppMotion.slow,
+        curve: AppMotion.emphasized,
+      );
+    }
+
     // Dismiss the hint immediately on tap.
     _hideProgressTimer?.cancel();
     if (mounted) {
@@ -317,8 +357,10 @@ class _ReaderPageState extends State<ReaderPage> {
     }
 
     return SmartScrollbar(
+      key: _smartScrollbarKey,
       controller: _scrollController,
       readingPalette: readingPalette,
+      externalScrollSource: _isHtmlDocument,
       child: _ReaderContent(
         document: _document,
         scrollController: _scrollController,
@@ -326,6 +368,9 @@ class _ReaderPageState extends State<ReaderPage> {
         settings: settings,
         readingPalette: readingPalette,
         searchController: _searchController,
+        htmlViewKey: _htmlViewKey,
+        onHtmlScroll: _handleHtmlScroll,
+        onHtmlPageReady: _onHtmlPageReady,
       ),
     );
   }
@@ -348,13 +393,18 @@ class _ReaderPageState extends State<ReaderPage> {
       final refreshed = await _libraryController.refreshDocument(_document);
       final opened = await _libraryController.markDocumentOpened(refreshed);
       if (mounted) {
+        _isHtmlDocument = opened.type == DocumentType.html;
         setState(() {
           _document = opened;
           _prepareError = null;
           _documentReady = true;
           _isPreparingDocument = !_entranceSettled;
         });
-        _loadSavedProgress();
+        // For Markdown, load progress immediately.
+        // For HTML, defer until the WebView page is ready (_onHtmlPageReady).
+        if (!_isHtmlDocument) {
+          _loadSavedProgress();
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -578,6 +628,9 @@ class _ReaderContent extends StatelessWidget {
     required this.searchController,
     this.scrollController,
     this.topPadding = 0,
+    this.htmlViewKey,
+    this.onHtmlScroll,
+    this.onHtmlPageReady,
   });
 
   final DocumentEntry document;
@@ -586,6 +639,9 @@ class _ReaderContent extends StatelessWidget {
   final DocumentSearchController searchController;
   final ScrollController? scrollController;
   final double topPadding;
+  final GlobalKey<HtmlDocumentViewState>? htmlViewKey;
+  final ValueChanged<double>? onHtmlScroll;
+  final VoidCallback? onHtmlPageReady;
 
   @override
   Widget build(BuildContext context) {
@@ -606,6 +662,7 @@ class _ReaderContent extends StatelessWidget {
           searchController: searchController,
         ),
       DocumentType.html => HtmlDocumentView(
+          key: htmlViewKey,
           file: file,
           fontSize: settings.readingFontSizeValue,
           lineHeight: settings.readingLineHeightValue,
@@ -613,6 +670,8 @@ class _ReaderContent extends StatelessWidget {
           horizontalPadding: settings.readingHorizontalPaddingValue,
           topPadding: topPadding,
           searchController: searchController,
+          onScroll: onHtmlScroll,
+          onPageReady: onHtmlPageReady,
         ),
     };
   }
