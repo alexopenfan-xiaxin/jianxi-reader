@@ -1671,17 +1671,6 @@ class _DocumentTileState extends State<_DocumentTile>
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          _documentSummary(widget.document),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: palette.muted,
-                                fontSize: 12,
-                                letterSpacing: 0,
-                              ),
-                        ),
                         _DocumentMetaRow(
                           tags: widget.document.tags,
                           summary: _documentSummary(widget.document),
