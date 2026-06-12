@@ -1417,18 +1417,10 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                             ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _documentSummary(widget.document),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: cover.foreground.withOpacity(0.78),
-                              fontSize: 12,
-                              height: 1.35,
-                              letterSpacing: 0,
-                            ),
+                      _DocumentMetaRow(
+                        tags: widget.document.tags,
+                        summary: _documentSummary(widget.document),
                       ),
-                      _DocumentTagRow(tags: widget.document.tags),
                     ],
                   ),
                 ),
@@ -1676,7 +1668,10 @@ class _DocumentTileState extends State<_DocumentTile>
                                 letterSpacing: 0,
                               ),
                         ),
-                        _DocumentTagRow(tags: widget.document.tags),
+                        _DocumentMetaRow(
+                          tags: widget.document.tags,
+                          summary: _documentSummary(widget.document),
+                        ),
                       ],
                     ),
                   ),
@@ -2080,6 +2075,65 @@ class _EditableTagChip extends StatelessWidget {
   }
 }
 
+class _DocumentMetaRow extends StatelessWidget {
+  const _DocumentMetaRow({required this.tags, required this.summary});
+
+  final List<String> tags;
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xs),
+        child: Text(
+          summary,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.palette.muted,
+                fontSize: 12,
+                letterSpacing: 0,
+              ),
+        ),
+      );
+    }
+    final visibleTags = tags.take(2).toList();
+    final overflow = tags.length - visibleTags.length;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Row(
+        children: [
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xxs,
+            children: [
+              for (final tag in visibleTags)
+                _SmallTagChip(label: tag, flexible: true),
+              if (overflow > 0)
+                _SmallTagChip(label: '+$overflow', flexible: true),
+            ],
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              summary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.palette.muted,
+                    fontSize: 12,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DocumentTagRow extends StatelessWidget {
   const _DocumentTagRow({required this.tags});
 
@@ -2107,16 +2161,17 @@ class _DocumentTagRow extends StatelessWidget {
 }
 
 class _SmallTagChip extends StatelessWidget {
-  const _SmallTagChip({required this.label});
+  const _SmallTagChip({required this.label, this.flexible = false});
 
   final String label;
+  final bool flexible;
 
   @override
   Widget build(BuildContext context) {
     if (liquidGlassEnabled(context)) {
       return LiquidGlassChip(label: label, selected: true);
     }
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.10),
@@ -2132,6 +2187,8 @@ class _SmallTagChip extends StatelessWidget {
             ),
       ),
     );
+    if (flexible) return Flexible(child: chip);
+    return chip;
   }
 }
 
