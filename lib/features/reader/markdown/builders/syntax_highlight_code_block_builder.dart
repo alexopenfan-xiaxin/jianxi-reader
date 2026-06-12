@@ -108,11 +108,11 @@ class _SyntaxHighlightCodeBlockWidgetState
   /// Only languages that have actual grammar files in syntax_highlight 0.5.0.
   /// If a grammar is missing, Highlighter.initialize() throws and kills ALL
   /// highlighting.  Keep this list in sync with the package's grammars/ dir.
-  static final List<String> _supportedLanguages = [
+  static final Set<String> _supportedLanguages = {
     'dart', 'python', 'javascript', 'typescript', 'java', 'kotlin',
     'swift', 'rust', 'go', 'sql', 'yaml', 'json', 'html', 'css',
     // Not available in 0.5.0: cpp, c, ruby, php, shell, xml
-  ];
+  };
 
   @override
   void initState() {
@@ -132,7 +132,7 @@ class _SyntaxHighlightCodeBlockWidgetState
   /// Returns true if initialization succeeded.
   static Future<bool> _doInitialize() async {
     try {
-      await Highlighter.initialize(_supportedLanguages);
+      await Highlighter.initialize(_supportedLanguages.toList());
       _lightTheme = await HighlighterTheme.loadLightTheme();
       _darkTheme = await HighlighterTheme.loadDarkTheme();
       debugPrint('[SyntaxHighlight] init OK (${_supportedLanguages.length} grammars)');

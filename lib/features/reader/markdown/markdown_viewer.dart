@@ -94,7 +94,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       }
     });
     _fileWatchTimer = Timer.periodic(
-      const Duration(seconds: 3),
+      const Duration(seconds: 10),
       (_) => _checkFileChanged(),
     );
   }
@@ -130,10 +130,10 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
     }
   }
 
-  void _checkFileChanged() {
+  Future<void> _checkFileChanged() async {
     try {
-      if (!widget.file.existsSync()) return;
-      final modified = widget.file.lastModifiedSync();
+      if (!await widget.file.exists()) return;
+      final modified = await widget.file.lastModified();
       if (_lastModified != null && modified.isAfter(_lastModified!)) {
         debugPrint('[MarkdownViewer] file changed, reloading (${widget.file.path})');
         _loadFile();

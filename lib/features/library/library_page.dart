@@ -50,7 +50,9 @@ class _LibraryPageState extends State<LibraryPage>
     return SafeArea(
       child: Consumer<LibraryController>(
         builder: (context, controller, _) {
-          final settings = context.watch<AppSettingsController>();
+          final settings = context.select<AppSettingsController, LibraryViewMode>(
+            (s) => s.libraryViewMode,
+          );
           if (!_hasPlayedInitialListAnimation &&
               controller.documents.isNotEmpty) {
             _hasPlayedInitialListAnimation = true;
@@ -81,7 +83,7 @@ class _LibraryPageState extends State<LibraryPage>
                       ],
                       _LibraryAnimatedContent(
                         controller: controller,
-                        viewMode: settings.libraryViewMode,
+                        viewMode: settings,
                         staggerController: _staggerController,
                       ),
                     ],
@@ -233,20 +235,20 @@ class _LibraryAnimatedContent extends StatelessWidget {
     if (viewMode == LibraryViewMode.shelf) {
       return _ShelfGrid(documents: controller.documents);
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: controller.documents.asMap().entries.map(
-        (entry) {
-          return _StaggeredFadeIn(
-            index: entry.key,
-            controller: staggerController,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _DocumentTile(document: entry.value),
-            ),
-          );
-        },
-      ).toList(),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: controller.documents.length,
+      itemBuilder: (context, index) {
+        return _StaggeredFadeIn(
+          index: index,
+          controller: staggerController,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _DocumentTile(document: controller.documents[index]),
+          ),
+        );
+      },
     );
   }
 }
@@ -1282,6 +1284,19 @@ class _ShelfGrid extends StatelessWidget {
 
   final List<DocumentEntry> documents;
 
+  static const _grid2Col = SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    crossAxisSpacing: AppSpacing.sm,
+    mainAxisSpacing: AppSpacing.sm,
+    childAspectRatio: 0.72,
+  );
+  static const _grid3Col = SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 3,
+    crossAxisSpacing: AppSpacing.sm,
+    mainAxisSpacing: AppSpacing.sm,
+    childAspectRatio: 0.72,
+  );
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -1292,12 +1307,7 @@ class _ShelfGrid extends StatelessWidget {
           itemCount: documents.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: AppSpacing.sm,
-            mainAxisSpacing: AppSpacing.sm,
-            childAspectRatio: 0.72,
-          ),
+          gridDelegate: columns == 2 ? _grid2Col : _grid3Col,
           itemBuilder: (context, index) {
             return _ShelfDocumentCard(document: documents[index]);
           },
@@ -1353,7 +1363,8 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
   @override
   Widget build(BuildContext context) {
     final cover = _CoverStyle.forDocument(widget.document);
-    return AnimatedBuilder(
+    return RepaintBoundary(
+      child: AnimatedBuilder(
       animation: _pressAnimation,
       builder: (context, child) {
         return Transform.scale(scale: _pressAnimation.value, child: child);
@@ -1428,6 +1439,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -1608,8 +1620,10 @@ class _DocumentTileState extends State<_DocumentTile>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final settings = context.watch<AppSettingsController>();
-    final forceClassicCard = settings.liquidGlassEnabled &&
+    final liquidGlass = context.select<AppSettingsController, bool>(
+      (s) => s.liquidGlassEnabled,
+    );
+    final forceClassicCard = liquidGlass &&
         Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _hoverAnim,
@@ -2104,15 +2118,15 @@ class _DocumentMetaRow extends StatelessWidget {
       padding: const EdgeInsets.only(top: AppSpacing.xs),
       child: Row(
         children: [
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xxs,
-            children: [
-              for (final tag in visibleTags)
-                _SmallTagChip(label: tag, flexible: true),
-              if (overflow > 0)
-                _SmallTagChip(label: '+$overflow', flexible: true),
-            ],
+          Flexible(
+            child: Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xxs,
+              children: [
+                for (final tag in visibleTags) _SmallTagChip(label: tag),
+                if (overflow > 0) _SmallTagChip(label: '+$overflow'),
+              ],
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -2134,44 +2148,17 @@ class _DocumentMetaRow extends StatelessWidget {
   }
 }
 
-class _DocumentTagRow extends StatelessWidget {
-  const _DocumentTagRow({required this.tags});
-
-  final List<String> tags;
-
-  @override
-  Widget build(BuildContext context) {
-    if (tags.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    final visibleTags = tags.take(2).toList();
-    final overflow = tags.length - visibleTags.length;
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xs),
-      child: Wrap(
-        spacing: AppSpacing.xs,
-        runSpacing: AppSpacing.xxs,
-        children: [
-          for (final tag in visibleTags) _SmallTagChip(label: tag),
-          if (overflow > 0) _SmallTagChip(label: '+$overflow'),
-        ],
-      ),
-    );
-  }
-}
-
 class _SmallTagChip extends StatelessWidget {
-  const _SmallTagChip({required this.label, this.flexible = false});
+  const _SmallTagChip({required this.label});
 
   final String label;
-  final bool flexible;
 
   @override
   Widget build(BuildContext context) {
     if (liquidGlassEnabled(context)) {
       return LiquidGlassChip(label: label, selected: true);
     }
-    final chip = Container(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.10),
@@ -2187,8 +2174,6 @@ class _SmallTagChip extends StatelessWidget {
             ),
       ),
     );
-    if (flexible) return Flexible(child: chip);
-    return chip;
   }
 }
 

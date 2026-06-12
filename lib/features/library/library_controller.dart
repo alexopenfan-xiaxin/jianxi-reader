@@ -26,31 +26,42 @@ class LibraryController extends ChangeNotifier {
   LibrarySortMode _sortMode = LibrarySortMode.modifiedNewest;
   List<String> _tags = const [];
 
+  // Cached computed lists — invalidated on data change.
+  List<DocumentEntry>? _cachedDocuments;
+  List<DocumentEntry>? _cachedDocumentsIgnoringSearch;
+
   List<DocumentEntry> get documents {
-    final query = _searchQuery.trim().toLowerCase();
+    return _cachedDocuments ??= _computeDocuments(
+      query: _searchQuery,
+      tag: _selectedTag,
+    );
+  }
+
+  List<DocumentEntry> get documentsIgnoringSearch {
+    return _cachedDocumentsIgnoringSearch ??= _computeDocuments(
+      query: '',
+      tag: _selectedTag,
+    );
+  }
+
+  List<DocumentEntry> _computeDocuments({
+    required String query,
+    required String? tag,
+  }) {
+    final q = query.trim().toLowerCase();
     final filtered = _allDocuments.where((document) {
       final matchesQuery =
-          query.isEmpty || document.name.toLowerCase().contains(query);
-      final tag = _selectedTag;
+          q.isEmpty || document.name.toLowerCase().contains(q);
       final matchesTag = tag == null || document.tags.contains(tag);
       return matchesQuery && matchesTag;
     }).toList();
-
     filtered.sort(_compareDocuments);
     return filtered;
   }
 
-  List<DocumentEntry> get documentsIgnoringSearch {
-    final tag = _selectedTag;
-    final filtered = _allDocuments.where((document) {
-      if (tag == null) {
-        return true;
-      }
-      return document.tags.contains(tag);
-    }).toList();
-
-    filtered.sort(_compareDocuments);
-    return filtered;
+  void _invalidateCache() {
+    _cachedDocuments = null;
+    _cachedDocumentsIgnoringSearch = null;
   }
 
   List<DocumentEntry> get allDocuments => _allDocuments;
@@ -77,6 +88,7 @@ class LibraryController extends ChangeNotifier {
     try {
       _allDocuments = await documentService.scanLibrary();
       _tags = await documentService.loadTags();
+      _invalidateCache();
     } catch (error) {
       _errorMessage = '读取文档库失败：$error';
     } finally {
@@ -94,6 +106,7 @@ class LibraryController extends ChangeNotifier {
       final imported = await documentService.pickAndImportDocuments();
       _allDocuments = await documentService.scanLibrary();
       _tags = await documentService.loadTags();
+      _invalidateCache();
       return imported;
     } catch (error) {
       _errorMessage = '导入外部文档失败：$error';
@@ -114,6 +127,7 @@ class LibraryController extends ChangeNotifier {
       await documentService.markDocumentOpened(imported);
       _allDocuments = await documentService.scanLibrary();
       _tags = await documentService.loadTags();
+      _invalidateCache();
       return imported;
     } catch (error) {
       _errorMessage = '打开外部文档失败：$error';
@@ -165,6 +179,7 @@ class LibraryController extends ChangeNotifier {
       _tags = [..._tags, tag]..sort();
     }
     _errorMessage = null;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -184,6 +199,7 @@ class LibraryController extends ChangeNotifier {
       );
     }).toList();
     _errorMessage = null;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -198,6 +214,7 @@ class LibraryController extends ChangeNotifier {
       document.copyWith(tags: update.documentTags),
     );
     _errorMessage = null;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -206,6 +223,7 @@ class LibraryController extends ChangeNotifier {
       return;
     }
     _searchQuery = query;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -214,6 +232,7 @@ class LibraryController extends ChangeNotifier {
       return;
     }
     _selectedTag = tag;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -222,6 +241,7 @@ class LibraryController extends ChangeNotifier {
       return;
     }
     _sortMode = sortMode;
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -242,18 +262,16 @@ class LibraryController extends ChangeNotifier {
     );
     if (index == -1) {
       _allDocuments = [..._allDocuments, replacement];
-      return;
+    } else {
+      _allDocuments = List<DocumentEntry>.from(_allDocuments)
+        ..[index] = replacement;
     }
-    _allDocuments = [
-      ..._allDocuments.take(index),
-      replacement,
-      ..._allDocuments.skip(index + 1),
-    ];
+    _invalidateCache();
   }
 
   void _removeDocument(String path) {
-    _allDocuments = _allDocuments
-        .where((document) => document.path != path)
-        .toList();
+    _allDocuments = List<DocumentEntry>.from(_allDocuments)
+      ..removeWhere((document) => document.path == path);
+    _invalidateCache();
   }
 }

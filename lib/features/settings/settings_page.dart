@@ -60,8 +60,8 @@ class _FixedSettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final liquidGlass =
-        context.watch<AppSettingsController>().liquidGlassEnabled;
+    final liquidGlass = context.select<AppSettingsController, bool>(
+        (s) => s.liquidGlassEnabled);
     final headerContent = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -751,7 +751,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=146';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=150';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',

@@ -2,12 +2,34 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/app_settings_controller.dart';
 import 'document_search_controller.dart';
 import 'html_styler.dart';
+
+/// Top-level function for [compute] to run HTML styling in an isolate.
+String _buildHtmlInIsolate(Map<String, dynamic> args) {
+  final palette = ReadingPalette(
+    background: Color(args['bg'] as int),
+    foreground: Color(args['fg'] as int),
+    muted: Color(args['muted'] as int),
+    surface: Color(args['surface'] as int),
+    border: Color(args['border'] as int),
+    link: Color(args['link'] as int),
+    codeBackground: Color(args['codeBg'] as int),
+  );
+  return HtmlStyler.buildAssimilatedHtml(
+    args['rawHtml'] as String,
+    fontSize: args['fontSize'] as double,
+    lineHeight: args['lineHeight'] as double,
+    readingPalette: palette,
+    horizontalPadding: args['hPadding'] as double,
+    topPadding: args['topPadding'] as double,
+  );
+}
 
 class HtmlDocumentView extends StatefulWidget {
   const HtmlDocumentView({
@@ -243,14 +265,30 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       setState(() => _isLoading = true);
     }
     final rawHtml = await widget.file.readAsString();
-    var html = HtmlStyler.buildAssimilatedHtml(
-      rawHtml,
-      fontSize: widget.fontSize,
-      lineHeight: widget.lineHeight,
-      readingPalette: widget.readingPalette,
-      horizontalPadding: widget.horizontalPadding,
-      topPadding: widget.topPadding,
-    );
+    const isolateThreshold = 50 * 1024; // 50 KB
+    var html = rawHtml.length > isolateThreshold
+        ? await compute(_buildHtmlInIsolate, {
+            'rawHtml': rawHtml,
+            'fontSize': widget.fontSize,
+            'lineHeight': widget.lineHeight,
+            'bg': widget.readingPalette.background.toARGB32(),
+            'fg': widget.readingPalette.foreground.toARGB32(),
+            'muted': widget.readingPalette.muted.toARGB32(),
+            'surface': widget.readingPalette.surface.toARGB32(),
+            'border': widget.readingPalette.border.toARGB32(),
+            'link': widget.readingPalette.link.toARGB32(),
+            'codeBg': widget.readingPalette.codeBackground.toARGB32(),
+            'hPadding': widget.horizontalPadding,
+            'topPadding': widget.topPadding,
+          })
+        : HtmlStyler.buildAssimilatedHtml(
+            rawHtml,
+            fontSize: widget.fontSize,
+            lineHeight: widget.lineHeight,
+            readingPalette: widget.readingPalette,
+            horizontalPadding: widget.horizontalPadding,
+            topPadding: widget.topPadding,
+          );
     // Embed the scroll bridge script directly into the HTML content
     // so it runs in the same JS context as the loaded page.
     html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
@@ -291,16 +329,6 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       _isSearchScriptReady = true;
     } catch (error) {
       debugPrint('[HtmlDocumentView] install search script failed: $error');
-    }
-  }
-
-  Future<void> _installScrollBridge() async {
-    if (_isScrollBridgeReady) return;
-    try {
-      await _controller.runJavaScript(_scrollBridgeScript);
-      _isScrollBridgeReady = true;
-    } catch (error) {
-      debugPrint('[HtmlDocumentView] install scroll bridge failed: $error');
     }
   }
 

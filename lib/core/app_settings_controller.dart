@@ -114,6 +114,8 @@ class AppSettingsController extends ChangeNotifier {
   static const _libraryViewModeKey = 'settings.libraryViewMode';
   static const _visualModeKey = 'settings.visualMode';
 
+  SharedPreferences? _prefs;
+
   ThemeMode _themeMode = ThemeMode.system;
   ReadingFontSize _readingFontSize = ReadingFontSize.comfortable;
   ReadingLineHeight _readingLineHeight = ReadingLineHeight.comfortable;
@@ -210,7 +212,8 @@ class AppSettingsController extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    final preferences = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
+    final preferences = _prefs!;
     _themeMode = _themeModeFromName(preferences.getString(_themeModeKey));
     _readingFontSize = _readingFontSizeFromName(
       preferences.getString(_readingFontSizeKey),
@@ -233,15 +236,19 @@ class AppSettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _persist(String key, String value) async {
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    await prefs.setString(key, value);
+  }
+
   Future<void> setThemeMode(ThemeMode themeMode) async {
     if (_themeMode == themeMode) {
       return;
     }
     _themeMode = themeMode;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_themeModeKey, themeMode.name);
+    await _persist(_themeModeKey, themeMode.name);
   }
 
   Future<void> setReadingFontSize(ReadingFontSize readingFontSize) async {
@@ -250,9 +257,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _readingFontSize = readingFontSize;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_readingFontSizeKey, readingFontSize.name);
+    await _persist(_readingFontSizeKey, readingFontSize.name);
   }
 
   Future<void> setReadingLineHeight(ReadingLineHeight readingLineHeight) async {
@@ -261,9 +266,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _readingLineHeight = readingLineHeight;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_readingLineHeightKey, readingLineHeight.name);
+    await _persist(_readingLineHeightKey, readingLineHeight.name);
   }
 
   Future<void> setReadingTheme(ReadingTheme readingTheme) async {
@@ -272,9 +275,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _readingTheme = readingTheme;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_readingThemeKey, readingTheme.name);
+    await _persist(_readingThemeKey, readingTheme.name);
   }
 
   Future<void> setReadingMargin(ReadingMargin readingMargin) async {
@@ -283,9 +284,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _readingMargin = readingMargin;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_readingMarginKey, readingMargin.name);
+    await _persist(_readingMarginKey, readingMargin.name);
   }
 
   Future<void> setLibraryViewMode(LibraryViewMode libraryViewMode) async {
@@ -294,9 +293,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _libraryViewMode = libraryViewMode;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_libraryViewModeKey, libraryViewMode.name);
+    await _persist(_libraryViewModeKey, libraryViewMode.name);
   }
 
   Future<void> setVisualMode(AppVisualMode visualMode) async {
@@ -305,9 +302,7 @@ class AppSettingsController extends ChangeNotifier {
     }
     _visualMode = visualMode;
     notifyListeners();
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_visualModeKey, visualMode.name);
+    await _persist(_visualModeKey, visualMode.name);
   }
 
   static ThemeMode _themeModeFromName(String? name) {
