@@ -117,21 +117,22 @@ class LiquidGlassSurface extends StatelessWidget {
         ? ImageFilter.blur(sigmaX: blurSigma + 1, sigmaY: blurSigma + 1)
         : ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: resolvedShadows,
-      ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: filter,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: resolvedColor,
-              borderRadius: borderRadius,
-              border: Border.all(color: resolvedBorder),
-            ),
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: resolvedShadows,
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: filter,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: resolvedColor,
+                borderRadius: borderRadius,
+                border: Border.all(color: resolvedBorder),
+              ),
             child: Stack(
               children: [
                 if (useMetalFxDark)
@@ -458,7 +459,9 @@ Color liquidGlassHeaderColor(BuildContext context) {
 }
 
 bool liquidGlassEnabled(BuildContext context) {
-  return context.watch<AppSettingsController>().liquidGlassEnabled;
+  return context.select<AppSettingsController, bool>(
+    (s) => s.liquidGlassEnabled,
+  );
 }
 
 bool readLiquidGlassEnabled(BuildContext context) {

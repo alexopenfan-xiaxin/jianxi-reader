@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../../core/app_settings_controller.dart';
@@ -227,10 +225,6 @@ class HtmlStyler {
       (match) => " ${match.group(1)}='#'",
     );
     return sanitized;
-  }
-
-  static String escapedTitle(String title) {
-    return const HtmlEscape().convert(title);
   }
 
   static String _cssColor(Color color) {

@@ -62,7 +62,8 @@ class _AppCardState extends State<AppCard>
   Widget build(BuildContext context) {
     final palette = context.palette;
     final liquidGlass = !widget.forceClassic &&
-        context.watch<AppSettingsController>().liquidGlassEnabled;
+        context.select<AppSettingsController, bool>(
+            (s) => s.liquidGlassEnabled);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final radius = liquidGlass ? 14.0 : AppRadii.lg;
     final borderRadius = BorderRadius.circular(radius);
