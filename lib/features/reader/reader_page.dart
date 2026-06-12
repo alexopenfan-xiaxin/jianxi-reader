@@ -356,22 +356,26 @@ class _ReaderPageState extends State<ReaderPage> {
       return _ReaderError(message: _prepareError!);
     }
 
+    final content = _ReaderContent(
+      document: _document,
+      scrollController: _scrollController,
+      topPadding: topPadding,
+      settings: settings,
+      readingPalette: readingPalette,
+      searchController: _searchController,
+      htmlViewKey: _htmlViewKey,
+      onHtmlScroll: _handleHtmlScroll,
+      onHtmlPageReady: _onHtmlPageReady,
+    );
+
+    // HTML uses WebView internal scrolling — no Flutter scrollbar.
+    if (_isHtmlDocument) return content;
+
     return SmartScrollbar(
       key: _smartScrollbarKey,
       controller: _scrollController,
       readingPalette: readingPalette,
-      externalScrollSource: _isHtmlDocument,
-      child: _ReaderContent(
-        document: _document,
-        scrollController: _scrollController,
-        topPadding: topPadding,
-        settings: settings,
-        readingPalette: readingPalette,
-        searchController: _searchController,
-        htmlViewKey: _htmlViewKey,
-        onHtmlScroll: _handleHtmlScroll,
-        onHtmlPageReady: _onHtmlPageReady,
-      ),
+      child: content,
     );
   }
 
