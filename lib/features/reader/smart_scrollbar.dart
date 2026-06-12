@@ -59,6 +59,9 @@ class SmartScrollbarState extends State<SmartScrollbar> {
   /// Current scroll ratio for external scroll sources (0–1).
   double _scrollRatio = 0.0;
 
+  /// Whether a rebuild has been scheduled for the next frame.
+  bool _rebuildScheduled = false;
+
   // ── public API for external scroll sources ──────────────────────────
 
   /// Report a scroll event from an external source (e.g. WebView JS channel).
@@ -75,6 +78,15 @@ class SmartScrollbarState extends State<SmartScrollbar> {
 
     _scrollRatio = clamped;
     _lastEventTime = now;
+
+    // Schedule a rebuild to update the thumb position (throttled).
+    if (!_rebuildScheduled && mounted) {
+      _rebuildScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _rebuildScheduled = false;
+        if (mounted) setState(() {});
+      });
+    }
 
     if (elapsed <= 0) return;
     final speed = delta / (elapsed / 1e6);

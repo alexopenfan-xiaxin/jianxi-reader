@@ -149,22 +149,29 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 ''';
 
   /// Injected after page load to report scroll position to Flutter.
+  /// Embedded directly in the HTML for maximum reliability.
   static const _scrollBridgeScript = r'''
 (function() {
   if (window.__jianxiScrollBridge) return;
   window.__jianxiScrollBridge = true;
-  let ticking = false;
-  window.addEventListener('scroll', function() {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(function() {
-        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-        const ratio = maxScroll > 0 ? (window.scrollY / maxScroll) : 0;
+  var lastRatio = -1;
+  function sendRatio() {
+    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    var ratio = maxScroll > 0 ? (window.scrollY / maxScroll) : 0;
+    ratio = Math.max(0, Math.min(1, ratio));
+    if (Math.abs(ratio - lastRatio) > 0.0005) {
+      lastRatio = ratio;
+      if (typeof FlutterBridge !== 'undefined') {
         FlutterBridge.postMessage(String(ratio));
-        ticking = false;
-      });
+      }
     }
-  }, {passive: true});
+  }
+  window.addEventListener('scroll', sendRatio, {passive: true});
+  // Polling fallback: ensures scroll events fire even if the native
+  // scroll listener is not triggered by certain WebView implementations.
+  setInterval(sendRatio, 300);
+  // Send initial position.
+  sendRatio();
 })();
 ''';
 
@@ -236,7 +243,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       setState(() => _isLoading = true);
     }
     final rawHtml = await widget.file.readAsString();
-    final html = HtmlStyler.buildAssimilatedHtml(
+    var html = HtmlStyler.buildAssimilatedHtml(
       rawHtml,
       fontSize: widget.fontSize,
       lineHeight: widget.lineHeight,
@@ -244,6 +251,9 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       horizontalPadding: widget.horizontalPadding,
       topPadding: widget.topPadding,
     );
+    // Embed the scroll bridge script directly into the HTML content
+    // so it runs in the same JS context as the loaded page.
+    html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
     final baseUrl = widget.file.parent.uri.toString();
     if (!mounted) {
       return;
@@ -253,7 +263,9 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   Future<void> _finishPageLoad() async {
     await _installSearchScript();
-    await _installScrollBridge();
+    // The scroll bridge script is embedded in the HTML content,
+    // so it's already active. Mark as ready and run backup injection.
+    _isScrollBridgeReady = true;
     await _runSearch();
     widget.onPageReady?.call();
   }
@@ -295,12 +307,11 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   /// Scroll the WebView content to the given ratio (0.0 – 1.0).
   Future<void> jumpToRatio(double ratio) async {
     final clamped = ratio.clamp(0.0, 1.0);
+    final target = (clamped * 1000).round();
     try {
       await _controller.runJavaScript(
-        '(function(){'
         'var m=document.documentElement.scrollHeight-window.innerHeight;'
-        'if(m>0){window.scrollTo({top:m*$clamped,behavior:"smooth"});}'
-        '})();',
+        'if(m>0){window.scrollTo(0,m*$target/1000);}',
       );
     } catch (error) {
       debugPrint('[HtmlDocumentView] jump to ratio failed: $error');
