@@ -18,6 +18,8 @@ class HtmlDocumentView extends StatefulWidget {
     required this.horizontalPadding,
     this.topPadding = 0,
     this.searchController,
+    this.onScroll,
+    this.onPageReady,
     super.key,
   });
 
@@ -29,11 +31,18 @@ class HtmlDocumentView extends StatefulWidget {
   final double topPadding;
   final DocumentSearchController? searchController;
 
+  /// Called with the current scroll ratio (0.0 – 1.0) whenever the
+  /// WebView content is scrolled.
+  final ValueChanged<double>? onScroll;
+
+  /// Called once after the page finishes loading and scripts are ready.
+  final VoidCallback? onPageReady;
+
   @override
-  State<HtmlDocumentView> createState() => _HtmlDocumentViewState();
+  State<HtmlDocumentView> createState() => HtmlDocumentViewState();
 }
 
-class _HtmlDocumentViewState extends State<HtmlDocumentView> {
+class HtmlDocumentViewState extends State<HtmlDocumentView> {
   static const _searchScript = r'''
 (function() {
   if (window.jianxiSearch) return;
@@ -139,9 +148,30 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
 })();
 ''';
 
+  /// Injected after page load to report scroll position to Flutter.
+  static const _scrollBridgeScript = r'''
+(function() {
+  if (window.__jianxiScrollBridge) return;
+  window.__jianxiScrollBridge = true;
+  let ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(function() {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const ratio = maxScroll > 0 ? (window.scrollY / maxScroll) : 0;
+        FlutterBridge.postMessage(String(ratio));
+        ticking = false;
+      });
+    }
+  }, {passive: true});
+})();
+''';
+
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isSearchScriptReady = false;
+  bool _isScrollBridgeReady = false;
   bool _isApplyingSearch = false;
   String _lastAppliedSearchQuery = '';
 
@@ -152,6 +182,15 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(widget.readingPalette.background)
+      ..addJavaScriptChannel(
+        'FlutterBridge',
+        onMessageReceived: (message) {
+          final ratio = double.tryParse(message.message);
+          if (ratio != null) {
+            widget.onScroll?.call(ratio);
+          }
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
@@ -191,6 +230,7 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   Future<void> _loadHtml() async {
     _isSearchScriptReady = false;
+    _isScrollBridgeReady = false;
     _lastAppliedSearchQuery = '';
     if (mounted) {
       setState(() => _isLoading = true);
@@ -213,7 +253,9 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   Future<void> _finishPageLoad() async {
     await _installSearchScript();
+    await _installScrollBridge();
     await _runSearch();
+    widget.onPageReady?.call();
   }
 
   void _handleSearchChanged() {
@@ -237,6 +279,31 @@ class _HtmlDocumentViewState extends State<HtmlDocumentView> {
       _isSearchScriptReady = true;
     } catch (error) {
       debugPrint('[HtmlDocumentView] install search script failed: $error');
+    }
+  }
+
+  Future<void> _installScrollBridge() async {
+    if (_isScrollBridgeReady) return;
+    try {
+      await _controller.runJavaScript(_scrollBridgeScript);
+      _isScrollBridgeReady = true;
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] install scroll bridge failed: $error');
+    }
+  }
+
+  /// Scroll the WebView content to the given ratio (0.0 – 1.0).
+  Future<void> jumpToRatio(double ratio) async {
+    final clamped = ratio.clamp(0.0, 1.0);
+    try {
+      await _controller.runJavaScript(
+        '(function(){'
+        'var m=document.documentElement.scrollHeight-window.innerHeight;'
+        'if(m>0){window.scrollTo({top:m*$clamped,behavior:"smooth"});}'
+        '})();',
+      );
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] jump to ratio failed: $error');
     }
   }
 
