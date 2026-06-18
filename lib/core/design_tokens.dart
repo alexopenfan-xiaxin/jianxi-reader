@@ -182,15 +182,20 @@ class AppTheme {
     inkMuted48: Color(0xFF7A7A7A),
   );
 
-  static ThemeData light() {
-    return _theme(Brightness.light, _lightPalette);
+  static ThemeData light({String? fontFamily}) {
+    return _theme(Brightness.light, _lightPalette, fontFamily: fontFamily);
   }
 
-  static ThemeData dark() {
-    return _theme(Brightness.dark, _darkPalette);
+  static ThemeData dark({String? fontFamily}) {
+    return _theme(Brightness.dark, _darkPalette, fontFamily: fontFamily);
   }
 
-  static ThemeData _theme(Brightness brightness, AppPalette palette) {
+  static ThemeData _theme(
+    Brightness brightness,
+    AppPalette palette, {
+    String? fontFamily,
+  }) {
+    final resolvedFontFamily = fontFamily ?? AppTheme.fontFamily;
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: brightness,
@@ -200,7 +205,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: fontFamily,
+      fontFamily: resolvedFontFamily,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: palette.parchment,
       extensions: <ThemeExtension<dynamic>>[palette],
@@ -213,6 +218,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         titleTextStyle: TextStyle(
           color: palette.ink,
+          fontFamily: resolvedFontFamily,
           fontSize: 17,
           fontWeight: FontWeight.w600,
           height: 1,
@@ -220,7 +226,7 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: palette.ink),
       ),
-      textTheme: _textTheme(palette),
+      textTheme: _textTheme(palette, resolvedFontFamily),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -232,7 +238,7 @@ class AppTheme {
             fontSize: 17,
             fontWeight: FontWeight.w400,
             letterSpacing: 0,
-          ),
+          ).copyWith(fontFamily: resolvedFontFamily),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -246,7 +252,7 @@ class AppTheme {
             fontSize: 17,
             fontWeight: FontWeight.w400,
             letterSpacing: 0,
-          ),
+          ).copyWith(fontFamily: resolvedFontFamily),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -272,15 +278,19 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: palette.navBackground,
-        contentTextStyle: TextStyle(color: palette.navForeground),
+        contentTextStyle: TextStyle(
+          color: palette.navForeground,
+          fontFamily: resolvedFontFamily,
+        ),
       ),
     );
   }
 
-  static TextTheme _textTheme(AppPalette palette) {
+  static TextTheme _textTheme(AppPalette palette, String fontFamily) {
     return TextTheme(
       displayLarge: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 40,
         fontWeight: FontWeight.w600,
         height: 1.10,
@@ -288,6 +298,7 @@ class AppTheme {
       ),
       headlineLarge: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 34,
         fontWeight: FontWeight.w600,
         height: 1.18,
@@ -295,6 +306,7 @@ class AppTheme {
       ),
       titleLarge: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 21,
         fontWeight: FontWeight.w600,
         height: 1.19,
@@ -302,6 +314,7 @@ class AppTheme {
       ),
       titleMedium: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 17,
         fontWeight: FontWeight.w600,
         height: 1.24,
@@ -309,6 +322,7 @@ class AppTheme {
       ),
       bodyLarge: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 17,
         fontWeight: FontWeight.w400,
         height: 1.47,
@@ -316,6 +330,7 @@ class AppTheme {
       ),
       bodyMedium: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 14,
         fontWeight: FontWeight.w400,
         height: 1.43,
@@ -323,6 +338,7 @@ class AppTheme {
       ),
       labelLarge: TextStyle(
         color: palette.ink,
+        fontFamily: fontFamily,
         fontSize: 17,
         fontWeight: FontWeight.w400,
         height: 1,
@@ -330,6 +346,7 @@ class AppTheme {
       ),
       labelMedium: TextStyle(
         color: palette.muted,
+        fontFamily: fontFamily,
         fontSize: 14,
         fontWeight: FontWeight.w400,
         height: 1.29,

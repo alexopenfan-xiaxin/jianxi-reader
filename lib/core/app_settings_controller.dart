@@ -26,8 +26,7 @@ enum ReadingLineHeight {
 enum ReadingTheme {
   defaultTheme('默认'),
   paper('纸张'),
-  eyeCare('护眼'),
-  night('夜览');
+  eyeCare('护眼');
 
   const ReadingTheme(this.label);
 
@@ -36,7 +35,7 @@ enum ReadingTheme {
 
 enum ReadingFontFamily {
   system('默认', null),
-  wenkai('文楷', 'LXGWWenKai');
+  wenkai('落霞孤鹜', 'LXGWWenKai');
 
   const ReadingFontFamily(this.label, this.fontFamily);
 
@@ -71,6 +70,16 @@ enum AppVisualMode {
   const AppVisualMode(this.label);
 
   final String label;
+}
+
+enum AppFontFamily {
+  system('默认', null),
+  lxgw('落霞孤鹜', 'LXGWWenKai');
+
+  const AppFontFamily(this.label, this.fontFamily);
+
+  final String label;
+  final String? fontFamily;
 }
 
 class ReadingPalette {
@@ -125,6 +134,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _libraryViewModeKey = 'settings.libraryViewMode';
   static const _visualModeKey = 'settings.visualMode';
   static const _readingFontFamilyKey = 'settings.readingFontFamily';
+  static const _appFontFamilyKey = 'settings.appFontFamily';
 
   SharedPreferences? _prefs;
 
@@ -136,6 +146,7 @@ class AppSettingsController extends ChangeNotifier {
   LibraryViewMode _libraryViewMode = LibraryViewMode.list;
   AppVisualMode _visualMode = AppVisualMode.classic;
   ReadingFontFamily _readingFontFamily = ReadingFontFamily.system;
+  AppFontFamily _appFontFamily = AppFontFamily.system;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -154,6 +165,10 @@ class AppSettingsController extends ChangeNotifier {
   ReadingFontFamily get readingFontFamily => _readingFontFamily;
 
   String? get readingFontFamilyValue => _readingFontFamily.fontFamily;
+
+  AppFontFamily get appFontFamily => _appFontFamily;
+
+  String? get appFontFamilyValue => _appFontFamily.fontFamily;
 
   bool get liquidGlassEnabled => _visualMode == AppVisualMode.liquidGlass;
 
@@ -225,16 +240,6 @@ class AppSettingsController extends ChangeNotifier {
           link: Color(0xFF0E6D55),
           codeBackground: Color(0xFFE2EDE1),
         );
-      case ReadingTheme.night:
-        return const ReadingPalette(
-          background: Color(0xFF000000),
-          foreground: Color(0xFFB0A89A),
-          muted: Color(0xFF706860),
-          surface: Color(0xFF0A0A0A),
-          border: Color(0xFF1A1A1A),
-          link: Color(0xFFCC9955),
-          codeBackground: Color(0xFF0D0D0D),
-        );
     }
   }
 
@@ -262,6 +267,9 @@ class AppSettingsController extends ChangeNotifier {
     );
     _readingFontFamily = _readingFontFamilyFromName(
       preferences.getString(_readingFontFamilyKey),
+    );
+    _appFontFamily = _appFontFamilyFromName(
+      preferences.getString(_appFontFamilyKey),
     );
     notifyListeners();
   }
@@ -344,6 +352,15 @@ class AppSettingsController extends ChangeNotifier {
     await _persist(_readingFontFamilyKey, fontFamily.name);
   }
 
+  Future<void> setAppFontFamily(AppFontFamily fontFamily) async {
+    if (_appFontFamily == fontFamily) {
+      return;
+    }
+    _appFontFamily = fontFamily;
+    notifyListeners();
+    await _persist(_appFontFamilyKey, fontFamily.name);
+  }
+
   static ThemeMode _themeModeFromName(String? name) {
     return ThemeMode.values.firstWhere(
       (mode) => mode.name == name,
@@ -397,6 +414,13 @@ class AppSettingsController extends ChangeNotifier {
     return ReadingFontFamily.values.firstWhere(
       (family) => family.name == name,
       orElse: () => ReadingFontFamily.system,
+    );
+  }
+
+  static AppFontFamily _appFontFamilyFromName(String? name) {
+    return AppFontFamily.values.firstWhere(
+      (family) => family.name == name,
+      orElse: () => AppFontFamily.system,
     );
   }
 }

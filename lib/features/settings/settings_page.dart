@@ -473,6 +473,34 @@ class AppearancePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const _CardTitle(
+                    icon: Icons.text_fields_rounded,
+                    title: '应用字体',
+                    subtitle: '选择整个应用界面的字体。',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GlassSegmentedControl<AppFontFamily>(
+                    segments: AppFontFamily.values.map((family) {
+                      return GlassSegment(
+                        value: family,
+                        label: family.label,
+                        icon: family == AppFontFamily.system
+                            ? Icons.font_download_outlined
+                            : Icons.auto_stories_outlined,
+                        selectedIcon: Icons.check_rounded,
+                      );
+                    }).toList(),
+                    value: settings.appFontFamily,
+                    onChanged: settings.setAppFontFamily,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _CardTitle(
                     icon: Icons.palette_outlined,
                     title: '界面主题',
                     subtitle: '跟随系统，或手动选择浅色/深色界面。',

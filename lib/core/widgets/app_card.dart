@@ -78,13 +78,13 @@ class _AppCardState extends State<AppCard>
           ? LiquidGlassSurface(
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
-              borderColor: Colors.white.withOpacity(dark ? 0.18 : 0.46),
+              borderColor: Colors.white.withOpacity(dark ? 0.18 : 0.22),
               blurSigma: LiquidGlassTokens.effectBlurSigma,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(dark ? 0.18 : 0.10),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
+                  color: Colors.black.withOpacity(dark ? 0.18 : 0.04),
+                  blurRadius: dark ? 24 : 16,
+                  offset: Offset(0, dark ? 12 : 8),
                 ),
               ],
               child: Material(

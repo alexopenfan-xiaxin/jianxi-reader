@@ -27,9 +27,14 @@ class JianxiReaderApp extends StatelessWidget {
           )..loadDocuments(),
         ),
       ],
-      child: Selector<AppSettingsController, ThemeMode>(
-        selector: (_, s) => s.themeMode,
-        builder: (context, themeMode, _) {
+      child: Selector<
+          AppSettingsController,
+          ({ThemeMode themeMode, String? appFontFamily})>(
+        selector: (_, s) => (
+          themeMode: s.themeMode,
+          appFontFamily: s.appFontFamilyValue,
+        ),
+        builder: (context, selection, _) {
           return MaterialApp(
             title: '简兮阅读器',
             debugShowCheckedModeBanner: false,
@@ -40,9 +45,9 @@ class JianxiReaderApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            theme: AppTheme.light(),
-            darkTheme: AppTheme.dark(),
-            themeMode: themeMode,
+            theme: AppTheme.light(fontFamily: selection.appFontFamily),
+            darkTheme: AppTheme.dark(fontFamily: selection.appFontFamily),
+            themeMode: selection.themeMode,
             themeAnimationDuration: AppMotion.normal,
             themeAnimationCurve: AppMotion.standard,
             home: const AppShell(),
