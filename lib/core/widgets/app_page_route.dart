@@ -91,18 +91,29 @@ class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onHorizontalDragStart: _handleDragStart,
-        onHorizontalDragUpdate: _handleDragUpdate,
-        onHorizontalDragEnd: _handleDragEnd,
-        onHorizontalDragCancel: _handleDragCancel,
-        child: AnimatedContainer(
-          duration: _tracking ? Duration.zero : AppMotion.fast,
-          curve: AppMotion.release,
-          transform: Matrix4.translationValues(_dragOffset * 0.18, 0, 0),
-          child: widget.child,
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedContainer(
+            duration: _tracking ? Duration.zero : AppMotion.fast,
+            curve: AppMotion.release,
+            transform: Matrix4.translationValues(_dragOffset * 0.18, 0, 0),
+            child: widget.child,
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: _edgeWidth,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: _handleDragStart,
+              onHorizontalDragUpdate: _handleDragUpdate,
+              onHorizontalDragEnd: _handleDragEnd,
+              onHorizontalDragCancel: _handleDragCancel,
+            ),
+          ),
+        ],
       ),
     );
   }
