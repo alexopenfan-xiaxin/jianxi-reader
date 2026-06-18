@@ -268,28 +268,29 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
               );
             },
             child: SingleChildScrollView(
-          key: ValueKey(_contentVersion),
-          controller: widget.scrollController,
-          padding: EdgeInsets.fromLTRB(
-            widget.horizontalPadding,
-            widget.topPadding + AppSpacing.md,
-            widget.horizontalPadding,
-            AppSpacing.xxl + kBottomNavigationBarHeight,
-          ),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: RepaintBoundary(
-            child: SmoothMarkdown(
-              data: _data!,
-              styleSheet: styleSheet,
-              useEnhancedComponents: false,
-              selectable: true,
-              plugins: _plugins(),
-              builderRegistry: _builderRegistry,
-              onTapLink: (url) => _handleLinkTap(context, url),
-              onTapImage: (url, alt, title) =>
-                  _showImagePreview(context, url, alt, title),
+              key: ValueKey(_contentVersion),
+              controller: widget.scrollController,
+              padding: EdgeInsets.fromLTRB(
+                widget.horizontalPadding,
+                widget.topPadding + AppSpacing.md,
+                widget.horizontalPadding,
+                AppSpacing.xxl + kBottomNavigationBarHeight,
+              ),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: RepaintBoundary(
+                child: SmoothMarkdown(
+                  data: _data!,
+                  styleSheet: styleSheet,
+                  useEnhancedComponents: false,
+                  selectable: true,
+                  plugins: _plugins(),
+                  builderRegistry: _builderRegistry,
+                  onTapLink: (url) => _handleLinkTap(context, url),
+                  onTapImage: (url, alt, title) =>
+                      _showImagePreview(context, url, alt, title),
+                ),
+              ),
             ),
-          ),
           ),
           if (_isLargeDocument && !_showFullContent)
             Positioned(
