@@ -76,7 +76,23 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAPTIC_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "selectionClick" -> {
-                    performSelectionHaptic()
+                    performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+                    result.success(true)
+                }
+                "lightImpact" -> {
+                    performHaptic(HapticFeedbackConstants.VIRTUAL_KEY)
+                    result.success(true)
+                }
+                "mediumImpact" -> {
+                    performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                    result.success(true)
+                }
+                "successFeedback" -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        performHaptic(HapticFeedbackConstants.CONFIRM)
+                    } else {
+                        performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                    }
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -307,9 +323,9 @@ class MainActivity : FlutterActivity() {
         return 0L
     }
 
-    private fun performSelectionHaptic() {
+    private fun performHaptic(constant: Int) {
         window.decorView.performHapticFeedback(
-            HapticFeedbackConstants.CLOCK_TICK,
+            constant,
             HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
         )
     }

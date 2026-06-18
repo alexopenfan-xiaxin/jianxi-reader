@@ -129,7 +129,7 @@ Future<void> _importAndMaybeOpen(
   if (!context.mounted || documents.isEmpty) {
     return;
   }
-  HapticService.selectionClick();
+  HapticService.lightImpact();
   if (documents.length > 1) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('已导入 ${documents.length} 个文档')),
@@ -240,12 +240,28 @@ class _LibraryAnimatedContent extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: controller.documents.length,
       itemBuilder: (context, index) {
+        final doc = controller.documents[index];
         return _StaggeredFadeIn(
           index: index,
           controller: staggerController,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _DocumentTile(document: controller.documents[index]),
+          child: AnimatedSwitcher(
+            duration: AppMotion.normal,
+            reverseDuration: AppMotion.fast,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SizeTransition(
+                  sizeFactor: animation,
+                  axisAlignment: -1,
+                  child: child,
+                ),
+              );
+            },
+            child: Padding(
+              key: ValueKey('doc_tile_${doc.path}'),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _DocumentTile(document: doc),
+            ),
           ),
         );
       },
@@ -1468,6 +1484,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
   }
 
   Future<void> _showShelfActions(BuildContext context) async {
+    HapticService.mediumImpact();
     _springBack();
     final action = await _showGlassDocumentMenu(context, widget.document);
     if (action != null && mounted) {
@@ -1642,7 +1659,10 @@ class _DocumentTileState extends State<_DocumentTile>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _TypeBadge(document: widget.document),
+                  Hero(
+                    tag: 'doc_badge_${widget.document.path}',
+                    child: _TypeBadge(document: widget.document),
+                  ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(

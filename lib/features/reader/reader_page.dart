@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
+import '../../core/haptic_service.dart';
 import '../../core/reading_progress_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/liquid_glass.dart';
@@ -243,15 +244,32 @@ class _ReaderPageState extends State<ReaderPage> {
             : AnimatedOpacity(
                 opacity: showGlassAppBar ? 1 : 0,
                 duration: AppMotion.fast,
-                child: Text(
-                  _document.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                child: Row(
+                  children: [
+                    Hero(
+                      tag: 'doc_badge_${_document.path}',
+                      child: Icon(
+                        _document.type == DocumentType.markdown
+                            ? Icons.description_rounded
+                            : Icons.code_rounded,
+                        size: 20,
                         color: readingPalette.foreground,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _document.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: readingPalette.foreground,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
         actions: _isSearching
@@ -513,40 +531,75 @@ class _ReaderMenuTile extends StatelessWidget {
   }
 }
 
-class _ReaderProgressBar extends StatelessWidget {
+class _ReaderProgressBar extends StatefulWidget {
   const _ReaderProgressBar({required this.scrollController});
 
   final ScrollController scrollController;
 
   @override
+  State<_ReaderProgressBar> createState() => _ReaderProgressBarState();
+}
+
+class _ReaderProgressBarState extends State<_ReaderProgressBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tweenController;
+  double _displayProgress = 0;
+  double _targetProgress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tweenController = AnimationController(
+      vsync: this,
+      duration: AppMotion.micro,
+    );
+    widget.scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_onScroll);
+    _tweenController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!widget.scrollController.hasClients) return;
+    final position = widget.scrollController.position;
+    final newProgress = position.maxScrollExtent > 0
+        ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
+        : 0.0;
+    if ((newProgress - _targetProgress).abs() < 0.001) return;
+    final startProgress = _displayProgress;
+    _targetProgress = newProgress;
+    _tweenController.stop();
+    _tweenController.reset();
+    _tweenController.addListener(() {
+      setState(() {
+        _displayProgress =
+            startProgress + (_targetProgress - startProgress) * _tweenController.value;
+      });
+    });
+    _tweenController.forward();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: scrollController,
-      builder: (context, _) {
-        if (!scrollController.hasClients) {
-          return const SizedBox(height: 3);
-        }
-        final position = scrollController.position;
-        final progress = position.maxScrollExtent > 0
-            ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
-            : 0.0;
-        if (progress <= 0) {
-          return const SizedBox(height: 3);
-        }
-        return SizedBox(
-          height: 3,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: progress,
-              heightFactor: 1,
-              child: ColoredBox(
-                color: AppColors.primary.withOpacity(0.70),
-              ),
-            ),
+    if (_displayProgress <= 0) {
+      return const SizedBox(height: 3);
+    }
+    return SizedBox(
+      height: 3,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: _displayProgress,
+          heightFactor: 1,
+          child: ColoredBox(
+            color: AppColors.primary.withOpacity(0.70),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -664,6 +717,7 @@ class _ReaderContent extends StatelessWidget {
           scrollController: scrollController,
           topPadding: topPadding,
           searchController: searchController,
+          fontFamily: settings.readingFontFamilyValue,
         ),
       DocumentType.html => HtmlDocumentView(
           key: htmlViewKey,
@@ -773,6 +827,7 @@ class _ReaderError extends StatelessWidget {
 }
 
 void showReadingDisplaySheet(BuildContext context) {
+  HapticService.lightImpact();
   final isLiquidGlass = readLiquidGlassEnabled(context);
   showModalBottomSheet<void>(
     context: context,

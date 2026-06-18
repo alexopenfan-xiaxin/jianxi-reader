@@ -12,6 +12,7 @@ class MarkdownStyleFactory {
     required double fontSize,
     required double lineHeight,
     required ReadingPalette readingPalette,
+    String? fontFamily,
   }) {
     final textTheme = Theme.of(context).textTheme;
     final brightness = Theme.of(context).brightness;
@@ -19,6 +20,7 @@ class MarkdownStyleFactory {
       color: readingPalette.foreground,
       fontSize: fontSize,
       height: lineHeight,
+      fontFamily: fontFamily,
       letterSpacing: 0,
     );
 
@@ -31,29 +33,35 @@ class MarkdownStyleFactory {
       h1Style: textTheme.headlineLarge?.copyWith(
         fontSize: fontSize + 16,
         color: readingPalette.foreground,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h2Style: textTheme.headlineLarge?.copyWith(
         fontSize: fontSize + 10,
         color: readingPalette.foreground,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h3Style: textTheme.titleLarge?.copyWith(
         fontSize: fontSize + 5,
         color: readingPalette.foreground,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h4Style: textTheme.titleMedium?.copyWith(
         fontSize: fontSize + 2,
         color: readingPalette.foreground,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h5Style: textTheme.titleMedium?.copyWith(
         color: readingPalette.foreground,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h6Style: textTheme.titleMedium?.copyWith(
         color: readingPalette.muted,
+        fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       paragraphStyle: bodyStyle,

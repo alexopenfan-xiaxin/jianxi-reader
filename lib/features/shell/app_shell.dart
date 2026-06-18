@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/haptic_service.dart';
+import '../../core/spring_curve.dart';
 import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../library/document_entry.dart';
@@ -290,7 +291,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
 
   void _selectIndex(int index) {
     if (index != widget.currentIndex) {
-      HapticService.selectionClick();
+      HapticService.lightImpact();
       widget.onChanged(index);
     }
   }
@@ -471,7 +472,7 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
 
   void _selectIndex(int index) {
     if (index != widget.currentIndex) {
-      HapticService.selectionClick();
+      HapticService.lightImpact();
       widget.onChanged(index);
     }
   }
@@ -515,8 +516,8 @@ class _LiquidBottomNavItem extends StatelessWidget {
                 _LiquidBottomNavState._outerPadding * 2,
             child: AnimatedScale(
               scale: selected ? 1.08 : 1,
-              duration: AppMotion.normal,
-              curve: AppMotion.release,
+              duration: AppMotion.settle,
+              curve: SpringCurve.bouncy,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -690,8 +691,8 @@ class _FloatingNavItem extends StatelessWidget {
             width: _FloatingBottomNavState._itemWidth,
             child: AnimatedScale(
               scale: selected ? 1.06 : 1,
-              duration: AppMotion.normal,
-              curve: AppMotion.release,
+              duration: AppMotion.settle,
+              curve: SpringCurve.bouncy,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
