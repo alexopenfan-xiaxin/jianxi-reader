@@ -370,7 +370,7 @@ class _ReadingValueSlider extends StatelessWidget {
                   : null,
               backgroundColor: selected
                   ? AppColors.primary.withOpacity(0.12)
-                  : palette.surface.withOpacity(0.72),
+                  : palette.card.withOpacity(0.72),
               side: BorderSide(
                 color: selected
                     ? AppColors.primary.withOpacity(0.28)
