@@ -78,8 +78,12 @@ class _AppCardState extends State<AppCard>
           ? LiquidGlassSurface(
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
-              borderColor: Colors.white.withOpacity(dark ? 0.18 : 0.22),
+              borderColor:
+                  dark ? Colors.white.withOpacity(0.18) : Colors.transparent,
               blurSigma: LiquidGlassTokens.effectBlurSigma,
+              chromaticEdge: dark,
+              edgeHighlight: dark,
+              innerHighlight: dark,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(dark ? 0.18 : 0.04),
@@ -103,7 +107,10 @@ class _AppCardState extends State<AppCard>
                       : null,
                   borderRadius: borderRadius,
                   splashFactory: NoSplash.splashFactory,
-                  highlightColor: AppColors.primary.withOpacity(0.05),
+                  highlightColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  splashColor: Colors.transparent,
                   child: Padding(padding: widget.padding, child: widget.child),
                 ),
               ),
