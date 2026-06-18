@@ -48,6 +48,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemWidth = constraints.maxWidth / segments.length;
+        final trackRadius = BorderRadius.circular(AppRadii.pill);
         var activeValue = value;
 
         void selectValue(T nextValue) {
@@ -83,32 +84,49 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                     liquidGlass: liquidGlass,
                   ),
                 ),
-                AnimatedPositioned(
-                  duration: liquidGlass ? AppMotion.settle : AppMotion.normal,
-                  curve: SpringCurve.snappy,
-                  left: effectiveIndex * itemWidth,
-                  top: 0,
-                  bottom: 0,
-                  width: itemWidth,
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      liquidGlass ? LiquidGlassTokens.bottomBarPadding : 4,
-                    ),
-                    child: _GlassThumb(liquidGlass: liquidGlass),
-                  ),
-                ),
                 Positioned.fill(
-                  child: Row(
-                    children: [
-                      for (var index = 0; index < segments.length; index++)
-                        Expanded(
-                          child: _GlassSegmentButton<T>(
-                            segment: segments[index],
-                            selected: index == effectiveIndex,
-                            onTap: () => selectValue(segments[index].value),
+                  child: ClipRRect(
+                    borderRadius: trackRadius,
+                    child: Stack(
+                      children: [
+                        AnimatedPositioned(
+                          duration: liquidGlass
+                              ? AppMotion.settle
+                              : AppMotion.normal,
+                          curve: SpringCurve.snappy,
+                          left: effectiveIndex * itemWidth,
+                          top: 0,
+                          bottom: 0,
+                          width: itemWidth,
+                          child: Padding(
+                            padding: EdgeInsets.all(
+                              liquidGlass
+                                  ? LiquidGlassTokens.bottomBarPadding
+                                  : 4,
+                            ),
+                            child: _GlassThumb(liquidGlass: liquidGlass),
                           ),
                         ),
-                    ],
+                        Positioned.fill(
+                          child: Row(
+                            children: [
+                              for (var index = 0;
+                                  index < segments.length;
+                                  index++)
+                                Expanded(
+                                  child: _GlassSegmentButton<T>(
+                                    segment: segments[index],
+                                    selected: index == effectiveIndex,
+                                    onTap: () {
+                                      selectValue(segments[index].value);
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -242,7 +260,10 @@ class _GlassSegmentButton<T> extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         splashFactory: NoSplash.splashFactory,
-        highlightColor: AppColors.primary.withOpacity(0.04),
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        splashColor: Colors.transparent,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
