@@ -168,16 +168,16 @@ class AppTheme {
   );
 
   static const _darkPalette = AppPalette(
-    canvas: Color(0xFF111113),
+    canvas: Color(0xFF0A0A0C),
     parchment: Color(0xFF000000),
-    card: AppColors.tileDark,
+    card: Color(0xFF1C1C1E),
     ink: AppColors.bodyOnDark,
     muted: AppColors.darkMuted,
     hairline: Color(0xFF3A3A3C),
     dividerSoft: AppColors.tileDark2,
     navBackground: Color(0xFF000000),
     navForeground: AppColors.bodyOnDark,
-    searchFill: Color(0xFF1C1C1E),
+    searchFill: Color(0xFF141416),
     inkMuted80: Color(0xFFCCCCCC),
     inkMuted48: Color(0xFF7A7A7A),
   );

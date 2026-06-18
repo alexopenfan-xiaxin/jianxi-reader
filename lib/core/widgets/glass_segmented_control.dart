@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 import '../haptic_service.dart';
+import '../spring_curve.dart';
 import 'liquid_glass.dart';
 
 class GlassSegment<T> {
@@ -83,8 +84,8 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                   ),
                 ),
                 AnimatedPositioned(
-                  duration: liquidGlass ? AppMotion.normal : AppMotion.fast,
-                  curve: AppMotion.release,
+                  duration: liquidGlass ? AppMotion.settle : AppMotion.normal,
+                  curve: SpringCurve.snappy,
                   left: effectiveIndex * itemWidth,
                   top: 0,
                   bottom: 0,

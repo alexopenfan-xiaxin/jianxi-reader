@@ -38,6 +38,7 @@ class MarkdownViewer extends StatefulWidget {
   final ScrollController? scrollController;
   final double topPadding;
   final DocumentSearchController? searchController;
+  final String? fontFamily;
 
   const MarkdownViewer({
     required this.file,
@@ -48,6 +49,7 @@ class MarkdownViewer extends StatefulWidget {
     this.scrollController,
     this.topPadding = 0,
     this.searchController,
+    this.fontFamily,
     super.key,
   });
 
@@ -75,8 +77,17 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   Map<String, String>? _pluginEmojiMap;
   List<int> _searchMatchOffsets = const [];
   String _searchText = '';
+  String? _cachedSearchText;
   int _contentVersion = 0;
   Timer? _fileWatchTimer;
+  Timer? _searchDebounce;
+  StreamSubscription<FileSystemEvent>? _fileWatchSub;
+  bool _isLargeDocument = false;
+  bool _showFullContent = false;
+  String? _fullData;
+
+  static const int _largeDocumentLineThreshold = 2000;
+  static const int _largeDocumentPreviewLines = 1500;
 
   @override
   void initState() {
@@ -94,17 +105,34 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       }
     });
     _fileWatchTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 5),
       (_) => _checkFileChanged(),
     );
+    _startFileWatch();
   }
 
   @override
   void dispose() {
     _fileWatchTimer?.cancel();
+    _fileWatchSub?.cancel();
+    _searchDebounce?.cancel();
     widget.searchController?.removeListener(_handleSearchChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _startFileWatch() {
+    _fileWatchSub?.cancel();
+    try {
+      _fileWatchSub = widget.file.watch().listen((event) {
+        if (event.type == FileSystemEvent.modify) {
+          debugPrint('[MarkdownViewer] file watch event, reloading');
+          _loadFile();
+        }
+      });
+    } catch (e) {
+      debugPrint('[MarkdownViewer] file watch not supported: $e');
+    }
   }
 
   @override
@@ -150,20 +178,50 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       final modified = DateTime.fromMillisecondsSinceEpoch(
         snapshot['modified']! as int,
       );
+      final lineCount = '\n'.allMatches(data).length + 1;
+      final isLarge = lineCount > _largeDocumentLineThreshold;
       if (mounted) {
         setState(() {
-          _data = data;
+          _fullData = data;
+          _isLargeDocument = isLarge;
+          if (isLarge && !_showFullContent) {
+            _data = _truncateLines(data, _largeDocumentPreviewLines);
+          } else {
+            _showFullContent = true;
+            _data = data;
+          }
           _error = null;
           _contentVersion++;
+          _cachedSearchText = null;
         });
       }
       _lastModified = modified;
+      _rebuildSearchTextCache();
       _updateSearchMatches();
     } catch (e) {
       if (mounted) {
         setState(() => _error = '读取 Markdown 失败：$e');
       }
     }
+  }
+
+  void _loadFullDocument() {
+    final full = _fullData;
+    if (full == null) return;
+    setState(() {
+      _showFullContent = true;
+      _data = full;
+      _contentVersion++;
+      _cachedSearchText = null;
+    });
+    _rebuildSearchTextCache();
+    _updateSearchMatches();
+  }
+
+  String _truncateLines(String text, int maxLines) {
+    final lines = text.split('\n');
+    if (lines.length <= maxLines) return text;
+    return lines.sublist(0, maxLines).join('\n');
   }
 
   @override
@@ -187,17 +245,29 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       fontSize: widget.fontSize,
       lineHeight: widget.lineHeight,
       readingPalette: widget.readingPalette,
+      fontFamily: widget.fontFamily,
     );
     widget.searchController?.beginBuildPass();
 
     return ColoredBox(
       color: widget.readingPalette.background,
-      child: AnimatedSwitcher(
-        duration: AppMotion.normal,
-        reverseDuration: AppMotion.fast,
-        switchInCurve: AppMotion.enter,
-        switchOutCurve: AppMotion.exit,
-        child: SingleChildScrollView(
+      child: Stack(
+        children: [
+          AnimatedSwitcher(
+            duration: AppMotion.normal,
+            reverseDuration: AppMotion.fast,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.98, end: 1.0).animate(
+                    CurvedAnimation(parent: animation, curve: AppMotion.enter),
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            child: SingleChildScrollView(
           key: ValueKey(_contentVersion),
           controller: widget.scrollController,
           padding: EdgeInsets.fromLTRB(
@@ -207,18 +277,45 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
             AppSpacing.xxl + kBottomNavigationBarHeight,
           ),
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SmoothMarkdown(
-            data: _data!,
-            styleSheet: styleSheet,
-            useEnhancedComponents: false,
-            selectable: true,
-            plugins: _plugins(),
-            builderRegistry: _builderRegistry,
-            onTapLink: (url) => _handleLinkTap(context, url),
-            onTapImage: (url, alt, title) =>
-                _showImagePreview(context, url, alt, title),
+          child: RepaintBoundary(
+            child: SmoothMarkdown(
+              data: _data!,
+              styleSheet: styleSheet,
+              useEnhancedComponents: false,
+              selectable: true,
+              plugins: _plugins(),
+              builderRegistry: _builderRegistry,
+              onTapLink: (url) => _handleLinkTap(context, url),
+              onTapImage: (url, alt, title) =>
+                  _showImagePreview(context, url, alt, title),
+            ),
           ),
-        ),
+          ),
+          if (_isLargeDocument && !_showFullContent)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _LoadMoreBanner(
+                readingPalette: widget.readingPalette,
+                onTap: _loadFullDocument,
+              ),
+            ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: AnimatedOpacity(
+              opacity: _data == null ? 1.0 : 0.0,
+              duration: AppMotion.fast,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: widget.readingPalette.background,
+                valueColor: AlwaysStoppedAnimation(widget.readingPalette.link.withOpacity(0.6)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -271,11 +368,14 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   }
 
   void _handleSearchChanged() {
-    _updateSearchMatches();
-    _scrollToCurrentSearchMatch();
-    if (mounted) {
-      setState(() {});
-    }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      _updateSearchMatches();
+      _scrollToCurrentSearchMatch();
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _updateSearchMatches() {
@@ -288,7 +388,10 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       return;
     }
 
-    _searchText = _buildSearchText(data);
+    if (_cachedSearchText == null && data != null) {
+      _rebuildSearchTextCache();
+    }
+    _searchText = _cachedSearchText ?? '';
     _searchMatchOffsets = _matchOffsets(
       _searchText,
       controller.normalizedQuery,
@@ -315,6 +418,15 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       duration: AppMotion.fast,
       curve: AppMotion.emphasized,
     );
+  }
+
+  void _rebuildSearchTextCache() {
+    final data = _data;
+    if (data == null) {
+      _cachedSearchText = null;
+      return;
+    }
+    _cachedSearchText = _buildSearchText(data);
   }
 
   String _buildSearchText(String data) {
@@ -477,6 +589,52 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
               maxScale: 4,
               child: MarkdownPreviewImage(url: url),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreBanner extends StatelessWidget {
+  const _LoadMoreBanner({
+    required this.readingPalette,
+    required this.onTap,
+  });
+
+  final ReadingPalette readingPalette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: readingPalette.surface.withOpacity(0.95),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.lg,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.unfold_more_rounded,
+                size: 20,
+                color: readingPalette.link,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                '点击加载完整文档',
+                style: TextStyle(
+                  color: readingPalette.link,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
