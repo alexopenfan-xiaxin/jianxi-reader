@@ -1,26 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum ReadingFontSize {
-  compact('紧凑', 16),
-  comfortable('标准', 18),
-  large('大字', 21);
-
-  const ReadingFontSize(this.label, this.value);
-
-  final String label;
-  final double value;
-}
-
-enum ReadingLineHeight {
-  compact('紧凑', 1.42),
-  comfortable('标准', 1.58),
-  airy('宽松', 1.74);
-
-  const ReadingLineHeight(this.label, this.value);
+class ReadingScalePreset {
+  const ReadingScalePreset({
+    required this.label,
+    required this.fontSize,
+    required this.lineHeight,
+  });
 
   final String label;
-  final double value;
+  final double fontSize;
+  final double lineHeight;
 }
 
 enum ReadingTheme {
@@ -126,6 +116,18 @@ class ReadingPalette {
 }
 
 class AppSettingsController extends ChangeNotifier {
+  static const readingFontSizeMin = 14.0;
+  static const readingFontSizeMax = 28.0;
+  static const readingFontSizeDefault = 18.0;
+  static const readingLineHeightMin = 1.2;
+  static const readingLineHeightMax = 2.0;
+  static const readingLineHeightDefault = 1.58;
+  static const readingScalePresets = <ReadingScalePreset>[
+    ReadingScalePreset(label: '紧凑', fontSize: 16, lineHeight: 1.42),
+    ReadingScalePreset(label: '标准', fontSize: 18, lineHeight: 1.58),
+    ReadingScalePreset(label: '宽松', fontSize: 21, lineHeight: 1.74),
+  ];
+
   static const _themeModeKey = 'settings.themeMode';
   static const _readingFontSizeKey = 'settings.readingFontSize';
   static const _readingLineHeightKey = 'settings.readingLineHeight';
@@ -139,8 +141,8 @@ class AppSettingsController extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   ThemeMode _themeMode = ThemeMode.system;
-  ReadingFontSize _readingFontSize = ReadingFontSize.comfortable;
-  ReadingLineHeight _readingLineHeight = ReadingLineHeight.comfortable;
+  double _readingFontSize = readingFontSizeDefault;
+  double _readingLineHeight = readingLineHeightDefault;
   ReadingTheme _readingTheme = ReadingTheme.defaultTheme;
   ReadingMargin _readingMargin = ReadingMargin.comfortable;
   LibraryViewMode _libraryViewMode = LibraryViewMode.list;
@@ -150,9 +152,9 @@ class AppSettingsController extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
 
-  ReadingFontSize get readingFontSize => _readingFontSize;
+  double get readingFontSize => _readingFontSize;
 
-  ReadingLineHeight get readingLineHeight => _readingLineHeight;
+  double get readingLineHeight => _readingLineHeight;
 
   ReadingTheme get readingTheme => _readingTheme;
 
@@ -172,9 +174,9 @@ class AppSettingsController extends ChangeNotifier {
 
   bool get liquidGlassEnabled => _visualMode == AppVisualMode.liquidGlass;
 
-  double get readingFontSizeValue => _readingFontSize.value;
+  double get readingFontSizeValue => _readingFontSize;
 
-  double get readingLineHeightValue => _readingLineHeight.value;
+  double get readingLineHeightValue => _readingLineHeight;
 
   double get readingHorizontalPaddingValue => _readingMargin.value;
 
@@ -247,11 +249,11 @@ class AppSettingsController extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     final preferences = _prefs!;
     _themeMode = _themeModeFromName(preferences.getString(_themeModeKey));
-    _readingFontSize = _readingFontSizeFromName(
-      preferences.getString(_readingFontSizeKey),
+    _readingFontSize = _readingFontSizeFromStored(
+      preferences.get(_readingFontSizeKey),
     );
-    _readingLineHeight = _readingLineHeightFromName(
-      preferences.getString(_readingLineHeightKey),
+    _readingLineHeight = _readingLineHeightFromStored(
+      preferences.get(_readingLineHeightKey),
     );
     _readingTheme = _readingThemeFromName(
       preferences.getString(_readingThemeKey),
@@ -280,6 +282,12 @@ class AppSettingsController extends ChangeNotifier {
     await prefs.setString(key, value);
   }
 
+  Future<void> _persistDouble(String key, double value) async {
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    await prefs.setDouble(key, value);
+  }
+
   Future<void> setThemeMode(ThemeMode themeMode) async {
     if (_themeMode == themeMode) {
       return;
@@ -289,22 +297,24 @@ class AppSettingsController extends ChangeNotifier {
     await _persist(_themeModeKey, themeMode.name);
   }
 
-  Future<void> setReadingFontSize(ReadingFontSize readingFontSize) async {
-    if (_readingFontSize == readingFontSize) {
+  Future<void> setReadingFontSize(double readingFontSize) async {
+    final value = _normalizeFontSize(readingFontSize);
+    if ((_readingFontSize - value).abs() < 0.01) {
       return;
     }
-    _readingFontSize = readingFontSize;
+    _readingFontSize = value;
     notifyListeners();
-    await _persist(_readingFontSizeKey, readingFontSize.name);
+    await _persistDouble(_readingFontSizeKey, value);
   }
 
-  Future<void> setReadingLineHeight(ReadingLineHeight readingLineHeight) async {
-    if (_readingLineHeight == readingLineHeight) {
+  Future<void> setReadingLineHeight(double readingLineHeight) async {
+    final value = _normalizeLineHeight(readingLineHeight);
+    if ((_readingLineHeight - value).abs() < 0.001) {
       return;
     }
-    _readingLineHeight = readingLineHeight;
+    _readingLineHeight = value;
     notifyListeners();
-    await _persist(_readingLineHeightKey, readingLineHeight.name);
+    await _persistDouble(_readingLineHeightKey, value);
   }
 
   Future<void> setReadingTheme(ReadingTheme readingTheme) async {
@@ -368,18 +378,54 @@ class AppSettingsController extends ChangeNotifier {
     );
   }
 
-  static ReadingFontSize _readingFontSizeFromName(String? name) {
-    return ReadingFontSize.values.firstWhere(
-      (fontSize) => fontSize.name == name,
-      orElse: () => ReadingFontSize.comfortable,
+  static double _readingFontSizeFromStored(Object? value) {
+    return _normalizeFontSize(
+      switch (value) {
+        double stored => stored,
+        int stored => stored.toDouble(),
+        String stored => double.tryParse(stored) ?? _legacyFontSize(stored),
+        _ => readingFontSizeDefault,
+      },
     );
   }
 
-  static ReadingLineHeight _readingLineHeightFromName(String? name) {
-    return ReadingLineHeight.values.firstWhere(
-      (lineHeight) => lineHeight.name == name,
-      orElse: () => ReadingLineHeight.comfortable,
+  static double _readingLineHeightFromStored(Object? value) {
+    return _normalizeLineHeight(
+      switch (value) {
+        double stored => stored,
+        int stored => stored.toDouble(),
+        String stored => double.tryParse(stored) ?? _legacyLineHeight(stored),
+        _ => readingLineHeightDefault,
+      },
     );
+  }
+
+  static double _legacyFontSize(String name) {
+    return switch (name) {
+      'compact' => 16,
+      'comfortable' => readingFontSizeDefault,
+      'large' => 21,
+      _ => readingFontSizeDefault,
+    };
+  }
+
+  static double _legacyLineHeight(String name) {
+    return switch (name) {
+      'compact' => 1.42,
+      'comfortable' => readingLineHeightDefault,
+      'airy' => 1.74,
+      _ => readingLineHeightDefault,
+    };
+  }
+
+  static double _normalizeFontSize(double value) {
+    final clamped = value.clamp(readingFontSizeMin, readingFontSizeMax);
+    return (clamped * 10).roundToDouble() / 10;
+  }
+
+  static double _normalizeLineHeight(double value) {
+    final clamped = value.clamp(readingLineHeightMin, readingLineHeightMax);
+    return (clamped * 100).roundToDouble() / 100;
   }
 
   static ReadingTheme _readingThemeFromName(String? name) {

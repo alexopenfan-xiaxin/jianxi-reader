@@ -48,7 +48,7 @@ class DocumentTagUpdate {
 }
 
 class DocumentFileService implements DocumentLibraryService {
-  const DocumentFileService();
+  DocumentFileService();
 
   static const libraryFolderName = 'documents';
   static const _documentAccessChannel =
@@ -59,15 +59,20 @@ class DocumentFileService implements DocumentLibraryService {
   static const _tagsKey = 'document.tags';
   static const _documentTagsPrefix = 'document.tags.';
   static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
+  Future<SharedPreferences>? _preferencesFuture;
+
+  Future<SharedPreferences> _preferences() {
+    return _preferencesFuture ??= SharedPreferences.getInstance();
+  }
 
   @override
   Future<List<DocumentEntry>> scanLibrary() async {
     final entries = <DocumentEntry>[];
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
 
     final directory = await ensureLibraryDirectory();
-    final files = directory
-        .listSync(followLinks: false)
+    final files = await directory
+        .list(followLinks: false)
         .where(DocumentFileRules.isSupportedFile)
         .cast<File>()
         .toList();
@@ -145,7 +150,7 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     final imported = <DocumentEntry>[];
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final paths = preferences.getStringList(_referencedPathsKey) ?? [];
     for (final pickedFile in result.files) {
       final sourcePath = pickedFile.path;
@@ -201,7 +206,7 @@ class DocumentFileService implements DocumentLibraryService {
       throw FileSystemException('文档不存在或已被移除', sourcePath);
     }
 
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     await _rememberReferencedDocument(
       preferences: preferences,
       path: sourcePath,
@@ -216,7 +221,7 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final refreshedPath = document.isReferenced
         ? await _refreshReferencedMirror(preferences, document.path)
         : document.path;
@@ -270,7 +275,7 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     final renamedFile = await source.rename(destinationPath);
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     await _moveDocumentMetadata(preferences, document.path, renamedFile.path);
     if (document.isReferenced) {
       await _updateReferencedPath(preferences, document.path, renamedFile.path);
@@ -303,7 +308,7 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<void> removeDocument(DocumentEntry document) async {
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
 
     if (document.isReferenced) {
       final paths = preferences.getStringList(_referencedPathsKey) ?? [];
@@ -331,7 +336,7 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<DateTime> markDocumentOpened(DocumentEntry document) async {
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final openedAt = DateTime.now();
     await preferences.setInt(
       _recentOpenedKey(document.path),
@@ -342,14 +347,14 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<List<String>> loadTags() async {
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     return _allTags(preferences);
   }
 
   @override
   Future<void> createTag(String name) async {
     final tag = _validateTagName(name);
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final tags = _allTags(preferences);
     if (!tags.contains(tag)) {
       tags.add(tag);
@@ -361,7 +366,7 @@ class DocumentFileService implements DocumentLibraryService {
   @override
   Future<void> deleteTag(String name) async {
     final tag = _validateTagName(name);
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final tags = _allTags(preferences)..remove(tag);
     await preferences.setStringList(_tagsKey, tags);
 
@@ -381,7 +386,7 @@ class DocumentFileService implements DocumentLibraryService {
     DocumentEntry document,
     List<String> tags,
   ) async {
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final cleanTags = _cleanTags(tags);
     final allTags = _allTags(preferences);
     for (final tag in cleanTags) {
@@ -492,7 +497,7 @@ class DocumentFileService implements DocumentLibraryService {
       return const [];
     }
 
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     final documents = <DocumentEntry>[];
     for (final item in picked) {
       final metadata = item is Map ? item : const <String, Object?>{};
@@ -551,7 +556,7 @@ class DocumentFileService implements DocumentLibraryService {
       throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
     }
 
-    final preferences = await SharedPreferences.getInstance();
+    final preferences = await _preferences();
     await _rememberReferencedDocument(
       preferences: preferences,
       path: path,

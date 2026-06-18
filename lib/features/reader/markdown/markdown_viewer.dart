@@ -12,6 +12,7 @@ import '../../../core/emoji_service.dart';
 import '../../../core/widgets/app_page_route.dart';
 import '../../../core/widgets/liquid_glass.dart';
 import '../document_search_controller.dart';
+import '../toc_service.dart';
 import 'builders/clickable_link_builder.dart';
 import 'builders/emoji_builder.dart';
 import 'builders/mindmap_builder.dart';
@@ -39,6 +40,7 @@ class MarkdownViewer extends StatefulWidget {
   final double topPadding;
   final DocumentSearchController? searchController;
   final String? fontFamily;
+  final ValueChanged<List<TocEntry>>? onTocChanged;
 
   const MarkdownViewer({
     required this.file,
@@ -50,11 +52,12 @@ class MarkdownViewer extends StatefulWidget {
     this.topPadding = 0,
     this.searchController,
     this.fontFamily,
+    this.onTocChanged,
     super.key,
   });
 
   @override
-  State<MarkdownViewer> createState() => _MarkdownViewerState();
+  State<MarkdownViewer> createState() => MarkdownViewerState();
 }
 
 Future<Map<String, Object>> _readMarkdownSnapshot(String path) async {
@@ -67,7 +70,8 @@ Future<Map<String, Object>> _readMarkdownSnapshot(String path) async {
   };
 }
 
-class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObserver {
+class MarkdownViewerState extends State<MarkdownViewer>
+    with WidgetsBindingObserver {
   String? _data;
   String? _error;
   DateTime? _lastModified;
@@ -85,6 +89,8 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   bool _isLargeDocument = false;
   bool _showFullContent = false;
   String? _fullData;
+  int _headingBuildIndex = 0;
+  final Map<int, GlobalKey> _headingKeys = {};
 
   static const int _largeDocumentLineThreshold = 2000;
   static const int _largeDocumentPreviewLines = 1500;
@@ -151,6 +157,9 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       _builderRegistry = _createBuilderRegistry();
       _handleSearchChanged();
     }
+    if (oldWidget.onTocChanged != widget.onTocChanged && _data != null) {
+      _notifyTocChanged(_data!);
+    }
     if (oldWidget.file.path != widget.file.path ||
         oldWidget.fontSize != widget.fontSize ||
         oldWidget.lineHeight != widget.lineHeight) {
@@ -180,22 +189,24 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       );
       final lineCount = '\n'.allMatches(data).length + 1;
       final isLarge = lineCount > _largeDocumentLineThreshold;
+      final displayData = isLarge && !_showFullContent
+          ? _truncateLines(data, _largeDocumentPreviewLines)
+          : data;
       if (mounted) {
         setState(() {
           _fullData = data;
           _isLargeDocument = isLarge;
-          if (isLarge && !_showFullContent) {
-            _data = _truncateLines(data, _largeDocumentPreviewLines);
-          } else {
+          if (!isLarge || _showFullContent) {
             _showFullContent = true;
-            _data = data;
           }
+          _data = displayData;
           _error = null;
           _contentVersion++;
           _cachedSearchText = null;
         });
       }
       _lastModified = modified;
+      _notifyTocChanged(displayData);
       _rebuildSearchTextCache();
       _updateSearchMatches();
     } catch (e) {
@@ -214,6 +225,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       _contentVersion++;
       _cachedSearchText = null;
     });
+    _notifyTocChanged(full);
     _rebuildSearchTextCache();
     _updateSearchMatches();
   }
@@ -248,6 +260,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       fontFamily: widget.fontFamily,
     );
     widget.searchController?.beginBuildPass();
+    _headingBuildIndex = 0;
 
     return ColoredBox(
       color: widget.readingPalette.background,
@@ -324,6 +337,10 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
   BuilderRegistry _createBuilderRegistry() {
     return BuilderRegistry()
       ..register(
+        'header',
+        TocHeaderBuilder(keyForHeading: _keyForHeading),
+      )
+      ..register(
         'text',
         SearchTextBuilder(searchController: widget.searchController),
       )
@@ -366,6 +383,38 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
       ..registerBlock(const MermaidPlugin())
       ..registerBlock(const MindmapPlugin());
     return _pluginRegistry!;
+  }
+
+  GlobalKey? _keyForHeading(HeaderNode node) {
+    if (node.level > 4 || node.content.trim().isEmpty) {
+      return null;
+    }
+    final index = _headingBuildIndex++;
+    return _headingKeys.putIfAbsent(index, () => GlobalKey());
+  }
+
+  Future<void> jumpToTocEntry(TocEntry entry) async {
+    final context = _headingKeys[entry.index]?.currentContext;
+    if (context == null) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      context,
+      duration: AppMotion.normal,
+      curve: AppMotion.emphasized,
+      alignment: 0.08,
+    );
+  }
+
+  void _notifyTocChanged(String data) {
+    try {
+      final entries = TocService.fromMarkdown(data, plugins: _plugins());
+      _headingKeys.removeWhere((index, _) => index >= entries.length);
+      widget.onTocChanged?.call(entries);
+    } catch (error) {
+      debugPrint('[MarkdownViewer] build toc failed: $error');
+      widget.onTocChanged?.call(const []);
+    }
   }
 
   void _handleSearchChanged() {
@@ -594,6 +643,48 @@ class _MarkdownViewerState extends State<MarkdownViewer> with WidgetsBindingObse
         ),
       ),
     );
+  }
+}
+
+class TocHeaderBuilder extends MarkdownWidgetBuilder {
+  const TocHeaderBuilder({required this.keyForHeading});
+
+  final GlobalKey? Function(HeaderNode node) keyForHeading;
+
+  @override
+  bool canBuild(MarkdownNode node) => node is HeaderNode;
+
+  @override
+  Widget build(
+    MarkdownNode node,
+    MarkdownStyleSheet styleSheet,
+    MarkdownRenderContext context,
+  ) {
+    final headerNode = node as HeaderNode;
+    final style = _styleForLevel(headerNode.level, styleSheet);
+    final inlineRenderer = context.inlineRenderer;
+    final content = headerNode.children != null &&
+            headerNode.children!.isNotEmpty &&
+            inlineRenderer != null
+        ? inlineRenderer(headerNode.children!, style)
+        : Text(headerNode.content, style: style);
+    final key = keyForHeading(headerNode);
+    if (key == null) {
+      return content;
+    }
+    return KeyedSubtree(key: key, child: content);
+  }
+
+  TextStyle? _styleForLevel(int level, MarkdownStyleSheet styleSheet) {
+    return switch (level) {
+      1 => styleSheet.h1Style,
+      2 => styleSheet.h2Style,
+      3 => styleSheet.h3Style,
+      4 => styleSheet.h4Style,
+      5 => styleSheet.h5Style,
+      6 => styleSheet.h6Style,
+      _ => styleSheet.textStyle,
+    };
   }
 }
 

@@ -170,8 +170,10 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<AppSettingsController>();
-    if (settings.liquidGlassEnabled) {
+    final liquidGlass = context.select<AppSettingsController, bool>(
+      (settings) => settings.liquidGlassEnabled,
+    );
+    if (liquidGlass) {
       return _LiquidBottomNav(
         currentIndex: widget.currentIndex,
         onChanged: widget.onChanged,

@@ -38,8 +38,9 @@ class GlassSegmentedControl<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final liquidGlass =
-        context.watch<AppSettingsController>().liquidGlassEnabled;
+    final liquidGlass = context.select<AppSettingsController, bool>(
+      (settings) => settings.liquidGlassEnabled,
+    );
     final selectedIndex = segments.indexWhere((segment) {
       return segment.value == value;
     });

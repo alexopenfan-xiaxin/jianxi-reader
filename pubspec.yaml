@@ -2,7 +2,7 @@ name: jianxi_reader
 description: "A quiet mobile reader for Markdown and HTML documents."
 publish_to: 'none'
 
-version: 2.5.7+157
+version: 2.6.0+160
 
 environment:
   sdk: ^3.8.0
@@ -22,7 +22,6 @@ dependencies:
   provider: ^6.1.5+1
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.1
-  open_file: ^3.5.11
   webview_flutter: ^4.13.1
   syntax_highlight: ^0.5.0
 

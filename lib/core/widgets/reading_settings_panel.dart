@@ -59,7 +59,28 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<AppSettingsController>();
+    final values = context.select<
+        AppSettingsController,
+        ({
+          ReadingTheme readingTheme,
+          ReadingMargin readingMargin,
+          double readingFontSize,
+          double readingLineHeight,
+          ReadingFontFamily readingFontFamily,
+          String? readingFontFamilyValue,
+          bool liquidGlassEnabled,
+          double readingHorizontalPadding,
+        })>((settings) => (
+          readingTheme: settings.readingTheme,
+          readingMargin: settings.readingMargin,
+          readingFontSize: settings.readingFontSize,
+          readingLineHeight: settings.readingLineHeight,
+          readingFontFamily: settings.readingFontFamily,
+          readingFontFamilyValue: settings.readingFontFamilyValue,
+          liquidGlassEnabled: settings.liquidGlassEnabled,
+          readingHorizontalPadding: settings.readingHorizontalPaddingValue,
+        ));
+    final settings = context.read<AppSettingsController>();
     final palette = context.palette;
     final readingPalette = settings.readingPalette(
       defaultBackground: palette.parchment,
@@ -75,8 +96,12 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
       children: [
         if (widget.showPreview) ...[
           _staggerItem(0, _ReadingPreviewPanel(
-            settings: settings,
             readingPalette: readingPalette,
+            fontSize: values.readingFontSize,
+            lineHeight: values.readingLineHeight,
+            fontFamily: values.readingFontFamilyValue,
+            horizontalPadding: values.readingHorizontalPadding,
+            liquidGlassEnabled: values.liquidGlassEnabled,
           )),
           const SizedBox(height: AppSpacing.lg),
         ],
@@ -93,7 +118,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   selectedIcon: Icons.check_rounded,
                 );
               }).toList(),
-              value: settings.readingTheme,
+              value: values.readingTheme,
               onChanged: settings.setReadingTheme,
             ),
           ],
@@ -112,7 +137,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   selectedIcon: Icons.check_rounded,
                 );
               }).toList(),
-              value: settings.readingMargin,
+              value: values.readingMargin,
               onChanged: settings.setReadingMargin,
             ),
           ],
@@ -123,15 +148,18 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
           children: [
             _SettingLabel(text: '字号'),
             const SizedBox(height: AppSpacing.sm),
-            GlassSegmentedControl<ReadingFontSize>(
-              segments: ReadingFontSize.values.map((fontSize) {
-                return GlassSegment(
-                  value: fontSize,
-                  label: fontSize.label,
-                  selectedIcon: Icons.check_rounded,
-                );
-              }).toList(),
-              value: settings.readingFontSize,
+            _ReadingValueSlider(
+              value: values.readingFontSize,
+              min: AppSettingsController.readingFontSizeMin,
+              max: AppSettingsController.readingFontSizeMax,
+              divisions: 28,
+              valueLabel: '${values.readingFontSize.toStringAsFixed(1)} px',
+              presets: AppSettingsController.readingScalePresets
+                  .map((preset) => _ReadingSliderPreset(
+                        label: preset.label,
+                        value: preset.fontSize,
+                      ))
+                  .toList(),
               onChanged: settings.setReadingFontSize,
             ),
           ],
@@ -142,15 +170,18 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
           children: [
             _SettingLabel(text: '行距'),
             const SizedBox(height: AppSpacing.sm),
-            GlassSegmentedControl<ReadingLineHeight>(
-              segments: ReadingLineHeight.values.map((lineHeight) {
-                return GlassSegment(
-                  value: lineHeight,
-                  label: lineHeight.label,
-                  selectedIcon: Icons.check_rounded,
-                );
-              }).toList(),
-              value: settings.readingLineHeight,
+            _ReadingValueSlider(
+              value: values.readingLineHeight,
+              min: AppSettingsController.readingLineHeightMin,
+              max: AppSettingsController.readingLineHeightMax,
+              divisions: 40,
+              valueLabel: values.readingLineHeight.toStringAsFixed(2),
+              presets: AppSettingsController.readingScalePresets
+                  .map((preset) => _ReadingSliderPreset(
+                        label: preset.label,
+                        value: preset.lineHeight,
+                      ))
+                  .toList(),
               onChanged: settings.setReadingLineHeight,
             ),
           ],
@@ -169,7 +200,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   selectedIcon: Icons.check_rounded,
                 );
               }).toList(),
-              value: settings.readingFontFamily,
+              value: values.readingFontFamily,
               onChanged: settings.setReadingFontFamily,
             ),
           ],
@@ -181,12 +212,20 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
 
 class _ReadingPreviewPanel extends StatelessWidget {
   const _ReadingPreviewPanel({
-    required this.settings,
     required this.readingPalette,
+    required this.fontSize,
+    required this.lineHeight,
+    required this.horizontalPadding,
+    required this.liquidGlassEnabled,
+    this.fontFamily,
   });
 
-  final AppSettingsController settings;
   final ReadingPalette readingPalette;
+  final double fontSize;
+  final double lineHeight;
+  final double horizontalPadding;
+  final bool liquidGlassEnabled;
+  final String? fontFamily;
 
   @override
   Widget build(BuildContext context) {
@@ -196,9 +235,9 @@ class _ReadingPreviewPanel extends StatelessWidget {
         Text(
           '简兮简兮，方将万舞。\n\n这是一段 Markdown 正文预览。\n可观察当前主题、字号、行距与页边距。',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontSize: settings.readingFontSizeValue,
-                height: settings.readingLineHeightValue,
-                fontFamily: settings.readingFontFamilyValue,
+                fontSize: fontSize,
+                height: lineHeight,
+                fontFamily: fontFamily,
                 color: readingPalette.foreground,
                 letterSpacing: 0,
               ),
@@ -214,11 +253,11 @@ class _ReadingPreviewPanel extends StatelessWidget {
       ],
     );
 
-    if (settings.liquidGlassEnabled) {
+    if (liquidGlassEnabled) {
       final dark = Theme.of(context).brightness == Brightness.dark;
       return LiquidGlassSurface(
         padding: EdgeInsets.symmetric(
-          horizontal: settings.readingHorizontalPaddingValue,
+          horizontal: horizontalPadding,
           vertical: AppSpacing.md,
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
@@ -243,7 +282,7 @@ class _ReadingPreviewPanel extends StatelessWidget {
       duration: AppMotion.normal,
       width: double.infinity,
       padding: EdgeInsets.symmetric(
-        horizontal: settings.readingHorizontalPaddingValue,
+        horizontal: horizontalPadding,
         vertical: AppSpacing.md,
       ),
       decoration: BoxDecoration(
@@ -252,6 +291,96 @@ class _ReadingPreviewPanel extends StatelessWidget {
         border: Border.all(color: readingPalette.border),
       ),
       child: content,
+    );
+  }
+}
+
+class _ReadingSliderPreset {
+  const _ReadingSliderPreset({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final double value;
+}
+
+class _ReadingValueSlider extends StatelessWidget {
+  const _ReadingValueSlider({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.valueLabel,
+    required this.presets,
+    required this.onChanged,
+  });
+
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String valueLabel;
+  final List<_ReadingSliderPreset> presets;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: value.clamp(min, max).toDouble(),
+                min: min,
+                max: max,
+                divisions: divisions,
+                label: valueLabel,
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 64,
+              child: Text(
+                valueLabel,
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: palette.ink,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: presets.map((preset) {
+            final selected = (preset.value - value).abs() < 0.02;
+            return ActionChip(
+              label: Text(preset.label),
+              avatar: selected
+                  ? const Icon(Icons.check_rounded, size: 16)
+                  : null,
+              backgroundColor: selected
+                  ? AppColors.primary.withOpacity(0.12)
+                  : palette.surface.withOpacity(0.72),
+              side: BorderSide(
+                color: selected
+                    ? AppColors.primary.withOpacity(0.28)
+                    : palette.hairline,
+              ),
+              onPressed: () => onChanged(preset.value),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

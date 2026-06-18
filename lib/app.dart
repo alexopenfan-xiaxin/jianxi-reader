@@ -23,7 +23,7 @@ class JianxiReaderApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<LibraryController>(
           create: (_) => LibraryController(
-            documentService: documentService ?? const DocumentFileService(),
+            documentService: documentService ?? DocumentFileService(),
           )..loadDocuments(),
         ),
       ],

@@ -19,8 +19,19 @@ import 'document_search_controller.dart';
 import 'html_document_view.dart';
 import 'markdown_viewer.dart';
 import 'smart_scrollbar.dart';
+import 'toc_drawer.dart';
+import 'toc_service.dart';
 
 enum _ReaderMenuAction { rename, remove }
+
+typedef _ReaderDisplaySettings = ({
+  ReadingTheme readingTheme,
+  bool liquidGlassEnabled,
+  double fontSize,
+  double lineHeight,
+  double horizontalPadding,
+  String? fontFamily,
+});
 
 class ReaderPage extends StatefulWidget {
   const ReaderPage({required this.document, super.key});
@@ -40,12 +51,15 @@ class _ReaderPageState extends State<ReaderPage> {
   final _searchFocusNode = FocusNode();
   final _smartScrollbarKey = GlobalKey<SmartScrollbarState>();
   final _htmlViewKey = GlobalKey<HtmlDocumentViewState>();
+  final _markdownViewKey = GlobalKey<MarkdownViewerState>();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showGlass = false;
   bool _documentReady = false;
   bool _entranceSettled = false;
   bool _isPreparingDocument = true;
   bool _isSearching = false;
   String? _prepareError;
+  List<TocEntry> _tocEntries = const [];
 
   // --- Reading progress ---
   double? _savedProgressRatio;
@@ -198,8 +212,17 @@ class _ReaderPageState extends State<ReaderPage> {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight;
-    final settings = context.watch<AppSettingsController>();
-    final readingPalette = settings.readingPalette(
+    final settings = context.select<AppSettingsController, _ReaderDisplaySettings>(
+      (settings) => (
+        readingTheme: settings.readingTheme,
+        liquidGlassEnabled: settings.liquidGlassEnabled,
+        fontSize: settings.readingFontSizeValue,
+        lineHeight: settings.readingLineHeightValue,
+        horizontalPadding: settings.readingHorizontalPaddingValue,
+        fontFamily: settings.readingFontFamilyValue,
+      ),
+    );
+    final readingPalette = context.read<AppSettingsController>().readingPalette(
       defaultBackground: palette.parchment,
       defaultForeground: palette.ink,
       defaultMuted: palette.muted,
@@ -210,8 +233,13 @@ class _ReaderPageState extends State<ReaderPage> {
     final showGlassAppBar = settings.liquidGlassEnabled || _showGlass;
 
     return Scaffold(
+      key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       backgroundColor: readingPalette.background,
+      endDrawer: TocDrawer(
+        entries: _tocEntries,
+        onSelected: _jumpToTocEntry,
+      ),
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -296,6 +324,11 @@ class _ReaderPageState extends State<ReaderPage> {
               ]
             : [
                 IconButton(
+                  tooltip: '文档目录',
+                  onPressed: _tocEntries.isEmpty ? null : _openTocDrawer,
+                  icon: const Icon(Icons.toc_rounded),
+                ),
+                IconButton(
                   tooltip: '文档内搜索',
                   onPressed: _openSearch,
                   icon: const Icon(Icons.search_rounded),
@@ -362,7 +395,7 @@ class _ReaderPageState extends State<ReaderPage> {
 
   Widget _buildBody(
     double topPadding,
-    AppSettingsController settings,
+    _ReaderDisplaySettings settings,
     ReadingPalette readingPalette,
   ) {
     if (_isPreparingDocument) {
@@ -381,9 +414,11 @@ class _ReaderPageState extends State<ReaderPage> {
       settings: settings,
       readingPalette: readingPalette,
       searchController: _searchController,
+      markdownViewKey: _markdownViewKey,
       htmlViewKey: _htmlViewKey,
       onHtmlScroll: _handleHtmlScroll,
       onHtmlPageReady: _onHtmlPageReady,
+      onTocChanged: _handleTocChanged,
     );
 
     // HTML uses WebView internal scrolling — no Flutter scrollbar.
@@ -419,6 +454,7 @@ class _ReaderPageState extends State<ReaderPage> {
         setState(() {
           _document = opened;
           _prepareError = null;
+          _tocEntries = const [];
           _documentReady = true;
           _isPreparingDocument = !_entranceSettled;
         });
@@ -453,6 +489,29 @@ class _ReaderPageState extends State<ReaderPage> {
     _searchController.clear();
     _searchFocusNode.unfocus();
     setState(() => _isSearching = false);
+  }
+
+  void _handleTocChanged(List<TocEntry> entries) {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _tocEntries = entries);
+  }
+
+  void _openTocDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  Future<void> _jumpToTocEntry(TocEntry entry) async {
+    await Navigator.of(context).maybePop();
+    if (!mounted) {
+      return;
+    }
+    if (_isHtmlDocument) {
+      await _htmlViewKey.currentState?.jumpToTocEntry(entry);
+      return;
+    }
+    await _markdownViewKey.currentState?.jumpToTocEntry(entry);
   }
 
   Future<void> _handleAction(_ReaderMenuAction action) async {
@@ -585,18 +644,27 @@ class _ReaderProgressBarState extends State<_ReaderProgressBar>
 
   @override
   Widget build(BuildContext context) {
+    final percent = (_displayProgress * 100).round();
     if (_displayProgress <= 0) {
-      return const SizedBox(height: 3);
+      return Semantics(
+        label: '阅读进度',
+        value: '0%',
+        child: const SizedBox(height: 3),
+      );
     }
-    return SizedBox(
-      height: 3,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: _displayProgress,
-          heightFactor: 1,
-          child: ColoredBox(
-            color: AppColors.primary.withOpacity(0.70),
+    return Semantics(
+      label: '阅读进度',
+      value: '$percent%',
+      child: SizedBox(
+        height: 3,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: _displayProgress,
+            heightFactor: 1,
+            child: ColoredBox(
+              color: AppColors.primary.withOpacity(0.70),
+            ),
           ),
         ),
       ),
@@ -685,20 +753,24 @@ class _ReaderContent extends StatelessWidget {
     required this.searchController,
     this.scrollController,
     this.topPadding = 0,
+    this.markdownViewKey,
     this.htmlViewKey,
     this.onHtmlScroll,
     this.onHtmlPageReady,
+    this.onTocChanged,
   });
 
   final DocumentEntry document;
-  final AppSettingsController settings;
+  final _ReaderDisplaySettings settings;
   final ReadingPalette readingPalette;
   final DocumentSearchController searchController;
   final ScrollController? scrollController;
   final double topPadding;
+  final GlobalKey<MarkdownViewerState>? markdownViewKey;
   final GlobalKey<HtmlDocumentViewState>? htmlViewKey;
   final ValueChanged<double>? onHtmlScroll;
   final VoidCallback? onHtmlPageReady;
+  final ValueChanged<List<TocEntry>>? onTocChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -709,27 +781,30 @@ class _ReaderContent extends StatelessWidget {
 
     return switch (document.type) {
       DocumentType.markdown => MarkdownViewer(
+          key: markdownViewKey,
           file: file,
-          fontSize: settings.readingFontSizeValue,
-          lineHeight: settings.readingLineHeightValue,
+          fontSize: settings.fontSize,
+          lineHeight: settings.lineHeight,
           readingPalette: readingPalette,
-          horizontalPadding: settings.readingHorizontalPaddingValue,
+          horizontalPadding: settings.horizontalPadding,
           scrollController: scrollController,
           topPadding: topPadding,
           searchController: searchController,
-          fontFamily: settings.readingFontFamilyValue,
+          fontFamily: settings.fontFamily,
+          onTocChanged: onTocChanged,
         ),
       DocumentType.html => HtmlDocumentView(
           key: htmlViewKey,
           file: file,
-          fontSize: settings.readingFontSizeValue,
-          lineHeight: settings.readingLineHeightValue,
+          fontSize: settings.fontSize,
+          lineHeight: settings.lineHeight,
           readingPalette: readingPalette,
-          horizontalPadding: settings.readingHorizontalPaddingValue,
+          horizontalPadding: settings.horizontalPadding,
           topPadding: topPadding,
           searchController: searchController,
           onScroll: onHtmlScroll,
           onPageReady: onHtmlPageReady,
+          onTocChanged: onTocChanged,
         ),
     };
   }

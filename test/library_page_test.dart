@@ -14,7 +14,6 @@ class FakeDocumentService implements DocumentLibraryService {
 
   final List<DocumentEntry> _documents;
   final List<DocumentEntry> _pickedDocuments;
-  final Map<String, double> _readingOffsets = {};
   int scanCount = 0;
 
   @override
@@ -56,17 +55,12 @@ class FakeDocumentService implements DocumentLibraryService {
       tags: document.tags,
     );
     _documents[index] = renamed;
-    final offset = _readingOffsets.remove(document.path);
-    if (offset != null) {
-      _readingOffsets[renamed.path] = offset;
-    }
     return renamed;
   }
 
   @override
   Future<void> removeDocument(DocumentEntry document) async {
     _documents.removeWhere((entry) => entry.path == document.path);
-    _readingOffsets.remove(document.path);
   }
 
   @override
@@ -79,17 +73,6 @@ class FakeDocumentService implements DocumentLibraryService {
     return openedAt;
   }
 
-  @override
-  Future<double> loadReadingOffset(DocumentEntry document) async {
-    return _readingOffsets[document.path] ?? 0;
-  }
-
-  @override
-  Future<void> saveReadingOffset(DocumentEntry document, double offset) async {
-    _readingOffsets[document.path] = offset;
-  }
-
-  @override
   Future<List<String>> loadTags() async {
     final tags = <String>{};
     for (final document in _documents) {

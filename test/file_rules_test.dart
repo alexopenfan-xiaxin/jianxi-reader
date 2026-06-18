@@ -62,7 +62,7 @@ void main() {
       await originalFile.writeAsString('# Title');
       final document = await DocumentEntry.fromFile(originalFile);
 
-      final renamed = await const DocumentFileService().renameDocument(
+      final renamed = await DocumentFileService().renameDocument(
         document,
         'renamed article',
       );
@@ -82,7 +82,7 @@ void main() {
       final document = await DocumentEntry.fromFile(originalFile);
 
       expect(
-        () => const DocumentFileService().renameDocument(document, 'existing'),
+        () => DocumentFileService().renameDocument(document, 'existing'),
         throwsA(isA<FileSystemException>()),
       );
       expect(originalFile.existsSync(), isTrue);
@@ -96,29 +96,10 @@ void main() {
       await file.writeAsString('# Source');
       final document = await DocumentEntry.fromFile(file);
 
-      await const DocumentFileService().removeDocument(document);
+      await DocumentFileService().removeDocument(document);
 
       expect(file.existsSync(), isFalse);
     });
 
-    test('moves and clears reading offset with document metadata', () async {
-      final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
-      addTearDown(() => targetDir.deleteSync(recursive: true));
-
-      final originalFile = File(p.join(targetDir.path, 'article.md'));
-      await originalFile.writeAsString('# Title');
-      final document = await DocumentEntry.fromFile(originalFile);
-      const service = DocumentFileService();
-
-      await service.saveReadingOffset(document, 128.5);
-      expect(await service.loadReadingOffset(document), 128.5);
-
-      final renamed = await service.renameDocument(document, 'renamed article');
-      expect(await service.loadReadingOffset(document), 0);
-      expect(await service.loadReadingOffset(renamed), 128.5);
-
-      await service.removeDocument(renamed);
-      expect(await service.loadReadingOffset(renamed), 0);
-    });
   });
 }

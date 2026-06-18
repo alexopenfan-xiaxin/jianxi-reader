@@ -9,6 +9,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../core/app_settings_controller.dart';
 import 'document_search_controller.dart';
 import 'html_styler.dart';
+import 'toc_service.dart';
 
 /// Top-level function for [compute] to run HTML styling in an isolate.
 String _buildHtmlInIsolate(Map<String, dynamic> args) {
@@ -42,6 +43,7 @@ class HtmlDocumentView extends StatefulWidget {
     this.searchController,
     this.onScroll,
     this.onPageReady,
+    this.onTocChanged,
     super.key,
   });
 
@@ -59,6 +61,8 @@ class HtmlDocumentView extends StatefulWidget {
 
   /// Called once after the page finishes loading and scripts are ready.
   final VoidCallback? onPageReady;
+
+  final ValueChanged<List<TocEntry>>? onTocChanged;
 
   @override
   State<HtmlDocumentView> createState() => HtmlDocumentViewState();
@@ -197,6 +201,22 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 })();
 ''';
 
+  static const _tocScript = r'''
+(function() {
+  const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4'));
+  return JSON.stringify(headings.map(function(heading, index) {
+    if (!heading.id) {
+      heading.id = 'jianxi-heading-' + index;
+    }
+    return {
+      id: heading.id,
+      level: Number(heading.tagName.substring(1)),
+      title: (heading.innerText || heading.textContent || '').trim()
+    };
+  }));
+})();
+''';
+
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isSearchScriptReady = false;
@@ -304,6 +324,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
     // The scroll bridge script is embedded in the HTML content,
     // so it's already active. Mark as ready and run backup injection.
     _isScrollBridgeReady = true;
+    await _loadToc();
     await _runSearch();
     widget.onPageReady?.call();
   }
@@ -343,6 +364,35 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       );
     } catch (error) {
       debugPrint('[HtmlDocumentView] jump to ratio failed: $error');
+    }
+  }
+
+  Future<void> jumpToTocEntry(TocEntry entry) async {
+    final id = entry.htmlId;
+    if (id == null || id.isEmpty) {
+      return;
+    }
+    try {
+      await _controller.runJavaScript(
+        'var h=document.getElementById(${jsonEncode(id)});'
+        'if(h){h.scrollIntoView({block:"start",inline:"nearest"});}',
+      );
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] jump to toc failed: $error');
+    }
+  }
+
+  Future<void> _loadToc() async {
+    final callback = widget.onTocChanged;
+    if (callback == null || _isLoading) {
+      return;
+    }
+    try {
+      final result = await _controller.runJavaScriptReturningResult(_tocScript);
+      callback(TocService.fromHtmlJson(result));
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] build toc failed: $error');
+      callback(const []);
     }
   }
 
