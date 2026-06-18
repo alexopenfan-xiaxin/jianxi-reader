@@ -779,7 +779,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=156';
+      'https://alexxia.5imh.xyz/update/index.php?request&local=157';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -819,6 +819,7 @@ class _AboutPageState extends State<AboutPage> {
         final newVersion = response.headers.value('x-apk-version');
         client.close(force: true);
         if (!mounted) return;
+        setState(() => _isChecking = false);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => LiquidGlassDialog(
@@ -1177,15 +1178,6 @@ class _AboutPageState extends State<AboutPage> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    '为 Markdown 与 HTML 文档设计的本地阅读器，专注于安静的书库管理、稳定的原文件刷新和舒适的阅读显示。',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: palette.ink,
-                          height: 1.55,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                   _AboutLink(
                     text: '点击加入QQ交流群',
                     onTap: () => _openExternalLink(

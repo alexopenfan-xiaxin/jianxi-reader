@@ -2224,7 +2224,7 @@ Future<void> _openReader(BuildContext context, DocumentEntry document) {
 String _documentSummary(DocumentEntry document) {
   final timePrefix = document.recentOpenedAt == null ? '修改' : '最近阅读';
   final time = document.recentOpenedAt ?? document.modifiedAt;
-  return '${document.sizeLabel} · $timePrefix ${_timeLabel(time)}';
+  return '$timePrefix ${_timeLabel(time)}';
 }
 
 String _timeLabel(DateTime dateTime) {
