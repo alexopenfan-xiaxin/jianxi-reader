@@ -215,14 +215,26 @@ class _ReadingPreviewPanel extends StatelessWidget {
     );
 
     if (settings.liquidGlassEnabled) {
-      return LiquidGlassPanel(
+      final dark = Theme.of(context).brightness == Brightness.dark;
+      return LiquidGlassSurface(
         padding: EdgeInsets.symmetric(
           horizontal: settings.readingHorizontalPaddingValue,
           vertical: AppSpacing.md,
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         color: readingPalette.background.withOpacity(0.42),
-        borderColor: readingPalette.border.withOpacity(0.55),
+        borderColor:
+            dark ? readingPalette.border.withOpacity(0.55) : Colors.transparent,
+        chromaticEdge: dark,
+        edgeHighlight: dark,
+        innerHighlight: dark,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(dark ? 0.12 : 0.03),
+            blurRadius: dark ? 22 : 12,
+            offset: Offset(0, dark ? 10 : 5),
+          ),
+        ],
         child: content,
       );
     }

@@ -146,16 +146,21 @@ class _GlassTrack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     if (liquidGlass) {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
-        borderColor: Colors.white.withOpacity(0.34),
+        borderColor:
+            dark ? Colors.white.withOpacity(0.34) : Colors.transparent,
+        chromaticEdge: dark,
+        edgeHighlight: dark,
+        innerHighlight: dark,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(dark ? 0.10 : 0.03),
+            blurRadius: dark ? 22 : 12,
+            offset: Offset(0, dark ? 10 : 5),
           ),
         ],
         child: const SizedBox.expand(),
@@ -190,17 +195,22 @@ class _GlassThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     if (liquidGlass) {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: AppColors.primary.withOpacity(0.10),
-        borderColor: AppColors.primary.withOpacity(0.22),
-        tintPrimary: true,
+        borderColor:
+            dark ? AppColors.primary.withOpacity(0.22) : Colors.transparent,
+        tintPrimary: dark,
+        chromaticEdge: dark,
+        edgeHighlight: dark,
+        innerHighlight: dark,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
+            color: AppColors.primary.withOpacity(dark ? 0.18 : 0.08),
+            blurRadius: dark ? 18 : 10,
+            offset: Offset(0, dark ? 7 : 4),
           ),
         ],
         child: const SizedBox.expand(),
