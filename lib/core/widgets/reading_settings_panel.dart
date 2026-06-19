@@ -39,7 +39,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
 
   Widget _staggerItem(int index, Widget child) {
     if (!widget.showPreview) return child;
-    final totalItems = 6;
+    final totalItems = 7;
     final delay = index / totalItems;
     final animation = CurvedAnimation(
       parent: _staggerController,
@@ -205,6 +205,18 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
             ),
           ],
         )),
+        const SizedBox(height: AppSpacing.lg),
+        _staggerItem(
+          widget.showPreview ? 6 : 5,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: settings.resetReadingSettings,
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('恢复默认阅读设置'),
+            ),
+          ),
+        ),
       ],
     );
   }

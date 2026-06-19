@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_settings_controller.dart';
@@ -624,6 +625,10 @@ class MarkdownViewerState extends State<MarkdownViewer>
 
   void _showImagePreview(
       BuildContext context, String url, String? alt, String? title) {
+    final caption = [
+      if (alt != null && alt.trim().isNotEmpty) alt.trim(),
+      if (title != null && title.trim().isNotEmpty) title.trim(),
+    ].join(' · ');
     Navigator.of(context).push(
       appPageRoute<void>(
         builder: (ctx) => Scaffold(
@@ -631,15 +636,67 @@ class MarkdownViewerState extends State<MarkdownViewer>
           appBar: AppBar(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
-            title: Text(alt ?? title ?? ''),
+            title: Text(caption.isEmpty ? '图片预览' : caption),
+            actions: [
+              IconButton(
+                tooltip: '复制图片路径',
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: url));
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('已复制图片路径')),
+                  );
+                },
+                icon: const Icon(Icons.copy_rounded),
+              ),
+            ],
           ),
-          body: Center(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4,
-              child: MarkdownPreviewImage(url: url),
-            ),
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4,
+                  child: MarkdownPreviewImage(url: url),
+                ),
+              ),
+              Positioned(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: AppSpacing.md,
+                child: _ImagePreviewInfo(url: url, caption: caption),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImagePreviewInfo extends StatelessWidget {
+  const _ImagePreviewInfo({required this.url, required this.caption});
+
+  final String url;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = caption.isEmpty ? url : '$caption\n$url';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.62),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Text(
+          text,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white,
+                letterSpacing: 0,
+              ),
         ),
       ),
     );

@@ -4,9 +4,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/app_settings_controller.dart';
+import '../../core/file_rules.dart';
 import 'document_search_controller.dart';
 import 'html_styler.dart';
 import 'toc_service.dart';
@@ -242,6 +244,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       )
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: _handleNavigationRequest,
           onPageFinished: (_) {
             if (mounted) {
               setState(() => _isLoading = false);
@@ -317,6 +320,83 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       return;
     }
     await _controller.loadHtmlString(html, baseUrl: baseUrl);
+  }
+
+  NavigationDecision _handleNavigationRequest(NavigationRequest request) {
+    final uri = Uri.tryParse(request.url);
+    if (uri == null) {
+      _showNavigationMessage('无法识别的链接');
+      return NavigationDecision.prevent;
+    }
+    if (uri.scheme == 'about' || uri.toString() == widget.file.uri.toString()) {
+      return NavigationDecision.navigate;
+    }
+    if (uri.scheme == 'file') {
+      final path = uri.toFilePath();
+      if (_isSameDirectoryHtml(path)) {
+        return NavigationDecision.navigate;
+      }
+      if (DocumentFileRules.isSupportedPath(path)) {
+        _showNavigationMessage('暂不支持从 HTML 内跳转到其他文档');
+      } else {
+        _showNavigationMessage('不支持的本地链接');
+      }
+      return NavigationDecision.prevent;
+    }
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      unawaited(_confirmOpenExternal(uri));
+      return NavigationDecision.prevent;
+    }
+    if (uri.scheme == 'mailto' || uri.scheme == 'tel') {
+      unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+      return NavigationDecision.prevent;
+    }
+    if (uri.scheme.isEmpty) {
+      return NavigationDecision.navigate;
+    }
+    _showNavigationMessage('不支持的链接类型：${uri.scheme}');
+    return NavigationDecision.prevent;
+  }
+
+  bool _isSameDirectoryHtml(String path) {
+    return File(path).parent.path == widget.file.parent.path &&
+        (path.toLowerCase().endsWith('.html') ||
+            path.toLowerCase().endsWith('.htm'));
+  }
+
+  Future<void> _confirmOpenExternal(Uri uri) async {
+    if (!mounted) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('打开外部链接'),
+        content: Text(uri.toString()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('打开'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _showNavigationMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _finishPageLoad() async {

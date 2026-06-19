@@ -497,112 +497,114 @@ class _DocumentTileState extends State<_DocumentTile>
           child: child,
         ),
         child: AppCard(
-        onTap: widget.selectionActive
-            ? () => widget.onToggleSelection(widget.document)
-            : () => _openDocument(context),
-        onLongPress: () {
-          if (widget.selectionActive) {
-            widget.onToggleSelection(widget.document);
-          } else {
-            widget.onStartSelection(widget.document);
-          }
-        },
-        padding: const EdgeInsets.all(AppSpacing.md),
-        forceClassic: forceClassicCard,
-        child: Stack(
-          children: [
-            Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Row(
+          onTap: widget.selectionActive
+              ? () => widget.onToggleSelection(widget.document)
+              : () => _openDocument(context),
+          onLongPress: () {
+            if (widget.selectionActive) {
+              widget.onToggleSelection(widget.document);
+            } else {
+              widget.onStartSelection(widget.document);
+            }
+          },
+          padding: const EdgeInsets.all(AppSpacing.md),
+          forceClassic: forceClassicCard,
+          child: Stack(
+            children: [
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Hero(
-                    tag: 'doc_badge_${widget.document.path}',
-                    child: _TypeBadge(document: widget.document),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            if (widget.document.isReferenced)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  right: AppSpacing.xxs,
-                                ),
-                                child: Icon(
-                                  Icons.link_rounded,
-                                  size: 14,
-                                  color: palette.muted,
-                                ),
-                              ),
-                            if (widget.document.pinned)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  right: AppSpacing.xxs,
-                                ),
-                                child: Icon(
-                                  Icons.push_pin_rounded,
-                                  size: 14,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            Flexible(
-                              child: Text(
-                                widget.document.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                          ],
+                        Hero(
+                          tag: 'doc_badge_${widget.document.path}',
+                          child: _TypeBadge(document: widget.document),
                         ),
-                        _DocumentMetaRow(
-                          tags: widget.document.tags,
-                          summary: _documentSummary(widget.document),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  if (widget.document.isReferenced)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: AppSpacing.xxs,
+                                      ),
+                                      child: Icon(
+                                        Icons.link_rounded,
+                                        size: 14,
+                                        color: palette.muted,
+                                      ),
+                                    ),
+                                  if (widget.document.pinned)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: AppSpacing.xxs,
+                                      ),
+                                      child: Icon(
+                                        Icons.push_pin_rounded,
+                                        size: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      widget.document.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _DocumentMetaRow(
+                                tags: widget.document.tags,
+                                summary: _documentSummary(widget.document),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  if (!widget.selectionActive) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      tooltip: '文档操作',
+                      onPressed: () async {
+                        final action = await _showGlassDocumentMenu(
+                          context,
+                          widget.document,
+                        );
+                        if (action != null && context.mounted) {
+                          await _handleAction(context, action);
+                        }
+                      },
+                      icon: const Icon(Icons.more_horiz_rounded),
+                    ),
+                  ],
                 ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            IconButton(
-              tooltip: '文档操作',
-              onPressed: widget.selectionActive
-                  ? null
-                  : () async {
-                      final action = await _showGlassDocumentMenu(
-                        context,
-                        widget.document,
-                      );
-                      if (action != null && context.mounted) {
-                        await _handleAction(context, action);
-                      }
-                    },
-              icon: const Icon(Icons.more_horiz_rounded),
-            ),
-          ],
-        ),
-            if (widget.selectionActive)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Icon(
-                  widget.selected
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color: widget.selected ? AppColors.primary : palette.muted,
+              if (widget.selectionActive)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Icon(
+                    widget.selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: widget.selected ? AppColors.primary : palette.muted,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

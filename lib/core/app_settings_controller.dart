@@ -362,6 +362,20 @@ class AppSettingsController extends ChangeNotifier {
     await _persist(_readingFontFamilyKey, fontFamily.name);
   }
 
+  Future<void> resetReadingSettings() async {
+    _readingTheme = ReadingTheme.defaultTheme;
+    _readingMargin = ReadingMargin.comfortable;
+    _readingFontSize = readingFontSizeDefault;
+    _readingLineHeight = readingLineHeightDefault;
+    _readingFontFamily = ReadingFontFamily.system;
+    notifyListeners();
+    await _persist(_readingThemeKey, _readingTheme.name);
+    await _persist(_readingMarginKey, _readingMargin.name);
+    await _persistDouble(_readingFontSizeKey, _readingFontSize);
+    await _persistDouble(_readingLineHeightKey, _readingLineHeight);
+    await _persist(_readingFontFamilyKey, _readingFontFamily.name);
+  }
+
   Future<void> setAppFontFamily(AppFontFamily fontFamily) async {
     if (_appFontFamily == fontFamily) {
       return;

@@ -261,7 +261,10 @@ class _ReaderPageState extends State<ReaderPage> {
       backgroundColor: readingPalette.background,
       endDrawer: TocDrawer(
         entries: _tocEntries,
+        documentName: _document.name,
+        progressRatio: _progressController.ratio,
         onSelected: _jumpToTocEntry,
+        onBackToTop: _jumpToTop,
       ),
       appBar: AppBar(
         elevation: 0,
@@ -538,6 +541,23 @@ class _ReaderPageState extends State<ReaderPage> {
     await _markdownViewKey.currentState?.jumpToTocEntry(entry);
   }
 
+  Future<void> _jumpToTop() async {
+    await Navigator.of(context).maybePop();
+    if (_isHtmlDocument) {
+      await _htmlViewKey.currentState?.jumpToRatio(0);
+      _progressController.update(0);
+      return;
+    }
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    await _scrollController.animateTo(
+      0,
+      duration: AppMotion.normal,
+      curve: AppMotion.emphasized,
+    );
+  }
+
   Future<void> _handleAction(_ReaderMenuAction action) async {
     switch (action) {
       case _ReaderMenuAction.rename:
@@ -709,9 +729,11 @@ class _ReaderSearchCount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = controller.hasQuery
-        ? '${controller.hasMatches ? controller.currentIndex + 1 : 0}/${controller.matchCount}'
-        : '0/0';
+    final label = controller.hasQuery && !controller.hasMatches
+        ? '无结果'
+        : controller.hasQuery
+            ? '${controller.currentIndex + 1}/${controller.matchCount}'
+            : '0/0';
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
