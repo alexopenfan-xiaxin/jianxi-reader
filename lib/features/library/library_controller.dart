@@ -111,8 +111,21 @@ class LibraryController extends ChangeNotifier {
   Future<void> loadDocuments() async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
 
+    // Phase 1: show cached results immediately if available.
+    try {
+      final cached = await documentService.scanLibraryCached();
+      if (cached.isNotEmpty) {
+        _allDocuments = cached;
+        await _loadTags();
+        _invalidateCache();
+        notifyListeners();
+      }
+    } catch (error) {
+      debugPrint('[LibraryController] cached scan failed: $error');
+    }
+
+    // Phase 2: full background refresh.
     try {
       _allDocuments = await documentService.scanLibrary();
       await _loadTags();

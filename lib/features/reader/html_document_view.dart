@@ -124,7 +124,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
     return nodes;
   }
 
-  function highlightNode(node, query) {
+  function highlightNode(node, query, maxHits) {
     const text = node.nodeValue || '';
     const lowerText = text.toLocaleLowerCase();
     const lowerQuery = query.toLocaleLowerCase();
@@ -134,6 +134,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
     const fragment = document.createDocumentFragment();
     while (match !== -1) {
+      if (hits.length >= maxHits) break;
       if (match > start) {
         fragment.appendChild(document.createTextNode(text.slice(start, match)));
       }
@@ -152,15 +153,20 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
     node.parentNode.replaceChild(fragment, node);
   }
 
-  function search(query) {
+  function search(query, maxHits) {
     clear();
+    maxHits = maxHits || 200;
     const cleanQuery = (query || '').trim();
-    if (!cleanQuery) return 0;
-    for (const node of collectTextNodes(document.querySelector('.reader-shell') || document.body)) {
-      highlightNode(node, cleanQuery);
+    if (!cleanQuery) return JSON.stringify({count: 0, truncated: false});
+    const nodes = collectTextNodes(document.querySelector('.reader-shell') || document.body);
+    let truncated = false;
+    for (const node of nodes) {
+      if (hits.length >= maxHits) { truncated = true; break; }
+      highlightNode(node, cleanQuery, maxHits);
     }
+    if (hits.length >= maxHits) truncated = true;
     goTo(0);
-    return hits.length;
+    return JSON.stringify({count: hits.length, truncated: truncated});
   }
 
   function goTo(nextIndex) {
@@ -225,6 +231,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   bool _isScrollBridgeReady = false;
   bool _isApplyingSearch = false;
   String _lastAppliedSearchQuery = '';
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -276,6 +283,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     widget.searchController?.removeListener(_handleSearchChanged);
     super.dispose();
   }
@@ -410,15 +418,16 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   }
 
   void _handleSearchChanged() {
-    if (_isApplyingSearch) {
-      return;
-    }
-    final query = widget.searchController?.normalizedQuery ?? '';
-    if (query != _lastAppliedSearchQuery) {
-      unawaited(_runSearch());
-      return;
-    }
-    unawaited(_goToCurrentSearchMatch());
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (_isApplyingSearch) return;
+      final query = widget.searchController?.normalizedQuery ?? '';
+      if (query != _lastAppliedSearchQuery) {
+        unawaited(_runSearch());
+        return;
+      }
+      unawaited(_goToCurrentSearchMatch());
+    });
   }
 
   Future<void> _installSearchScript() async {
@@ -496,14 +505,38 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
         return;
       }
       final result = await _controller.runJavaScriptReturningResult(
-        'window.jianxiSearch.search(${jsonEncode(query)});',
+        'window.jianxiSearch.search(${jsonEncode(query)}, 200);',
       );
-      searchController.updateMatchCount(_parseJsInt(result));
+      final parsed = _parseSearchResult(result);
+      searchController.updateMatchCount(parsed.count);
+      if (parsed.truncated) {
+        debugPrint(
+          '[HtmlDocumentView] search results truncated at ${parsed.count} matches',
+        );
+      }
       await _goToCurrentSearchMatch();
     } catch (error) {
       debugPrint('[HtmlDocumentView] run search failed: $error');
     } finally {
       _isApplyingSearch = false;
+    }
+  }
+
+  _SearchResult _parseSearchResult(Object value) {
+    try {
+      final raw = value.toString();
+      // The JS may return a JSON string wrapped in quotes.
+      final unwrapped = raw.startsWith('"') && raw.endsWith('"')
+          ? jsonDecode(raw) as String
+          : raw;
+      final data = jsonDecode(unwrapped) as Map<String, dynamic>;
+      return _SearchResult(
+        count: (data['count'] as int?) ?? 0,
+        truncated: (data['truncated'] as bool?) ?? false,
+      );
+    } catch (_) {
+      // Fallback: treat as plain integer (legacy format).
+      return _SearchResult(count: _parseJsInt(value), truncated: false);
     }
   }
 
@@ -543,4 +576,11 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       ],
     );
   }
+}
+
+class _SearchResult {
+  const _SearchResult({required this.count, required this.truncated});
+
+  final int count;
+  final bool truncated;
 }

@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '165';
+  static const _fallbackBuildNumber = '166';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -78,6 +78,8 @@ class _AboutPageState extends State<AboutPage> {
 
   bool _isChecking = false;
   bool _isClearingCache = false;
+  bool _isEstimatingCache = false;
+  int _estimatedCacheSize = 0;
   PackageInfo? _packageInfo;
 
   @override
@@ -90,6 +92,35 @@ class _AboutPageState extends State<AboutPage> {
     }).catchError((_) {
       // Keep the about card usable if package metadata is unavailable.
     });
+    _estimateCacheSize();
+  }
+
+  Future<void> _estimateCacheSize() async {
+    if (_isEstimatingCache) return;
+    setState(() => _isEstimatingCache = true);
+    try {
+      var total = 0;
+      final tempDir = await getTemporaryDirectory();
+      if (await tempDir.exists()) {
+        total += await _directorySize(tempDir);
+      }
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final downloadedApk = File('${documentsDir.path}/jianxi_reader.apk');
+      if (await downloadedApk.exists()) {
+        total += await downloadedApk.length();
+      }
+      // Include image cache estimate.
+      total += PaintingBinding.instance.imageCache.currentSizeBytes;
+      if (mounted) {
+        setState(() => _estimatedCacheSize = total);
+      }
+    } catch (_) {
+      // Silently ignore estimation failures.
+    } finally {
+      if (mounted) {
+        setState(() => _isEstimatingCache = false);
+      }
+    }
   }
 
   Future<void> _checkForUpdate() async {
@@ -345,6 +376,7 @@ class _AboutPageState extends State<AboutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已清理缓存：${_formatBytes(clearedBytes)}')),
       );
+      _estimateCacheSize();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -610,7 +642,9 @@ class _AboutPageState extends State<AboutPage> {
                     title: '缓存清理',
                     subtitle: _isClearingCache
                         ? '正在清理临时缓存。'
-                        : '清理临时图片缓存和已下载的更新包。',
+                        : _isEstimatingCache
+                            ? '正在估算缓存大小…'
+                            : '当前缓存 ${_formatBytes(_estimatedCacheSize)}，清理临时文件和更新包。',
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _AboutActionButton(

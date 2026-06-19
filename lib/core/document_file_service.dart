@@ -14,6 +14,10 @@ import 'reading_progress_service.dart';
 abstract class DocumentLibraryService {
   Future<List<DocumentEntry>> scanLibrary();
 
+  Future<List<DocumentEntry>> scanLibraryCached();
+
+  void invalidateLibraryCache();
+
   Future<List<DocumentEntry>> pickAndImportDocuments();
 
   Future<DocumentEntry> importExternalUri(Uri uri);
@@ -67,8 +71,13 @@ class DocumentFileService implements DocumentLibraryService {
   static const _tagsKey = 'document.tags';
   static const _pinnedTagsKey = 'document.tags.pinned';
   static const _documentTagsPrefix = 'document.tags.';
+  static const _cacheMaxAge = Duration(minutes: 5);
   static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
   Future<SharedPreferences>? _preferencesFuture;
+
+  List<DocumentEntry>? _cachedEntries;
+  DateTime? _cacheTimestamp;
+  final Map<String, DateTime> _lastRefreshTimes = {};
 
   Future<SharedPreferences> _preferences() {
     return _preferencesFuture ??= SharedPreferences.getInstance();
@@ -133,7 +142,25 @@ class DocumentFileService implements DocumentLibraryService {
       await preferences.setStringList(_referencedPathsKey, referencedPaths);
     }
 
+    _cachedEntries = entries;
+    _cacheTimestamp = DateTime.now();
     return entries;
+  }
+
+  @override
+  Future<List<DocumentEntry>> scanLibraryCached() async {
+    if (_cachedEntries != null &&
+        _cacheTimestamp != null &&
+        DateTime.now().difference(_cacheTimestamp!) < _cacheMaxAge) {
+      return _cachedEntries!;
+    }
+    return scanLibrary();
+  }
+
+  @override
+  void invalidateLibraryCache() {
+    _cachedEntries = null;
+    _cacheTimestamp = null;
   }
 
   @override
@@ -689,6 +716,13 @@ class DocumentFileService implements DocumentLibraryService {
     SharedPreferences preferences,
     String path,
   ) async {
+    // Rate-limit: skip if refreshed within the last 5 minutes.
+    final lastRefresh = _lastRefreshTimes[path];
+    if (lastRefresh != null &&
+        DateTime.now().difference(lastRefresh) < _cacheMaxAge) {
+      return null;
+    }
+
     final sourceUri = preferences.getString(_referencedSourceUriKey(path));
     if (sourceUri == null || sourceUri.isEmpty) {
       return path;
@@ -699,6 +733,7 @@ class DocumentFileService implements DocumentLibraryService {
         'refreshDocument',
         {'uri': sourceUri, 'path': path},
       );
+      _lastRefreshTimes[path] = DateTime.now();
       return refreshed?['path'] as String? ?? path;
     } on MissingPluginException {
       return path;

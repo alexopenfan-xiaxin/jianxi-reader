@@ -31,6 +31,64 @@ import 'plugins/subscript_plugin.dart';
 import 'plugins/superscript_plugin.dart';
 import 'plugins/underline_plugin.dart';
 
+class _DocumentSection {
+  const _DocumentSection({
+    required this.title,
+    required this.headingLevel,
+    required this.content,
+    required this.startIndex,
+  });
+
+  final String title;
+  final int headingLevel;
+  final String content;
+  final int startIndex;
+}
+
+List<_DocumentSection> _splitIntoSections(String data) {
+  final lines = data.split('\n');
+  final sections = <_DocumentSection>[];
+  final buffer = StringBuffer();
+  var currentTitle = '';
+  var currentLevel = 0;
+  var sectionStart = 0;
+  var charIndex = 0;
+
+  for (var i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    final headingMatch = RegExp(r'^(#{1,6})\s+(.+)').firstMatch(line);
+
+    if (headingMatch != null && i > 0) {
+      // Flush current section.
+      sections.add(_DocumentSection(
+        title: currentTitle,
+        headingLevel: currentLevel,
+        content: buffer.toString(),
+        startIndex: sectionStart,
+      ));
+      buffer.clear();
+      currentTitle = headingMatch.group(2) ?? '';
+      currentLevel = headingMatch.group(1)!.length;
+      sectionStart = charIndex;
+    }
+
+    buffer.writeln(line);
+    charIndex += line.length + 1; // +1 for newline
+  }
+
+  // Flush last section.
+  if (buffer.isNotEmpty) {
+    sections.add(_DocumentSection(
+      title: currentTitle,
+      headingLevel: currentLevel,
+      content: buffer.toString(),
+      startIndex: sectionStart,
+    ));
+  }
+
+  return sections;
+}
+
 class MarkdownViewer extends StatefulWidget {
   final File file;
   final double fontSize;
@@ -86,15 +144,22 @@ class MarkdownViewerState extends State<MarkdownViewer>
   int _contentVersion = 0;
   Timer? _fileWatchTimer;
   Timer? _searchDebounce;
+  Timer? _debounceReloadTimer;
   StreamSubscription<FileSystemEvent>? _fileWatchSub;
-  bool _isLargeDocument = false;
-  bool _showFullContent = false;
-  String? _fullData;
   int _headingBuildIndex = 0;
   final Map<int, GlobalKey> _headingKeys = {};
+  bool _isReloading = false;
+  bool _pendingReload = false;
+  int? _lastKnownSize;
 
-  static const int _largeDocumentLineThreshold = 2000;
-  static const int _largeDocumentPreviewLines = 1500;
+  List<_DocumentSection> _sections = const [];
+  int _visibleSectionCount = 0;
+  bool _allSectionsVisible = true;
+  String? _fullData;
+
+  static const int _initialSectionCount = 3;
+  static const int _sectionIncrement = 2;
+  static const double _loadMoreThreshold = 0.8;
 
   @override
   void initState() {
@@ -102,6 +167,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
     WidgetsBinding.instance.addObserver(this);
     _builderRegistry = _createBuilderRegistry();
     widget.searchController?.addListener(_handleSearchChanged);
+    widget.scrollController?.addListener(_onScroll);
     _loadFile();
     EmojiService.load().then((map) {
       if (mounted) {
@@ -123,6 +189,8 @@ class MarkdownViewerState extends State<MarkdownViewer>
     _fileWatchTimer?.cancel();
     _fileWatchSub?.cancel();
     _searchDebounce?.cancel();
+    _debounceReloadTimer?.cancel();
+    widget.scrollController?.removeListener(_onScroll);
     widget.searchController?.removeListener(_handleSearchChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -133,12 +201,37 @@ class MarkdownViewerState extends State<MarkdownViewer>
     try {
       _fileWatchSub = widget.file.watch().listen((event) {
         if (event.type == FileSystemEvent.modify) {
-          debugPrint('[MarkdownViewer] file watch event, reloading');
-          _loadFile();
+          debugPrint('[MarkdownViewer] file watch event, scheduling reload');
+          _scheduleReload();
         }
       });
     } catch (e) {
       debugPrint('[MarkdownViewer] file watch not supported: $e');
+    }
+  }
+
+  void _scheduleReload() {
+    _debounceReloadTimer?.cancel();
+    _debounceReloadTimer = Timer(
+      const Duration(milliseconds: 500),
+      _guardedLoadFile,
+    );
+  }
+
+  Future<void> _guardedLoadFile() async {
+    if (_isReloading) {
+      _pendingReload = true;
+      return;
+    }
+    _isReloading = true;
+    try {
+      await _loadFile();
+    } finally {
+      _isReloading = false;
+      if (_pendingReload) {
+        _pendingReload = false;
+        _guardedLoadFile();
+      }
     }
   }
 
@@ -158,8 +251,12 @@ class MarkdownViewerState extends State<MarkdownViewer>
       _builderRegistry = _createBuilderRegistry();
       _handleSearchChanged();
     }
+    if (oldWidget.scrollController != widget.scrollController) {
+      oldWidget.scrollController?.removeListener(_onScroll);
+      widget.scrollController?.addListener(_onScroll);
+    }
     if (oldWidget.onTocChanged != widget.onTocChanged && _data != null) {
-      _notifyTocChanged(_data!);
+      _notifyTocChanged(_fullData ?? _data!);
     }
     if (oldWidget.file.path != widget.file.path ||
         oldWidget.fontSize != widget.fontSize ||
@@ -173,8 +270,8 @@ class MarkdownViewerState extends State<MarkdownViewer>
       if (!await widget.file.exists()) return;
       final modified = await widget.file.lastModified();
       if (_lastModified != null && modified.isAfter(_lastModified!)) {
-        debugPrint('[MarkdownViewer] file changed, reloading (${widget.file.path})');
-        _loadFile();
+        debugPrint('[MarkdownViewer] file changed, scheduling reload (${widget.file.path})');
+        _scheduleReload();
       }
     } catch (e) {
       debugPrint('[MarkdownViewer] checkFileChanged error: $e');
@@ -183,23 +280,38 @@ class MarkdownViewerState extends State<MarkdownViewer>
 
   Future<void> _loadFile() async {
     try {
+      // Check file fingerprint before doing expensive work.
+      final fileModified = await widget.file.lastModified();
+      final fileSize = await widget.file.length();
+      if (_lastModified != null &&
+          _lastKnownSize != null &&
+          fileModified == _lastModified! &&
+          fileSize == _lastKnownSize!) {
+        debugPrint('[MarkdownViewer] file unchanged, skipping reload');
+        return;
+      }
       final snapshot = await compute(_readMarkdownSnapshot, widget.file.path);
       final data = snapshot['data']! as String;
       final modified = DateTime.fromMillisecondsSinceEpoch(
         snapshot['modified']! as int,
       );
-      final lineCount = '\n'.allMatches(data).length + 1;
-      final isLarge = lineCount > _largeDocumentLineThreshold;
-      final displayData = isLarge && !_showFullContent
-          ? _truncateLines(data, _largeDocumentPreviewLines)
-          : data;
+
+      // Split into sections for progressive rendering.
+      final sections = _splitIntoSections(data);
+      final initialCount = sections.length <= _initialSectionCount
+          ? sections.length
+          : _initialSectionCount;
+      final allVisible = sections.length <= initialCount;
+      final displayData = allVisible
+          ? data
+          : sections.sublist(0, initialCount).map((s) => s.content).join();
+
       if (mounted) {
         setState(() {
           _fullData = data;
-          _isLargeDocument = isLarge;
-          if (!isLarge || _showFullContent) {
-            _showFullContent = true;
-          }
+          _sections = sections;
+          _visibleSectionCount = initialCount;
+          _allSectionsVisible = allVisible;
           _data = displayData;
           _error = null;
           _contentVersion++;
@@ -207,7 +319,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
         });
       }
       _lastModified = modified;
-      _notifyTocChanged(displayData);
+      _lastKnownSize = fileSize;
+      // Always generate TOC from full text for complete navigation.
+      _notifyTocChanged(data);
       _rebuildSearchTextCache();
       _updateSearchMatches();
     } catch (e) {
@@ -217,24 +331,36 @@ class MarkdownViewerState extends State<MarkdownViewer>
     }
   }
 
-  void _loadFullDocument() {
-    final full = _fullData;
-    if (full == null) return;
+  void _loadMoreSections() {
+    if (_allSectionsVisible) return;
+    final newCount = (_visibleSectionCount + _sectionIncrement)
+        .clamp(0, _sections.length);
+    if (newCount == _visibleSectionCount) return;
+    final allVisible = newCount >= _sections.length;
+    final displayData = allVisible
+        ? _fullData!
+        : _sections.sublist(0, newCount).map((s) => s.content).join();
     setState(() {
-      _showFullContent = true;
-      _data = full;
+      _visibleSectionCount = newCount;
+      _allSectionsVisible = allVisible;
+      _data = displayData;
       _contentVersion++;
       _cachedSearchText = null;
     });
-    _notifyTocChanged(full);
     _rebuildSearchTextCache();
     _updateSearchMatches();
   }
 
-  String _truncateLines(String text, int maxLines) {
-    final lines = text.split('\n');
-    if (lines.length <= maxLines) return text;
-    return lines.sublist(0, maxLines).join('\n');
+  void _onScroll() {
+    if (_allSectionsVisible) return;
+    final controller = widget.scrollController;
+    if (controller == null || !controller.hasClients) return;
+    final position = controller.position;
+    if (position.maxScrollExtent <= 0) return;
+    final ratio = position.pixels / position.maxScrollExtent;
+    if (ratio >= _loadMoreThreshold) {
+      _loadMoreSections();
+    }
   }
 
   @override
@@ -292,30 +418,40 @@ class MarkdownViewerState extends State<MarkdownViewer>
               ),
               physics: const AlwaysScrollableScrollPhysics(),
               child: RepaintBoundary(
-                child: SmoothMarkdown(
-                  data: _data!,
-                  styleSheet: styleSheet,
-                  useEnhancedComponents: false,
-                  selectable: true,
-                  plugins: _plugins(),
-                  builderRegistry: _builderRegistry,
-                  onTapLink: (url) => _handleLinkTap(context, url),
-                  onTapImage: (url, alt, title) =>
-                      _showImagePreview(context, url, alt, title),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SmoothMarkdown(
+                      data: _data!,
+                      styleSheet: styleSheet,
+                      useEnhancedComponents: false,
+                      selectable: true,
+                      plugins: _plugins(),
+                      builderRegistry: _builderRegistry,
+                      onTapLink: (url) => _handleLinkTap(context, url),
+                      onTapImage: (url, alt, title) =>
+                          _showImagePreview(context, url, alt, title),
+                    ),
+                    if (!_allSectionsVisible)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        child: Text(
+                          '下滑加载更多…',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: widget.readingPalette.muted
+                                .withOpacity(0.6),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
           ),
-          if (_isLargeDocument && !_showFullContent)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _LoadMoreBanner(
-                readingPalette: widget.readingPalette,
-                onTap: _loadFullDocument,
-              ),
-            ),
           Positioned(
             left: 0,
             right: 0,
@@ -395,16 +531,36 @@ class MarkdownViewerState extends State<MarkdownViewer>
   }
 
   Future<void> jumpToTocEntry(TocEntry entry) async {
-    final context = _headingKeys[entry.index]?.currentContext;
-    if (context == null) {
-      return;
+    // If the target heading is not yet rendered, expand sections until it is.
+    var context = _headingKeys[entry.index]?.currentContext;
+    if (context == null && !_allSectionsVisible) {
+      // Expand all sections to ensure the target is visible.
+      _loadAllSections();
+      // Wait for the frame to be built.
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      context = _headingKeys[entry.index]?.currentContext;
     }
+    if (context == null) return;
     await Scrollable.ensureVisible(
       context,
       duration: AppMotion.normal,
       curve: AppMotion.emphasized,
       alignment: 0.08,
     );
+  }
+
+  void _loadAllSections() {
+    if (_allSectionsVisible || _fullData == null) return;
+    setState(() {
+      _visibleSectionCount = _sections.length;
+      _allSectionsVisible = true;
+      _data = _fullData!;
+      _contentVersion++;
+      _cachedSearchText = null;
+    });
+    _rebuildSearchTextCache();
+    _updateSearchMatches();
   }
 
   void _notifyTocChanged(String data) {
@@ -742,51 +898,5 @@ class TocHeaderBuilder extends MarkdownWidgetBuilder {
       6 => styleSheet.h6Style,
       _ => styleSheet.textStyle,
     };
-  }
-}
-
-class _LoadMoreBanner extends StatelessWidget {
-  const _LoadMoreBanner({
-    required this.readingPalette,
-    required this.onTap,
-  });
-
-  final ReadingPalette readingPalette;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: readingPalette.surface.withOpacity(0.95),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.sm,
-            horizontal: AppSpacing.lg,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.unfold_more_rounded,
-                size: 20,
-                color: readingPalette.link,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                '点击加载完整文档',
-                style: TextStyle(
-                  color: readingPalette.link,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
