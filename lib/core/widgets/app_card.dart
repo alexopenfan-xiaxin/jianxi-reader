@@ -12,12 +12,14 @@ class AppCard extends StatefulWidget {
     super.key,
     this.padding = const EdgeInsets.all(AppSpacing.md),
     this.onTap,
+    this.onLongPress,
     this.forceClassic = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool forceClassic;
 
   @override
@@ -97,12 +99,13 @@ class _AppCardState extends State<AppCard>
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: widget.onTap,
+                  onLongPress: widget.onLongPress,
                   onTapDown:
-                      widget.onTap != null ? (_) => _controller.forward() : null,
-                  onTapUp: widget.onTap != null
+                      _hasAction ? (_) => _controller.forward() : null,
+                  onTapUp: _hasAction
                       ? (_) => _springBack()
                       : null,
-                  onTapCancel: widget.onTap != null
+                  onTapCancel: _hasAction
                       ? _springBack
                       : null,
                   borderRadius: borderRadius,
@@ -125,12 +128,13 @@ class _AppCardState extends State<AppCard>
               type: MaterialType.card,
               child: InkWell(
                 onTap: widget.onTap,
+                onLongPress: widget.onLongPress,
                 onTapDown:
-                    widget.onTap != null ? (_) => _controller.forward() : null,
+                    _hasAction ? (_) => _controller.forward() : null,
                 onTapUp:
-                    widget.onTap != null ? (_) => _springBack() : null,
+                    _hasAction ? (_) => _springBack() : null,
                 onTapCancel:
-                    widget.onTap != null ? _springBack : null,
+                    _hasAction ? _springBack : null,
                 borderRadius: borderRadius,
                 splashFactory: NoSplash.splashFactory,
                 highlightColor: AppColors.primary.withOpacity(0.05),
@@ -147,4 +151,6 @@ class _AppCardState extends State<AppCard>
             ),
     );
   }
+
+  bool get _hasAction => widget.onTap != null || widget.onLongPress != null;
 }

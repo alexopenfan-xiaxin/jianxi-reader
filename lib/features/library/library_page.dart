@@ -8,6 +8,7 @@ import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
+import '../../core/reading_progress_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/liquid_glass.dart';
@@ -22,7 +23,7 @@ part 'library_search_page.dart';
 part 'library_shelf_view.dart';
 part 'library_toolbar.dart';
 
-enum _DocumentMenuAction { rename, tags, remove }
+enum _DocumentMenuAction { pin, rename, tags, remove }
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -35,6 +36,9 @@ class _LibraryPageState extends State<LibraryPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _staggerController;
   bool _hasPlayedInitialListAnimation = false;
+  final Set<String> _selectedPaths = {};
+
+  bool get _selectionActive => _selectedPaths.isNotEmpty;
 
   @override
   void initState() {
@@ -99,10 +103,13 @@ class _LibraryPageState extends State<LibraryPage>
                           118,
                         ),
                         sliver: _LibraryAnimatedContent(
-                        controller: controller,
-                        viewMode: settings,
-                        staggerController: _staggerController,
-                      ),
+                          controller: controller,
+                          viewMode: settings,
+                          staggerController: _staggerController,
+                          selectedPaths: _selectedPaths,
+                          onToggleSelection: _toggleSelection,
+                          onStartSelection: _startSelection,
+                        ),
                       ),
                     ],
                   ),
@@ -112,17 +119,28 @@ class _LibraryPageState extends State<LibraryPage>
                 top: 0,
                 left: 0,
                 right: 0,
-                child: _FixedLibraryHeader(controller: controller),
+                child: _selectionActive
+                    ? _SelectionHeader(
+                        selectedCount: _selectedPaths.length,
+                        onClose: _clearSelection,
+                        onTags: () => _showBatchTagEditor(context, controller),
+                        onRefresh: () => _runBatchRefresh(context, controller),
+                        onClearProgress: () =>
+                            _confirmClearProgress(context, controller),
+                        onRemove: () => _confirmBatchRemove(context, controller),
+                      )
+                    : _FixedLibraryHeader(controller: controller),
               ),
-              Positioned(
-                right: AppSpacing.lg,
-                bottom: 86,
-                child: _FloatingImportButton(
-                  key: const ValueKey('import_button'),
-                  importing: controller.isImporting,
-                  onPressed: () => _importDocuments(context, controller),
+              if (!_selectionActive)
+                Positioned(
+                  right: AppSpacing.lg,
+                  bottom: 86,
+                  child: _FloatingImportButton(
+                    key: const ValueKey('import_button'),
+                    importing: controller.isImporting,
+                    onPressed: () => _importDocuments(context, controller),
+                  ),
                 ),
-              ),
             ],
           );
         },
@@ -136,6 +154,141 @@ class _LibraryPageState extends State<LibraryPage>
   ) {
     return _importAndMaybeOpen(context, controller);
   }
+
+  void _startSelection(DocumentEntry document) {
+    HapticService.mediumImpact();
+    setState(() => _selectedPaths.add(document.path));
+  }
+
+  void _toggleSelection(DocumentEntry document) {
+    setState(() {
+      if (!_selectedPaths.remove(document.path)) {
+        _selectedPaths.add(document.path);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(_selectedPaths.clear);
+  }
+
+  List<DocumentEntry> _selectedDocuments(LibraryController controller) {
+    return controller.allDocuments
+        .where((document) => _selectedPaths.contains(document.path))
+        .toList();
+  }
+
+  Future<void> _showBatchTagEditor(
+    BuildContext context,
+    LibraryController controller,
+  ) async {
+    final selected = _selectedDocuments(controller);
+    if (selected.isEmpty) {
+      return;
+    }
+    await _showTagEditor(context, selected.first, documents: selected);
+    if (mounted) {
+      _clearSelection();
+    }
+  }
+
+  Future<void> _runBatchRefresh(
+    BuildContext context,
+    LibraryController controller,
+  ) async {
+    final selected = _selectedDocuments(controller);
+    final result = await controller.refreshDocuments(selected);
+    if (!context.mounted) {
+      return;
+    }
+    _clearSelection();
+    _showBatchResult(context, result, '已刷新 ${result.success} 个文档');
+  }
+
+  Future<void> _confirmClearProgress(
+    BuildContext context,
+    LibraryController controller,
+  ) async {
+    final confirmed = await _confirmBatchAction(
+      context,
+      title: '清除阅读进度',
+      content: '将清除已选择文档的阅读进度，不会删除文档。',
+      confirmText: '清除',
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    final result = await controller.clearDocumentsProgress(
+      _selectedDocuments(controller),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    _clearSelection();
+    _showBatchResult(context, result, '已清除 ${result.success} 个文档的阅读进度');
+  }
+
+  Future<void> _confirmBatchRemove(
+    BuildContext context,
+    LibraryController controller,
+  ) async {
+    final confirmed = await _confirmBatchAction(
+      context,
+      title: '移出文档',
+      content: '将移出已选择的 ${_selectedPaths.length} 个文档。',
+      confirmText: '移出',
+      destructive: true,
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    final result = await controller.removeDocuments(_selectedDocuments(controller));
+    if (!context.mounted) {
+      return;
+    }
+    _clearSelection();
+    _showBatchResult(context, result, '已移出 ${result.success} 个文档');
+  }
+}
+
+Future<bool?> _confirmBatchAction(
+  BuildContext context, {
+  required String title,
+  required String content,
+  required String confirmText,
+  bool destructive = false,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => LiquidGlassDialog(
+      title: Text(title),
+      content: Text(content),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: destructive
+              ? FilledButton.styleFrom(backgroundColor: AppColors.error)
+              : null,
+          child: Text(confirmText),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showBatchResult(
+  BuildContext context,
+  LibraryBatchResult result,
+  String successMessage,
+) {
+  final message = result.hasFailure
+      ? '$successMessage，${result.failure} 个失败'
+      : successMessage;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
 Future<void> _importAndMaybeOpen(

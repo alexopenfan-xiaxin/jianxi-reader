@@ -53,6 +53,7 @@ class FakeDocumentService implements DocumentLibraryService {
       recentOpenedAt: document.recentOpenedAt,
       isReferenced: document.isReferenced,
       tags: document.tags,
+      pinned: document.pinned,
     );
     _documents[index] = renamed;
     return renamed;
@@ -61,6 +62,17 @@ class FakeDocumentService implements DocumentLibraryService {
   @override
   Future<void> removeDocument(DocumentEntry document) async {
     _documents.removeWhere((entry) => entry.path == document.path);
+  }
+
+  @override
+  Future<DocumentEntry> setDocumentPinned(
+    DocumentEntry document,
+    bool pinned,
+  ) async {
+    final index = _documents.indexWhere((entry) => entry.path == document.path);
+    final updated = _copyDocument(document, pinned: pinned);
+    _documents[index] = updated;
+    return updated;
   }
 
   @override
@@ -73,6 +85,7 @@ class FakeDocumentService implements DocumentLibraryService {
     return openedAt;
   }
 
+  @override
   Future<List<String>> loadTags() async {
     final tags = <String>{};
     for (final document in _documents) {
@@ -82,10 +95,16 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
+  Future<List<String>> loadPinnedTags() async => const [];
+
+  @override
   Future<void> createTag(String name) async {}
 
   @override
   Future<void> deleteTag(String name) async {}
+
+  @override
+  Future<void> setTagPinned(String name, bool pinned) async {}
 
   @override
   Future<DocumentTagUpdate> updateDocumentTags(
@@ -291,8 +310,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('文档排序'), findsOneWidget);
-    expect(find.text('按修改时间：新到旧'), findsOneWidget);
-    expect(find.text('按名称：A 到 Z'), findsOneWidget);
+    expect(find.text('最近修改'), findsOneWidget);
+    expect(find.text('最近阅读'), findsOneWidget);
+    expect(find.text('文件大小'), findsOneWidget);
+    expect(find.text('置顶优先'), findsOneWidget);
+  });
+
+  testWidgets('searches documents by type and tag text', (tester) async {
+    await tester.pumpWidget(
+      JianxiReaderApp(
+        documentService: FakeDocumentService([
+          _document('alpha.md', modifiedAt: DateTime(2026), tags: ['工作']),
+          _document('beta.html', type: DocumentType.html, tags: ['生活']),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('搜索文档'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('library_search_field')),
+      'html',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('beta.html'), findsOneWidget);
+    expect(find.text('alpha.md'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('library_search_field')),
+      '工作',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('alpha.md'), findsOneWidget);
+    expect(find.text('beta.html'), findsNothing);
   });
 
   testWidgets('exposes rename and remove actions for a document', (
@@ -435,6 +488,7 @@ DocumentEntry _document(
   DateTime? modifiedAt,
   DateTime? recentOpenedAt,
   List<String> tags = const [],
+  bool pinned = false,
 }) {
   return DocumentEntry(
     path: '/tmp/$name',
@@ -444,6 +498,7 @@ DocumentEntry _document(
     modifiedAt: modifiedAt ?? DateTime(2025),
     recentOpenedAt: recentOpenedAt,
     tags: tags,
+    pinned: pinned,
   );
 }
 
@@ -451,6 +506,7 @@ DocumentEntry _copyDocument(
   DocumentEntry document, {
   DateTime? recentOpenedAt,
   List<String>? tags,
+  bool? pinned,
 }) {
   return DocumentEntry(
     path: document.path,
@@ -461,5 +517,6 @@ DocumentEntry _copyDocument(
     recentOpenedAt: recentOpenedAt ?? document.recentOpenedAt,
     isReferenced: document.isReferenced,
     tags: tags ?? document.tags,
+    pinned: pinned ?? document.pinned,
   );
 }

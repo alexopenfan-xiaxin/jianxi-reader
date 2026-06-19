@@ -92,19 +92,58 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _SearchTagWrap(controller: controller),
-                if (controller.documents.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '找到 ${controller.documents.length} 个文档',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: palette.muted,
+                        letterSpacing: 0,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (controller.documents.isEmpty)
+                  _SearchEmptyState(hasQuery: controller.searchQuery.isNotEmpty)
+                else
                   ...controller.documents.map(
                     (document) => Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: _SearchResultTile(document: document),
                     ),
                   ),
-                ],
               ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _SearchEmptyState extends StatelessWidget {
+  const _SearchEmptyState({required this.hasQuery});
+
+  final bool hasQuery;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Row(
+        children: [
+          Icon(
+            hasQuery ? Icons.search_off_rounded : Icons.manage_search_rounded,
+            color: context.palette.muted,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              hasQuery ? '没有找到匹配的文档' : '输入文件名、标签、类型或路径进行搜索',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.palette.muted,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -245,6 +284,17 @@ class _SearchResultTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(document.name, style: Theme.of(context).textTheme.titleMedium),
+          if (document.tags.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xxs,
+              children: [
+                for (final tag in document.tags.take(3))
+                  _SmallTagChip(label: tag),
+              ],
+            ),
+          ],
           const SizedBox(height: AppSpacing.xxs),
           Text(
             _documentSummary(document),

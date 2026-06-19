@@ -120,6 +120,101 @@ class _FixedLibraryHeader extends StatelessWidget {
   }
 }
 
+class _SelectionHeader extends StatelessWidget {
+  const _SelectionHeader({
+    required this.selectedCount,
+    required this.onClose,
+    required this.onTags,
+    required this.onRefresh,
+    required this.onClearProgress,
+    required this.onRemove,
+  });
+
+  final int selectedCount;
+  final VoidCallback onClose;
+  final VoidCallback onTags;
+  final VoidCallback onRefresh;
+  final VoidCallback onClearProgress;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: '退出多选',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded),
+          ),
+          Expanded(
+            child: Text(
+              '已选择 $selectedCount 个',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ),
+          IconButton(
+            tooltip: '批量设置标签',
+            onPressed: onTags,
+            icon: const Icon(Icons.label_outline_rounded),
+          ),
+          IconButton(
+            tooltip: '批量刷新',
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
+            tooltip: '清除阅读进度',
+            onPressed: onClearProgress,
+            icon: const Icon(Icons.history_toggle_off_rounded),
+          ),
+          IconButton(
+            tooltip: '批量移出',
+            onPressed: onRemove,
+            color: AppColors.error,
+            icon: const Icon(Icons.remove_circle_outline_rounded),
+          ),
+        ],
+      ),
+    );
+
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassSurface(
+        borderRadius: BorderRadius.circular(24),
+        color: liquidGlassHeaderColor(context),
+        borderColor: Colors.white.withOpacity(0.16),
+        blurSigma: LiquidGlassTokens.effectBlurSigma,
+        child: content,
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.parchment.withOpacity(0.94),
+        border: Border(
+          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
+        ),
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
 class _LibraryHomeIcon extends StatelessWidget {
   const _LibraryHomeIcon();
 

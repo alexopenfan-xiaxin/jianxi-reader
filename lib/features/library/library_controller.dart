@@ -2,15 +2,30 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/document_error_describer.dart';
 import '../../core/document_file_service.dart';
+import '../../core/reading_progress_service.dart';
 import 'document_entry.dart';
 
 enum LibrarySortMode {
-  modifiedNewest('按修改时间：新到旧'),
-  name('按名称：A 到 Z');
+  modifiedNewest('最近修改'),
+  recentlyOpened('最近阅读'),
+  name('文件名'),
+  sizeLargest('文件大小'),
+  type('文件类型'),
+  tagCount('标签数量'),
+  pinnedFirst('置顶优先');
 
   const LibrarySortMode(this.label);
 
   final String label;
+}
+
+class LibraryBatchResult {
+  const LibraryBatchResult({required this.success, required this.failure});
+
+  final int success;
+  final int failure;
+
+  bool get hasFailure => failure > 0;
 }
 
 class LibraryController extends ChangeNotifier {
@@ -26,6 +41,7 @@ class LibraryController extends ChangeNotifier {
   String? _selectedTag;
   LibrarySortMode _sortMode = LibrarySortMode.modifiedNewest;
   List<String> _tags = const [];
+  List<String> _pinnedTags = const [];
 
   // Cached computed lists — invalidated on data change.
   List<DocumentEntry>? _cachedDocuments;
@@ -51,8 +67,7 @@ class LibraryController extends ChangeNotifier {
   }) {
     final q = query.trim().toLowerCase();
     final filtered = _allDocuments.where((document) {
-      final matchesQuery =
-          q.isEmpty || document.name.toLowerCase().contains(q);
+      final matchesQuery = q.isEmpty || _matchesQuery(document, q);
       final matchesTag = tag == null || document.tags.contains(tag);
       return matchesQuery && matchesTag;
     }).toList();
@@ -81,6 +96,18 @@ class LibraryController extends ChangeNotifier {
 
   List<String> get tags => _tags;
 
+  List<String> get pinnedTags => _pinnedTags;
+
+  List<DocumentEntry> get recentDocuments {
+    final recent = _allDocuments
+        .where((document) => document.recentOpenedAt != null)
+        .toList()
+      ..sort((left, right) {
+        return right.recentOpenedAt!.compareTo(left.recentOpenedAt!);
+      });
+    return recent.take(5).toList();
+  }
+
   Future<void> loadDocuments() async {
     _isLoading = true;
     _errorMessage = null;
@@ -88,7 +115,7 @@ class LibraryController extends ChangeNotifier {
 
     try {
       _allDocuments = await documentService.scanLibrary();
-      _tags = await documentService.loadTags();
+      await _loadTags();
       _invalidateCache();
     } catch (error) {
       debugPrint('[LibraryController] load documents failed: $error');
@@ -107,7 +134,7 @@ class LibraryController extends ChangeNotifier {
     try {
       final imported = await documentService.pickAndImportDocuments();
       _allDocuments = await documentService.scanLibrary();
-      _tags = await documentService.loadTags();
+      await _loadTags();
       _invalidateCache();
       return imported;
     } catch (error) {
@@ -129,7 +156,7 @@ class LibraryController extends ChangeNotifier {
       final imported = await documentService.importExternalUri(uri);
       await documentService.markDocumentOpened(imported);
       _allDocuments = await documentService.scanLibrary();
-      _tags = await documentService.loadTags();
+      await _loadTags();
       _invalidateCache();
       return imported;
     } catch (error) {
@@ -160,12 +187,54 @@ class LibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<LibraryBatchResult> removeDocuments(
+    List<DocumentEntry> documents,
+  ) async {
+    var success = 0;
+    var failure = 0;
+    for (final document in documents) {
+      try {
+        await documentService.removeDocument(document);
+        _removeDocument(document.path);
+        success += 1;
+      } catch (error) {
+        debugPrint('[LibraryController] remove document failed: $error');
+        failure += 1;
+      }
+    }
+    _errorMessage = failure == 0 ? null : '部分文档移出失败：$failure 个';
+    _invalidateCache();
+    notifyListeners();
+    return LibraryBatchResult(success: success, failure: failure);
+  }
+
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
     final refreshed = await documentService.refreshDocument(document);
     _replaceDocument(document.path, refreshed);
     _errorMessage = null;
     notifyListeners();
     return refreshed;
+  }
+
+  Future<LibraryBatchResult> refreshDocuments(
+    List<DocumentEntry> documents,
+  ) async {
+    var success = 0;
+    var failure = 0;
+    for (final document in documents) {
+      try {
+        final refreshed = await documentService.refreshDocument(document);
+        _replaceDocument(document.path, refreshed);
+        success += 1;
+      } catch (error) {
+        debugPrint('[LibraryController] refresh document failed: $error');
+        failure += 1;
+      }
+    }
+    _errorMessage = failure == 0 ? null : '部分文档刷新失败：$failure 个';
+    _invalidateCache();
+    notifyListeners();
+    return LibraryBatchResult(success: success, failure: failure);
   }
 
   Future<DocumentEntry> markDocumentOpened(DocumentEntry document) async {
@@ -178,10 +247,7 @@ class LibraryController extends ChangeNotifier {
 
   Future<void> createTag(String name) async {
     await documentService.createTag(name);
-    final tag = name.trim();
-    if (!_tags.contains(tag)) {
-      _tags = [..._tags, tag]..sort();
-    }
+    await _loadTags();
     _errorMessage = null;
     _invalidateCache();
     notifyListeners();
@@ -191,6 +257,7 @@ class LibraryController extends ChangeNotifier {
     await documentService.deleteTag(name);
     final tag = name.trim();
     _tags = _tags.where((item) => item != tag).toList();
+    _pinnedTags = _pinnedTags.where((item) => item != tag).toList();
     if (_selectedTag == tag) {
       _selectedTag = null;
     }
@@ -212,7 +279,7 @@ class LibraryController extends ChangeNotifier {
     List<String> tags,
   ) async {
     final update = await documentService.updateDocumentTags(document, tags);
-    _tags = update.allTags;
+    await _loadTags();
     _replaceDocument(
       document.path,
       document.copyWith(tags: update.documentTags),
@@ -220,6 +287,81 @@ class LibraryController extends ChangeNotifier {
     _errorMessage = null;
     _invalidateCache();
     notifyListeners();
+  }
+
+  Future<void> updateDocumentsTags(
+    List<DocumentEntry> documents,
+    List<String> tags,
+  ) async {
+    for (final document in documents) {
+      final update = await documentService.updateDocumentTags(document, tags);
+      _replaceDocument(
+        document.path,
+        document.copyWith(tags: update.documentTags),
+      );
+    }
+    await _loadTags();
+    _errorMessage = null;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  Future<void> addDocumentsTags(
+    List<DocumentEntry> documents,
+    List<String> tags,
+  ) async {
+    final cleanTags = tags.map((tag) => tag.trim()).where((tag) {
+      return tag.isNotEmpty;
+    }).toSet();
+    for (final document in documents) {
+      final mergedTags = {...document.tags, ...cleanTags}.toList()..sort();
+      final update = await documentService.updateDocumentTags(
+        document,
+        mergedTags,
+      );
+      _replaceDocument(
+        document.path,
+        document.copyWith(tags: update.documentTags),
+      );
+    }
+    await _loadTags();
+    _errorMessage = null;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  Future<void> setPinned(DocumentEntry document, bool pinned) async {
+    final updated = await documentService.setDocumentPinned(document, pinned);
+    _replaceDocument(document.path, updated);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<void> setTagPinned(String tag, bool pinned) async {
+    await documentService.setTagPinned(tag, pinned);
+    await _loadTags();
+    _errorMessage = null;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  Future<LibraryBatchResult> clearDocumentsProgress(
+    List<DocumentEntry> documents,
+  ) async {
+    var success = 0;
+    var failure = 0;
+    for (final document in documents) {
+      try {
+        await ReadingProgressService.removeProgress(document.path);
+        success += 1;
+      } catch (error) {
+        debugPrint('[LibraryController] clear progress failed: $error');
+        failure += 1;
+      }
+    }
+    _errorMessage = failure == 0 ? null : '部分阅读进度清理失败：$failure 个';
+    notifyListeners();
+    return LibraryBatchResult(success: success, failure: failure);
   }
 
   void updateSearchQuery(String query) {
@@ -250,14 +392,76 @@ class LibraryController extends ChangeNotifier {
   }
 
   int _compareDocuments(DocumentEntry left, DocumentEntry right) {
-    return switch (_sortMode) {
+    final result = switch (_sortMode) {
       LibrarySortMode.modifiedNewest => right.modifiedAt.compareTo(
           left.modifiedAt,
+        ),
+      LibrarySortMode.recentlyOpened => _compareNullableDateDesc(
+          left.recentOpenedAt,
+          right.recentOpenedAt,
         ),
       LibrarySortMode.name => left.name.toLowerCase().compareTo(
             right.name.toLowerCase(),
           ),
+      LibrarySortMode.sizeLargest => right.sizeBytes.compareTo(left.sizeBytes),
+      LibrarySortMode.type => left.type.label.compareTo(right.type.label),
+      LibrarySortMode.tagCount => right.tags.length.compareTo(left.tags.length),
+      LibrarySortMode.pinnedFirst => _comparePinned(left, right),
     };
+    if (result != 0) {
+      return result;
+    }
+    return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+  }
+
+  Future<void> _loadTags() async {
+    final tags = await documentService.loadTags();
+    final pinnedTags = await documentService.loadPinnedTags();
+    _pinnedTags = pinnedTags.where(tags.contains).toList();
+    _tags = tags.toList()
+      ..sort((left, right) {
+        final leftPinned = _pinnedTags.contains(left);
+        final rightPinned = _pinnedTags.contains(right);
+        if (leftPinned != rightPinned) {
+          return leftPinned ? -1 : 1;
+        }
+        return left.compareTo(right);
+      });
+  }
+
+  bool _matchesQuery(DocumentEntry document, String query) {
+    final fields = <String>[
+      document.name,
+      document.type.label,
+      document.type.badge,
+      document.path,
+      document.sizeLabel,
+      ...document.tags,
+      if (document.recentOpenedAt != null) '最近 最近阅读 已读',
+      if (document.recentOpenedAt == null) '未读',
+      if (document.pinned) '置顶',
+    ];
+    return fields.any((field) => field.toLowerCase().contains(query));
+  }
+
+  int _compareNullableDateDesc(DateTime? left, DateTime? right) {
+    if (left == null && right == null) {
+      return 0;
+    }
+    if (left == null) {
+      return 1;
+    }
+    if (right == null) {
+      return -1;
+    }
+    return right.compareTo(left);
+  }
+
+  int _comparePinned(DocumentEntry left, DocumentEntry right) {
+    if (left.pinned != right.pinned) {
+      return left.pinned ? -1 : 1;
+    }
+    return _compareNullableDateDesc(left.recentOpenedAt, right.recentOpenedAt);
   }
 
   void _replaceDocument(String oldPath, DocumentEntry replacement) {

@@ -14,6 +14,7 @@ class DocumentEntry {
     this.recentOpenedAt,
     this.isReferenced = false,
     this.tags = const [],
+    this.pinned = false,
   });
 
   final String path;
@@ -24,6 +25,7 @@ class DocumentEntry {
   final DateTime? recentOpenedAt;
   final bool isReferenced;
   final List<String> tags;
+  final bool pinned;
 
   DocumentEntry copyWith({
     String? path,
@@ -34,6 +36,7 @@ class DocumentEntry {
     DateTime? recentOpenedAt,
     bool? isReferenced,
     List<String>? tags,
+    bool? pinned,
   }) {
     return DocumentEntry(
       path: path ?? this.path,
@@ -44,6 +47,7 @@ class DocumentEntry {
       recentOpenedAt: recentOpenedAt ?? this.recentOpenedAt,
       isReferenced: isReferenced ?? this.isReferenced,
       tags: List.unmodifiable(tags ?? this.tags),
+      pinned: pinned ?? this.pinned,
     );
   }
 
@@ -52,6 +56,7 @@ class DocumentEntry {
     DateTime? recentOpenedAt,
     bool isReferenced = false,
     List<String> tags = const [],
+    bool pinned = false,
   }) async {
     final type = DocumentFileRules.typeForPath(file.path);
     if (type == null) {
@@ -68,6 +73,7 @@ class DocumentEntry {
       recentOpenedAt: recentOpenedAt,
       isReferenced: isReferenced,
       tags: List.unmodifiable(tags),
+      pinned: pinned,
     );
   }
 

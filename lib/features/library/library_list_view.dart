@@ -39,11 +39,17 @@ class _LibraryAnimatedContent extends StatelessWidget {
     required this.controller,
     required this.viewMode,
     required this.staggerController,
+    required this.selectedPaths,
+    required this.onToggleSelection,
+    required this.onStartSelection,
   });
 
   final LibraryController controller;
   final LibraryViewMode viewMode;
   final AnimationController staggerController;
+  final Set<String> selectedPaths;
+  final ValueChanged<DocumentEntry> onToggleSelection;
+  final ValueChanged<DocumentEntry> onStartSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +83,31 @@ class _LibraryAnimatedContent extends StatelessWidget {
       );
     }
     if (viewMode == LibraryViewMode.shelf) {
-      return _ShelfGrid(documents: controller.documents);
+      return SliverMainAxisGroup(
+        slivers: [
+          if (controller.recentDocuments.isNotEmpty && controller.searchQuery.isEmpty)
+            _RecentReadingSliver(documents: controller.recentDocuments),
+          _ShelfGrid(
+            documents: controller.documents,
+            selectedPaths: selectedPaths,
+            onToggleSelection: onToggleSelection,
+            onStartSelection: onStartSelection,
+          ),
+        ],
+      );
     }
-    return _AnimatedDocumentSliverList(
-      documents: controller.documents,
-      staggerController: staggerController,
+    return SliverMainAxisGroup(
+      slivers: [
+        if (controller.recentDocuments.isNotEmpty && controller.searchQuery.isEmpty)
+          _RecentReadingSliver(documents: controller.recentDocuments),
+        _AnimatedDocumentSliverList(
+          documents: controller.documents,
+          staggerController: staggerController,
+          selectedPaths: selectedPaths,
+          onToggleSelection: onToggleSelection,
+          onStartSelection: onStartSelection,
+        ),
+      ],
     );
   }
 }
@@ -98,6 +124,140 @@ class _LibrarySliverTransition extends StatefulWidget {
   @override
   State<_LibrarySliverTransition> createState() =>
       _LibrarySliverTransitionState();
+}
+
+class _RecentReadingSliver extends StatelessWidget {
+  const _RecentReadingSliver({required this.documents});
+
+  final List<DocumentEntry> documents;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '最近阅读',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  '${documents.length} 个',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.palette.muted,
+                        letterSpacing: 0,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 122,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: documents.length,
+                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  return _RecentDocumentCard(document: documents[index]);
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '全部文档',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentDocumentCard extends StatelessWidget {
+  const _RecentDocumentCard({required this.document});
+
+  final DocumentEntry document;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: AppCard(
+        onTap: () => _openDocument(context),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  document.type == DocumentType.markdown
+                      ? Icons.description_rounded
+                      : Icons.code_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                if (document.pinned) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  const Icon(
+                    Icons.push_pin_rounded,
+                    size: 15,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ],
+            ),
+            const Spacer(),
+            Text(
+              document.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            FutureBuilder<double?>(
+              future: ReadingProgressService.loadProgress(document.path),
+              builder: (context, snapshot) {
+                final ratio = snapshot.data;
+                final progress = ratio == null ? null : (ratio * 100).round();
+                return Text(
+                  progress == null ? _documentSummary(document) : '读到 $progress%',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.palette.muted,
+                        fontSize: 12,
+                        letterSpacing: 0,
+                      ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDocument(BuildContext context) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final controller = context.read<LibraryController>();
+    await _openReader(context, document);
+    if (context.mounted) {
+      await controller.loadDocuments();
+    }
+  }
 }
 
 class _LibrarySliverTransitionState extends State<_LibrarySliverTransition> {
@@ -135,10 +295,16 @@ class _AnimatedDocumentSliverList extends StatefulWidget {
   const _AnimatedDocumentSliverList({
     required this.documents,
     required this.staggerController,
+    required this.selectedPaths,
+    required this.onToggleSelection,
+    required this.onStartSelection,
   });
 
   final List<DocumentEntry> documents;
   final AnimationController staggerController;
+  final Set<String> selectedPaths;
+  final ValueChanged<DocumentEntry> onToggleSelection;
+  final ValueChanged<DocumentEntry> onStartSelection;
 
   @override
   State<_AnimatedDocumentSliverList> createState() =>
@@ -208,6 +374,7 @@ class _AnimatedDocumentSliverListState
                 recentOpenedAt: next.recentOpenedAt,
                 isReferenced: next.isReferenced,
                 tags: next.tags,
+                pinned: next.pinned,
               ))
           .toList();
     });
@@ -237,7 +404,13 @@ class _AnimatedDocumentSliverListState
     final tile = Padding(
       key: ValueKey('doc_tile_${document.path}'),
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: _DocumentTile(document: document),
+      child: _DocumentTile(
+        document: document,
+        selected: widget.selectedPaths.contains(document.path),
+        selectionActive: widget.selectedPaths.isNotEmpty,
+        onToggleSelection: widget.onToggleSelection,
+        onStartSelection: widget.onStartSelection,
+      ),
     );
 
     return _StaggeredFadeIn(
@@ -263,9 +436,19 @@ class _AnimatedDocumentSliverListState
 
 
 class _DocumentTile extends StatefulWidget {
-  const _DocumentTile({required this.document});
+  const _DocumentTile({
+    required this.document,
+    required this.selected,
+    required this.selectionActive,
+    required this.onToggleSelection,
+    required this.onStartSelection,
+  });
 
   final DocumentEntry document;
+  final bool selected;
+  final bool selectionActive;
+  final ValueChanged<DocumentEntry> onToggleSelection;
+  final ValueChanged<DocumentEntry> onStartSelection;
 
   @override
   State<_DocumentTile> createState() => _DocumentTileState();
@@ -304,8 +487,9 @@ class _DocumentTileState extends State<_DocumentTile>
         Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: widget.document.name,
-      hint: '双击打开阅读',
+      hint: widget.selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
       button: true,
+      selected: widget.selected,
       child: AnimatedBuilder(
         animation: _hoverAnim,
         builder: (context, child) => Transform.scale(
@@ -313,10 +497,21 @@ class _DocumentTileState extends State<_DocumentTile>
           child: child,
         ),
         child: AppCard(
-        onTap: () => _openDocument(context),
+        onTap: widget.selectionActive
+            ? () => widget.onToggleSelection(widget.document)
+            : () => _openDocument(context),
+        onLongPress: () {
+          if (widget.selectionActive) {
+            widget.onToggleSelection(widget.document);
+          } else {
+            widget.onStartSelection(widget.document);
+          }
+        },
         padding: const EdgeInsets.all(AppSpacing.md),
         forceClassic: forceClassicCard,
-        child: Row(
+        child: Stack(
+          children: [
+            Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
@@ -345,6 +540,17 @@ class _DocumentTileState extends State<_DocumentTile>
                                   color: palette.muted,
                                 ),
                               ),
+                            if (widget.document.pinned)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: AppSpacing.xxs,
+                                ),
+                                child: Icon(
+                                  Icons.push_pin_rounded,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             Flexible(
                               child: Text(
                                 widget.document.name,
@@ -368,17 +574,32 @@ class _DocumentTileState extends State<_DocumentTile>
             const SizedBox(width: AppSpacing.xs),
             IconButton(
               tooltip: '文档操作',
+              onPressed: widget.selectionActive
+                  ? null
+                  : () async {
+                      final action = await _showGlassDocumentMenu(
+                        context,
+                        widget.document,
+                      );
+                      if (action != null && context.mounted) {
+                        await _handleAction(context, action);
+                      }
+                    },
               icon: const Icon(Icons.more_horiz_rounded),
-              onPressed: () async {
-                final action = await _showGlassDocumentMenu(
-                  context,
-                  widget.document,
-                );
-                if (action != null && context.mounted) {
-                  await _handleAction(context, action);
-                }
-              },
             ),
+          ],
+        ),
+            if (widget.selectionActive)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Icon(
+                  widget.selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: widget.selected ? AppColors.primary : palette.muted,
+                ),
+              ),
           ],
         ),
       ),
@@ -400,6 +621,9 @@ class _DocumentTileState extends State<_DocumentTile>
     _DocumentMenuAction action,
   ) async {
     switch (action) {
+      case _DocumentMenuAction.pin:
+        final controller = context.read<LibraryController>();
+        await controller.setPinned(widget.document, !widget.document.pinned);
       case _DocumentMenuAction.rename:
         await showRenameDocumentDialog(context, widget.document);
       case _DocumentMenuAction.tags:
@@ -438,6 +662,13 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+            ),
+            _GlassMenuTile(
+              icon: document.pinned
+                  ? Icons.push_pin_rounded
+                  : Icons.push_pin_outlined,
+              title: document.pinned ? '取消置顶' : '置顶',
+              action: _DocumentMenuAction.pin,
             ),
             _GlassMenuTile(
               icon: Icons.drive_file_rename_outline_rounded,
@@ -492,20 +723,28 @@ class _GlassMenuTile extends StatelessWidget {
   }
 }
 
-Future<void> _showTagEditor(BuildContext context, DocumentEntry document) {
+Future<void> _showTagEditor(
+  BuildContext context,
+  DocumentEntry document, {
+  List<DocumentEntry>? documents,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => _TagEditorSheet(document: document),
+    builder: (context) => _TagEditorSheet(
+      document: document,
+      documents: documents ?? [document],
+    ),
   );
 }
 
 class _TagEditorSheet extends StatefulWidget {
-  const _TagEditorSheet({required this.document});
+  const _TagEditorSheet({required this.document, required this.documents});
 
   final DocumentEntry document;
+  final List<DocumentEntry> documents;
 
   @override
   State<_TagEditorSheet> createState() => _TagEditorSheetState();
@@ -520,7 +759,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
   void initState() {
     super.initState();
     _tagController = TextEditingController();
-    _selectedTags = widget.document.tags.toSet();
+    _selectedTags = widget.documents.length == 1
+        ? widget.document.tags.toSet()
+        : <String>{};
   }
 
   @override
@@ -553,12 +794,14 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '设置标签',
+              widget.documents.length == 1 ? '设置标签' : '批量设置标签',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              widget.document.name,
+              widget.documents.length == 1
+                  ? widget.document.name
+                  : '已选择 ${widget.documents.length} 个文档，勾选后将追加标签',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -575,9 +818,8 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
                   _EditableTagChip(
                     tag: tag,
                     selected: _selectedTags.contains(tag),
-                    canDelete: !controller.allDocuments.any(
-                      (document) => document.tags.contains(tag),
-                    ),
+                    pinned: controller.pinnedTags.contains(tag),
+                    canDelete: true,
                     onSelected: (selected) {
                       setState(() {
                         if (selected) {
@@ -587,6 +829,8 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
                         }
                       });
                     },
+                    onPinnedChanged: (pinned) =>
+                        controller.setTagPinned(tag, pinned),
                     onDeleted: () => _deleteTag(controller, tag),
                   ),
                 if (controller.tags.isEmpty)
@@ -695,6 +939,27 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
   }
 
   Future<void> _deleteTag(LibraryController controller, String tag) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => LiquidGlassDialog(
+        title: const Text('删除标签'),
+        content: Text('删除「$tag」后，所有文档都会移除这个标签。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
     try {
       await controller.deleteTag(tag);
       setState(() => _selectedTags.remove(tag));
@@ -710,10 +975,17 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
   Future<void> _saveTags(LibraryController controller) async {
     setState(() => _isSaving = true);
     try {
-      await controller.updateDocumentTags(
-        widget.document,
-        _selectedTags.toList(),
-      );
+      if (widget.documents.length > 1) {
+        await controller.addDocumentsTags(
+          widget.documents,
+          _selectedTags.toList(),
+        );
+      } else {
+        await controller.updateDocumentTags(
+          widget.document,
+          _selectedTags.toList(),
+        );
+      }
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -726,39 +998,63 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       }
     }
   }
+
 }
 
 class _EditableTagChip extends StatelessWidget {
   const _EditableTagChip({
     required this.tag,
     required this.selected,
+    required this.pinned,
     required this.canDelete,
     required this.onSelected,
+    required this.onPinnedChanged,
     required this.onDeleted,
   });
 
   final String tag;
   final bool selected;
+  final bool pinned;
   final bool canDelete;
   final ValueChanged<bool> onSelected;
+  final ValueChanged<bool> onPinnedChanged;
   final VoidCallback onDeleted;
 
   @override
   Widget build(BuildContext context) {
+    final color = _tagColor(tag);
     if (liquidGlassEnabled(context)) {
-      return LiquidGlassChip(
-        label: tag,
-        selected: selected,
-        icon: Icons.label_outline_rounded,
-        onTap: () => onSelected(!selected),
-        onDeleted: canDelete ? onDeleted : null,
+      return GestureDetector(
+        onLongPress: () => onPinnedChanged(!pinned),
+        child: LiquidGlassChip(
+          label: tag,
+          selected: selected,
+          icon: pinned ? Icons.push_pin_rounded : Icons.label_outline_rounded,
+          onTap: () => onSelected(!selected),
+          onDeleted: canDelete ? onDeleted : null,
+        ),
       );
     }
     return InputChip(
       label: Text(tag),
       selected: selected,
+      avatar: GestureDetector(
+        onTap: () => onPinnedChanged(!pinned),
+        child: Icon(
+          pinned ? Icons.push_pin_rounded : Icons.label_outline_rounded,
+          size: 18,
+          color: selected ? Colors.white : color,
+        ),
+      ),
       onSelected: onSelected,
       onDeleted: canDelete ? onDeleted : null,
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.12),
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : color,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      ),
     );
   }
 }
@@ -829,19 +1125,20 @@ class _SmallTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = _tagColor(label);
     if (liquidGlassEnabled(context)) {
       return LiquidGlassChip(label: label, selected: true);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color: color.withOpacity(0.10),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.primary,
+              color: color,
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0,
@@ -849,6 +1146,22 @@ class _SmallTagChip extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _tagColor(String tag) {
+  const colors = <Color>[
+    Color(0xFF2F6BFF),
+    Color(0xFF0F8B6B),
+    Color(0xFF9A5A00),
+    Color(0xFFC2415B),
+    Color(0xFF6D5BD0),
+    Color(0xFF087EA4),
+  ];
+  final hash = tag.codeUnits.fold<int>(
+    0,
+    (value, unit) => (value * 31 + unit) & 0x7fffffff,
+  );
+  return colors[hash % colors.length];
 }
 
 class _TypeBadge extends StatelessWidget {

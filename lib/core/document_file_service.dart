@@ -24,13 +24,19 @@ abstract class DocumentLibraryService {
 
   Future<void> removeDocument(DocumentEntry document);
 
+  Future<DocumentEntry> setDocumentPinned(DocumentEntry document, bool pinned);
+
   Future<DateTime> markDocumentOpened(DocumentEntry document);
 
   Future<List<String>> loadTags();
 
+  Future<List<String>> loadPinnedTags();
+
   Future<void> createTag(String name);
 
   Future<void> deleteTag(String name);
+
+  Future<void> setTagPinned(String name, bool pinned);
 
   Future<DocumentTagUpdate> updateDocumentTags(
     DocumentEntry document,
@@ -55,9 +61,11 @@ class DocumentFileService implements DocumentLibraryService {
   static const _documentAccessChannel =
       MethodChannel('com.jianxi.reader/document_access');
   static const _recentOpenedPrefix = 'document.recentOpened.';
+  static const _documentPinnedPrefix = 'document.pinned.';
   static const _referencedPathsKey = 'referenced.paths';
   static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
   static const _tagsKey = 'document.tags';
+  static const _pinnedTagsKey = 'document.tags.pinned';
   static const _documentTagsPrefix = 'document.tags.';
   static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
   Future<SharedPreferences>? _preferencesFuture;
@@ -84,6 +92,7 @@ class DocumentFileService implements DocumentLibraryService {
           file,
           recentOpenedAt: _recentOpenedAt(preferences, file.path),
           tags: _documentTags(preferences, file.path),
+          pinned: _documentPinned(preferences, file.path),
         ),
       );
     }
@@ -116,6 +125,7 @@ class DocumentFileService implements DocumentLibraryService {
           recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
           isReferenced: true,
           tags: _documentTags(preferences, refreshedPath),
+          pinned: _documentPinned(preferences, refreshedPath),
         ),
       );
     }
@@ -170,7 +180,14 @@ class DocumentFileService implements DocumentLibraryService {
       if (!paths.contains(sourcePath)) {
         paths.add(sourcePath);
       }
-      imported.add(await DocumentEntry.fromFile(source, isReferenced: true));
+      imported.add(
+        await DocumentEntry.fromFile(
+          source,
+          isReferenced: true,
+          tags: _documentTags(preferences, sourcePath),
+          pinned: _documentPinned(preferences, sourcePath),
+        ),
+      );
     }
     await preferences.setStringList(_referencedPathsKey, paths);
 
@@ -217,6 +234,7 @@ class DocumentFileService implements DocumentLibraryService {
       source,
       isReferenced: true,
       tags: _documentTags(preferences, sourcePath),
+      pinned: _documentPinned(preferences, sourcePath),
     );
   }
 
@@ -236,6 +254,7 @@ class DocumentFileService implements DocumentLibraryService {
       recentOpenedAt: _recentOpenedAt(preferences, path),
       isReferenced: document.isReferenced,
       tags: _documentTags(preferences, path),
+      pinned: _documentPinned(preferences, path),
     );
   }
 
@@ -291,6 +310,7 @@ class DocumentFileService implements DocumentLibraryService {
       recentOpenedAt: _recentOpenedAt(preferences, renamedFile.path),
       isReferenced: document.isReferenced,
       tags: _documentTags(preferences, renamedFile.path),
+      pinned: _documentPinned(preferences, renamedFile.path),
     );
   }
 
@@ -336,6 +356,20 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   @override
+  Future<DocumentEntry> setDocumentPinned(
+    DocumentEntry document,
+    bool pinned,
+  ) async {
+    final preferences = await _preferences();
+    if (pinned) {
+      await preferences.setBool(_documentPinnedKey(document.path), true);
+    } else {
+      await preferences.remove(_documentPinnedKey(document.path));
+    }
+    return document.copyWith(pinned: pinned);
+  }
+
+  @override
   Future<DateTime> markDocumentOpened(DocumentEntry document) async {
     final preferences = await _preferences();
     final openedAt = DateTime.now();
@@ -350,6 +384,12 @@ class DocumentFileService implements DocumentLibraryService {
   Future<List<String>> loadTags() async {
     final preferences = await _preferences();
     return _allTags(preferences);
+  }
+
+  @override
+  Future<List<String>> loadPinnedTags() async {
+    final preferences = await _preferences();
+    return _cleanTags(preferences.getStringList(_pinnedTagsKey) ?? []);
   }
 
   @override
@@ -370,6 +410,10 @@ class DocumentFileService implements DocumentLibraryService {
     final preferences = await _preferences();
     final tags = _allTags(preferences)..remove(tag);
     await preferences.setStringList(_tagsKey, tags);
+    final pinnedTags = _cleanTags(
+      preferences.getStringList(_pinnedTagsKey) ?? [],
+    )..remove(tag);
+    await preferences.setStringList(_pinnedTagsKey, pinnedTags);
 
     for (final key in preferences.getKeys()) {
       if (!key.startsWith(_documentTagsPrefix)) {
@@ -380,6 +424,22 @@ class DocumentFileService implements DocumentLibraryService {
         await preferences.setStringList(key, documentTags);
       }
     }
+  }
+
+  @override
+  Future<void> setTagPinned(String name, bool pinned) async {
+    final tag = _validateTagName(name);
+    final preferences = await _preferences();
+    final pinnedTags = _cleanTags(
+      preferences.getStringList(_pinnedTagsKey) ?? [],
+    );
+    if (pinned && !pinnedTags.contains(tag)) {
+      pinnedTags.add(tag);
+    } else if (!pinned) {
+      pinnedTags.remove(tag);
+    }
+    pinnedTags.sort();
+    await preferences.setStringList(_pinnedTagsKey, pinnedTags);
   }
 
   @override
@@ -413,6 +473,10 @@ class DocumentFileService implements DocumentLibraryService {
     return '$_recentOpenedPrefix$path';
   }
 
+  static String _documentPinnedKey(String path) {
+    return '$_documentPinnedPrefix$path';
+  }
+
   static String _referencedSourceUriKey(String path) {
     return '$_referencedSourceUriPrefix$path';
   }
@@ -429,6 +493,10 @@ class DocumentFileService implements DocumentLibraryService {
   static List<String> _documentTags(SharedPreferences preferences, String path) {
     final tags = preferences.getStringList(_documentTagsKey(path)) ?? [];
     return _cleanTags(tags);
+  }
+
+  static bool _documentPinned(SharedPreferences preferences, String path) {
+    return preferences.getBool(_documentPinnedKey(path)) ?? false;
   }
 
   static List<String> _cleanTags(List<String> tags) {
@@ -459,6 +527,7 @@ class DocumentFileService implements DocumentLibraryService {
     String path,
   ) async {
     await preferences.remove(_recentOpenedKey(path));
+    await preferences.remove(_documentPinnedKey(path));
     await preferences.remove(_documentTagsKey(path));
     await ReadingProgressService.removeProgress(path);
   }
@@ -469,11 +538,15 @@ class DocumentFileService implements DocumentLibraryService {
     String newPath,
   ) async {
     final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
+    final pinned = preferences.getBool(_documentPinnedKey(oldPath));
     final tags = preferences.getStringList(_documentTagsKey(oldPath));
     await ReadingProgressService.moveProgress(oldPath, newPath);
     await _clearDocumentMetadata(preferences, oldPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
+    }
+    if (pinned == true) {
+      await preferences.setBool(_documentPinnedKey(newPath), true);
     }
     if (tags != null) {
       await preferences.setStringList(_documentTagsKey(newPath), tags);
@@ -530,6 +603,7 @@ class DocumentFileService implements DocumentLibraryService {
           File(path),
           isReferenced: true,
           tags: _documentTags(preferences, path),
+          pinned: _documentPinned(preferences, path),
         ),
       );
     }
@@ -569,6 +643,7 @@ class DocumentFileService implements DocumentLibraryService {
       File(path),
       isReferenced: true,
       tags: _documentTags(preferences, path),
+      pinned: _documentPinned(preferences, path),
     );
   }
 

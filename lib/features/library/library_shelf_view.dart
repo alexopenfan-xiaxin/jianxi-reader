@@ -1,9 +1,17 @@
 part of 'library_page.dart';
 
 class _ShelfGrid extends StatelessWidget {
-  const _ShelfGrid({required this.documents});
+  const _ShelfGrid({
+    required this.documents,
+    required this.selectedPaths,
+    required this.onToggleSelection,
+    required this.onStartSelection,
+  });
 
   final List<DocumentEntry> documents;
+  final Set<String> selectedPaths;
+  final ValueChanged<DocumentEntry> onToggleSelection;
+  final ValueChanged<DocumentEntry> onStartSelection;
 
   static const _grid2Col = SliverGridDelegateWithFixedCrossAxisCount(
     crossAxisCount: 2,
@@ -50,6 +58,10 @@ class _ShelfGrid extends StatelessWidget {
                 child: _ShelfDocumentCard(
                   key: ValueKey('shelf_doc_${document.path}'),
                   document: document,
+                  selected: selectedPaths.contains(document.path),
+                  selectionActive: selectedPaths.isNotEmpty,
+                  onToggleSelection: onToggleSelection,
+                  onStartSelection: onStartSelection,
                 ),
               );
             },
@@ -62,9 +74,20 @@ class _ShelfGrid extends StatelessWidget {
 }
 
 class _ShelfDocumentCard extends StatefulWidget {
-  const _ShelfDocumentCard({required this.document, super.key});
+  const _ShelfDocumentCard({
+    required this.document,
+    required this.selected,
+    required this.selectionActive,
+    required this.onToggleSelection,
+    required this.onStartSelection,
+    super.key,
+  });
 
   final DocumentEntry document;
+  final bool selected;
+  final bool selectionActive;
+  final ValueChanged<DocumentEntry> onToggleSelection;
+  final ValueChanged<DocumentEntry> onStartSelection;
 
   @override
   State<_ShelfDocumentCard> createState() => _ShelfDocumentCardState();
@@ -109,8 +132,9 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     final cover = _CoverStyle.forDocument(widget.document);
     return Semantics(
       label: widget.document.name,
-      hint: '双击打开阅读，长按打开文档操作',
+      hint: widget.selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
       button: true,
+      selected: widget.selected,
       child: RepaintBoundary(
         child: AnimatedBuilder(
       animation: _pressAnimation,
@@ -122,8 +146,10 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
         borderRadius: BorderRadius.circular(AppRadii.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => _openDocument(context),
-          onLongPress: () => _showShelfActions(context),
+          onTap: widget.selectionActive
+              ? () => widget.onToggleSelection(widget.document)
+              : () => _openDocument(context),
+          onLongPress: () => _handleLongPress(context),
           onTapDown: (_) => _pressController.forward(),
           onTapUp: (_) => _springBack(),
           onTapCancel: _springBack,
@@ -162,6 +188,14 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                       Row(
                         children: [
                           _ShelfTypeMark(document: widget.document),
+                          if (widget.document.pinned) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            const Icon(
+                              Icons.push_pin_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
                         ],
                       ),
                       const Spacer(),
@@ -183,6 +217,17 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                     ],
                   ),
                 ),
+                if (widget.selectionActive)
+                  Positioned(
+                    right: AppSpacing.sm,
+                    top: AppSpacing.sm,
+                    child: Icon(
+                      widget.selected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -207,6 +252,9 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     _DocumentMenuAction action,
   ) async {
     switch (action) {
+      case _DocumentMenuAction.pin:
+        final controller = context.read<LibraryController>();
+        await controller.setPinned(widget.document, !widget.document.pinned);
       case _DocumentMenuAction.rename:
         await showRenameDocumentDialog(context, widget.document);
       case _DocumentMenuAction.tags:
@@ -216,13 +264,14 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     }
   }
 
-  Future<void> _showShelfActions(BuildContext context) async {
-    HapticService.mediumImpact();
-    _springBack();
-    final action = await _showGlassDocumentMenu(context, widget.document);
-    if (action != null && mounted) {
-      await _handleAction(context, action);
+  void _handleLongPress(BuildContext context) {
+    if (widget.selectionActive) {
+      widget.onToggleSelection(widget.document);
+      return;
     }
+    HapticService.mediumImpact();
+    widget.onStartSelection(widget.document);
+    _springBack();
   }
 }
 
