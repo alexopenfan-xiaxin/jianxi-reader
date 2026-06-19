@@ -7,8 +7,11 @@ import 'package:provider/provider.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/document_error_describer.dart';
+import '../../core/bookmark_service.dart';
+import '../../core/document_identity.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
+import '../../core/reading_history_service.dart';
 import '../../core/reading_progress_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/liquid_glass.dart';
@@ -23,7 +26,7 @@ import 'smart_scrollbar.dart';
 import 'toc_drawer.dart';
 import 'toc_service.dart';
 
-enum _ReaderMenuAction { rename, remove }
+enum _ReaderMenuAction { rename, remove, bookmark }
 
 class ReaderProgressController extends ChangeNotifier {
   double _ratio = 0;
@@ -382,6 +385,10 @@ class _ReaderPageState extends State<ReaderPage> {
                     itemBuilder: (context) {
                       return const <PopupMenuEntry<_ReaderMenuAction>>[
                         PopupMenuItem(
+                          value: _ReaderMenuAction.bookmark,
+                          child: Text('添加书签'),
+                        ),
+                        PopupMenuItem(
                           value: _ReaderMenuAction.rename,
                           child: Text('重命名'),
                         ),
@@ -475,6 +482,14 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       final refreshed = await _libraryController.refreshDocument(_document);
       final opened = await _libraryController.markDocumentOpened(refreshed);
+      // Record reading history with stable document ID.
+      DocumentIdentityService.getOrCreateId(path: opened.path).then((docId) {
+        ReadingHistoryService.record(documentId: docId).catchError((e) {
+          debugPrint('[ReaderPage] record history failed: $e');
+        });
+      }).catchError((e) {
+        debugPrint('[ReaderPage] get document id failed: $e');
+      });
       if (mounted) {
         _isHtmlDocument = opened.type == DocumentType.html;
         setState(() {
@@ -560,6 +575,8 @@ class _ReaderPageState extends State<ReaderPage> {
 
   Future<void> _handleAction(_ReaderMenuAction action) async {
     switch (action) {
+      case _ReaderMenuAction.bookmark:
+        await _addBookmark();
       case _ReaderMenuAction.rename:
         final renamed = await showRenameDocumentDialog(context, _document);
         if (renamed != null && mounted) {
@@ -570,6 +587,39 @@ class _ReaderPageState extends State<ReaderPage> {
         if (removed && mounted) {
           Navigator.of(context).pop();
         }
+    }
+  }
+
+  Future<void> _addBookmark() async {
+    try {
+      final docId = await DocumentIdentityService.getOrCreateId(
+        path: _document.path,
+      );
+      final ratio = _progressController.ratio;
+      // Find current heading as bookmark title.
+      String title = _document.name;
+      if (_tocEntries.isNotEmpty) {
+        final activeIndex = (ratio * _tocEntries.length)
+            .floor()
+            .clamp(0, _tocEntries.length - 1);
+        title = _tocEntries[activeIndex].title;
+      }
+      await BookmarkService.add(
+        documentId: docId,
+        progressRatio: ratio,
+        title: title,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已添加书签')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加书签失败：$e')),
+        );
+      }
     }
   }
 }
@@ -586,6 +636,11 @@ Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: const [
+            _ReaderMenuTile(
+              icon: Icons.bookmark_add_outlined,
+              title: '添加书签',
+              action: _ReaderMenuAction.bookmark,
+            ),
             _ReaderMenuTile(
               icon: Icons.drive_file_rename_outline_rounded,
               title: '重命名',

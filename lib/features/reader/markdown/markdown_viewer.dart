@@ -296,12 +296,13 @@ class MarkdownViewerState extends State<MarkdownViewer>
         snapshot['modified']! as int,
       );
 
-      // Split into sections for progressive rendering.
-      final sections = _splitIntoSections(data);
+      // Split into sections for progressive rendering (only for large files > 1MB).
+      final useSectionRendering = fileSize > 1048576; // 1 MB
+      final sections = useSectionRendering ? _splitIntoSections(data) : <_DocumentSection>[];
       final initialCount = sections.length <= _initialSectionCount
           ? sections.length
           : _initialSectionCount;
-      final allVisible = sections.length <= initialCount;
+      final allVisible = sections.isEmpty || sections.length <= initialCount;
       final displayData = allVisible
           ? data
           : sections.sublist(0, initialCount).map((s) => s.content).join();
