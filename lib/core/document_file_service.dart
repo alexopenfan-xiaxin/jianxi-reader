@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/library/document_entry.dart';
 import 'file_rules.dart';
+import 'reading_progress_service.dart';
 
 abstract class DocumentLibraryService {
   Future<List<DocumentEntry>> scanLibrary();
@@ -459,6 +460,7 @@ class DocumentFileService implements DocumentLibraryService {
   ) async {
     await preferences.remove(_recentOpenedKey(path));
     await preferences.remove(_documentTagsKey(path));
+    await ReadingProgressService.removeProgress(path);
   }
 
   static Future<void> _moveDocumentMetadata(
@@ -468,6 +470,7 @@ class DocumentFileService implements DocumentLibraryService {
   ) async {
     final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
     final tags = preferences.getStringList(_documentTagsKey(oldPath));
+    await ReadingProgressService.moveProgress(oldPath, newPath);
     await _clearDocumentMetadata(preferences, oldPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);

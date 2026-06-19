@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
+import '../../core/document_error_describer.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/liquid_glass.dart';
 import 'document_entry.dart';
@@ -29,7 +30,9 @@ Future<bool> removeDocumentFromLibrary(
     messenger.showSnackBar(SnackBar(content: Text('已移出 ${document.name}')));
     return true;
   } catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text('移出失败：$error')));
+    messenger.showSnackBar(
+      SnackBar(content: Text('移出失败：${describeDocumentError(error)}')),
+    );
     return false;
   }
 }
@@ -134,7 +137,7 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
       if (mounted) {
         setState(() {
           _isSaving = false;
-          _errorText = error.toString();
+          _errorText = describeDocumentError(error);
         });
       }
     }

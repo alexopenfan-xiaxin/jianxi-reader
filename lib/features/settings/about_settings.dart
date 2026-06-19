@@ -66,8 +66,8 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateUrl =
-      'https://alexxia.5imh.xyz/update/index.php?request&local=161';
+  static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
+  static const _fallbackBuildNumber = '162';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -96,15 +96,19 @@ class _AboutPageState extends State<AboutPage> {
     setState(() => _isChecking = true);
     final client = _createUpdateClient();
     try {
-      final request = await client.getUrl(Uri.parse(_updateUrl));
-      request.headers.set(
-        HttpHeaders.acceptHeader,
-        '$_apkContentType, application/json',
-      );
-      final response = await request.close();
+      final response = await _openUpdateRequest(client);
 
       if (response.statusCode == HttpStatus.ok && _isApkResponse(response)) {
+        if (!_isNewerBuildResponse(response)) {
+          await response.drain<void>();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已是最新版本')),
+          );
+          return;
+        }
         final newVersion = response.headers.value('x-apk-version');
+        await response.drain<void>();
         client.close(force: true);
         if (!mounted) return;
         setState(() => _isChecking = false);
@@ -146,6 +150,12 @@ class _AboutPageState extends State<AboutPage> {
           SnackBar(
             content: Text(message ?? '检查更新失败：${response.statusCode}'),
           ),
+        );
+      }
+    } on HandshakeException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('更新服务连接失败，请稍后重试')),
         );
       }
     } catch (error) {
@@ -194,13 +204,9 @@ class _AboutPageState extends State<AboutPage> {
       ),
     );
 
+    IOSink? sink;
     try {
-      final request = await client.getUrl(Uri.parse(_updateUrl));
-      request.headers.set(
-        HttpHeaders.acceptHeader,
-        '$_apkContentType, application/json',
-      );
-      final response = await request.close();
+      final response = await _openUpdateRequest(client);
       if (response.statusCode != HttpStatus.ok || !_isApkResponse(response)) {
         final message = await _readUpdateMessage(response);
         if (mounted) {
@@ -211,10 +217,20 @@ class _AboutPageState extends State<AboutPage> {
         }
         return;
       }
+      if (!_isNewerBuildResponse(response)) {
+        await response.drain<void>();
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已是最新版本')),
+          );
+        }
+        return;
+      }
 
       final total = response.contentLength;
       final file = File(filePath);
-      final sink = file.openWrite();
+      sink = file.openWrite();
       var received = 0;
 
       await for (final chunk in response) {
@@ -225,6 +241,27 @@ class _AboutPageState extends State<AboutPage> {
         }
       }
       await sink.close();
+      sink = null;
+      if (received == 0 || (total > 0 && received != total)) {
+        if (await file.exists()) {
+          await file.delete();
+        }
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('下载失败：更新包不完整')),
+          );
+        }
+        return;
+      }
+    } on HandshakeException {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('更新服务连接失败，请稍后重试')),
+        );
+      }
+      return;
     } catch (error) {
       if (mounted) {
         Navigator.of(context).pop();
@@ -234,6 +271,7 @@ class _AboutPageState extends State<AboutPage> {
       }
       return;
     } finally {
+      await sink?.close();
       client.close(force: true);
       progress.dispose();
     }
@@ -362,15 +400,59 @@ class _AboutPageState extends State<AboutPage> {
 
   HttpClient _createUpdateClient() {
     final client = HttpClient();
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
     client.userAgent = 'JianxiReader/1.0';
     return client;
+  }
+
+  Future<HttpClientResponse> _openUpdateRequest(HttpClient client) async {
+    final request = await client.getUrl(_buildUpdateUri());
+    request.headers.set(
+      HttpHeaders.acceptHeader,
+      '$_apkContentType, application/json',
+    );
+    return request.close();
+  }
+
+  Uri _buildUpdateUri() {
+    return Uri.parse('$_updateEndpoint?request&local=${_currentBuildNumber()}');
   }
 
   bool _isApkResponse(HttpClientResponse response) {
     final contentType = response.headers.value(HttpHeaders.contentTypeHeader);
     return contentType?.contains(_apkContentType) ?? false;
+  }
+
+  bool _isNewerBuildResponse(HttpClientResponse response) {
+    final latestBuild = _responseBuildNumber(response);
+    if (latestBuild == null) {
+      return true;
+    }
+    return latestBuild > _currentBuildNumberValue();
+  }
+
+  int? _responseBuildNumber(HttpClientResponse response) {
+    final build = response.headers.value('x-apk-build');
+    if (build != null) {
+      return int.tryParse(build);
+    }
+    final version = response.headers.value('x-apk-version');
+    if (version == null) {
+      return null;
+    }
+    final match = RegExp(r'\+(\d+)$').firstMatch(version);
+    return int.tryParse(match?.group(1) ?? version);
+  }
+
+  String _currentBuildNumber() {
+    final buildNumber = _packageInfo?.buildNumber;
+    if (buildNumber == null || buildNumber.isEmpty) {
+      return _fallbackBuildNumber;
+    }
+    return buildNumber;
+  }
+
+  int _currentBuildNumberValue() {
+    return int.tryParse(_currentBuildNumber()) ?? int.parse(_fallbackBuildNumber);
   }
 
   Future<String?> _readUpdateMessage(HttpClientResponse response) async {

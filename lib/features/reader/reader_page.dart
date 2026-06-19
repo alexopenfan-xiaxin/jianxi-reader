@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
+import '../../core/document_error_describer.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
 import '../../core/reading_progress_service.dart';
@@ -23,6 +24,21 @@ import 'toc_drawer.dart';
 import 'toc_service.dart';
 
 enum _ReaderMenuAction { rename, remove }
+
+class ReaderProgressController extends ChangeNotifier {
+  double _ratio = 0;
+
+  double get ratio => _ratio;
+
+  void update(double ratio) {
+    final value = ratio.clamp(0.0, 1.0).toDouble();
+    if ((value - _ratio).abs() < 0.001) {
+      return;
+    }
+    _ratio = value;
+    notifyListeners();
+  }
+}
 
 typedef _ReaderDisplaySettings = ({
   ReadingTheme readingTheme,
@@ -49,6 +65,7 @@ class _ReaderPageState extends State<ReaderPage> {
   final _searchController = DocumentSearchController();
   final _searchTextController = TextEditingController();
   final _searchFocusNode = FocusNode();
+  final _progressController = ReaderProgressController();
   final _smartScrollbarKey = GlobalKey<SmartScrollbarState>();
   final _htmlViewKey = GlobalKey<HtmlDocumentViewState>();
   final _markdownViewKey = GlobalKey<MarkdownViewerState>();
@@ -96,6 +113,7 @@ class _ReaderPageState extends State<ReaderPage> {
     _searchController.dispose();
     _searchTextController.dispose();
     _searchFocusNode.dispose();
+    _progressController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -106,12 +124,18 @@ class _ReaderPageState extends State<ReaderPage> {
     if (nextShowGlass != _showGlass && mounted) {
       setState(() => _showGlass = nextShowGlass);
     }
+    final position = _scrollController.position;
+    final ratio = position.maxScrollExtent > 0
+        ? position.pixels / position.maxScrollExtent
+        : 0.0;
+    _progressController.update(ratio);
     _scheduleProgressSave();
   }
 
   /// Called by [HtmlDocumentView.onScroll] with the current scroll ratio.
   void _handleHtmlScroll(double ratio) {
     _htmlScrollRatio = ratio;
+    _progressController.update(ratio);
     // Forward to SmartScrollbar for speed detection.
     _smartScrollbarKey.currentState?.reportScroll(ratio);
     // Update glass app bar visibility.
@@ -155,8 +179,6 @@ class _ReaderPageState extends State<ReaderPage> {
   Future<void> _loadSavedProgress() async {
     final file = File(_document.path);
     if (!file.existsSync()) return;
-    final fileSize = await file.length();
-    if (fileSize > ReadingProgressService.maxFileSizeBytes) return;
     final ratio = await ReadingProgressService.loadProgress(_document.path);
     if (ratio == null || ratio < 0.01 || !mounted) return;
     setState(() {
@@ -191,6 +213,7 @@ class _ReaderPageState extends State<ReaderPage> {
         curve: AppMotion.emphasized,
       );
     }
+    _progressController.update(ratio);
 
     // Dismiss the hint immediately on tap.
     _hideProgressTimer?.cancel();
@@ -370,7 +393,7 @@ class _ReaderPageState extends State<ReaderPage> {
       ),
       body: Column(
         children: [
-          _ReaderProgressBar(scrollController: _scrollController),
+          _ReaderProgressBar(controller: _progressController),
           Expanded(
             child: Stack(
               children: [
@@ -465,9 +488,10 @@ class _ReaderPageState extends State<ReaderPage> {
         }
       }
     } catch (error) {
+      debugPrint('[ReaderPage] prepare document failed: $error');
       if (mounted) {
         setState(() {
-          _prepareError = '读取文档失败：$error';
+          _prepareError = '读取文档失败：${describeDocumentError(error)}';
           _documentReady = true;
           _isPreparingDocument = !_entranceSettled;
         });
@@ -590,84 +614,43 @@ class _ReaderMenuTile extends StatelessWidget {
   }
 }
 
-class _ReaderProgressBar extends StatefulWidget {
-  const _ReaderProgressBar({required this.scrollController});
+class _ReaderProgressBar extends StatelessWidget {
+  const _ReaderProgressBar({required this.controller});
 
-  final ScrollController scrollController;
-
-  @override
-  State<_ReaderProgressBar> createState() => _ReaderProgressBarState();
-}
-
-class _ReaderProgressBarState extends State<_ReaderProgressBar>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _tweenController;
-  double _displayProgress = 0;
-  double _targetProgress = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _tweenController = AnimationController(
-      vsync: this,
-      duration: AppMotion.micro,
-    );
-    widget.scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    widget.scrollController.removeListener(_onScroll);
-    _tweenController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (!widget.scrollController.hasClients) return;
-    final position = widget.scrollController.position;
-    final newProgress = position.maxScrollExtent > 0
-        ? (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0)
-        : 0.0;
-    if ((newProgress - _targetProgress).abs() < 0.001) return;
-    final startProgress = _displayProgress;
-    _targetProgress = newProgress;
-    _tweenController.stop();
-    _tweenController.reset();
-    _tweenController.addListener(() {
-      setState(() {
-        _displayProgress =
-            startProgress + (_targetProgress - startProgress) * _tweenController.value;
-      });
-    });
-    _tweenController.forward();
-  }
+  final ReaderProgressController controller;
 
   @override
   Widget build(BuildContext context) {
-    final percent = (_displayProgress * 100).round();
-    if (_displayProgress <= 0) {
-      return Semantics(
-        label: '阅读进度',
-        value: '0%',
-        child: const SizedBox(height: 3),
-      );
-    }
-    return Semantics(
-      label: '阅读进度',
-      value: '$percent%',
-      child: SizedBox(
-        height: 3,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: _displayProgress,
-            heightFactor: 1,
-            child: ColoredBox(
-              color: AppColors.primary.withOpacity(0.70),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final progress = controller.ratio;
+        final percent = (progress * 100).round();
+        if (progress <= 0) {
+          return Semantics(
+            label: '阅读进度',
+            value: '0%',
+            child: const SizedBox(height: 3),
+          );
+        }
+        return Semantics(
+          label: '阅读进度',
+          value: '$percent%',
+          child: SizedBox(
+            height: 3,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: progress,
+                heightFactor: 1,
+                child: ColoredBox(
+                  color: AppColors.primary.withOpacity(0.70),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

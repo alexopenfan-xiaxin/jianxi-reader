@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../core/document_error_describer.dart';
 import '../../core/document_file_service.dart';
 import 'document_entry.dart';
 
@@ -90,7 +91,8 @@ class LibraryController extends ChangeNotifier {
       _tags = await documentService.loadTags();
       _invalidateCache();
     } catch (error) {
-      _errorMessage = '读取文档库失败：$error';
+      debugPrint('[LibraryController] load documents failed: $error');
+      _errorMessage = '读取文档库失败：${describeDocumentError(error)}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -109,7 +111,8 @@ class LibraryController extends ChangeNotifier {
       _invalidateCache();
       return imported;
     } catch (error) {
-      _errorMessage = '导入外部文档失败：$error';
+      debugPrint('[LibraryController] import external documents failed: $error');
+      _errorMessage = '导入外部文档失败：${describeDocumentError(error)}';
       return const [];
     } finally {
       _isImporting = false;
@@ -130,7 +133,8 @@ class LibraryController extends ChangeNotifier {
       _invalidateCache();
       return imported;
     } catch (error) {
-      _errorMessage = '打开外部文档失败：$error';
+      debugPrint('[LibraryController] import external uri failed: $error');
+      _errorMessage = '打开外部文档失败：${describeDocumentError(error)}';
       rethrow;
     } finally {
       _isImporting = false;
