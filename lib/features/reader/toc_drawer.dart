@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design_tokens.dart';
 import 'toc_service.dart';
 
-class TocDrawer extends StatelessWidget {
+class TocDrawer extends StatefulWidget {
   const TocDrawer({
     required this.entries,
     required this.onSelected,
@@ -18,6 +18,65 @@ class TocDrawer extends StatelessWidget {
   final String documentName;
   final double progressRatio;
   final VoidCallback onBackToTop;
+
+  @override
+  State<TocDrawer> createState() => _TocDrawerState();
+}
+
+class _TocDrawerState extends State<TocDrawer> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToActiveEntry(animated: false);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant TocDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.progressRatio != widget.progressRatio) {
+      _scrollToActiveEntry(animated: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  int get _activeIndex {
+    if (widget.entries.isEmpty) return 0;
+    return (widget.progressRatio * widget.entries.length)
+        .floor()
+        .clamp(0, widget.entries.length - 1);
+  }
+
+  void _scrollToActiveEntry({bool animated = false}) {
+    if (!_scrollController.hasClients || widget.entries.isEmpty) return;
+
+    // Estimate each ListTile height: dense ListTile ≈ 48px vertical.
+    const itemHeight = 48.0;
+    final activeIndex = _activeIndex;
+    // Center the active item in the visible viewport when possible.
+    final viewportHeight = _scrollController.position.viewportDimension;
+    final targetOffset = (activeIndex * itemHeight) - (viewportHeight * 0.35);
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final clamped = targetOffset.clamp(0.0, maxScroll);
+
+    if (animated) {
+      _scrollController.animateTo(
+        clamped,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(clamped);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +98,7 @@ class TocDrawer extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    documentName,
+                    widget.documentName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -49,7 +108,7 @@ class TocDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    '阅读进度 ${(progressRatio * 100).round()}%',
+                    '阅读进度 ${(widget.progressRatio * 100).round()}%',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: palette.muted,
                           letterSpacing: 0,
@@ -61,14 +120,14 @@ class TocDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: OutlinedButton.icon(
-                onPressed: onBackToTop,
+                onPressed: widget.onBackToTop,
                 icon: const Icon(Icons.vertical_align_top_rounded),
                 label: const Text('返回顶部'),
               ),
             ),
             Divider(color: palette.hairline),
             Expanded(
-              child: entries.isEmpty
+              child: widget.entries.isEmpty
                   ? Center(
                       child: Text(
                         '当前文档没有目录',
@@ -79,14 +138,15 @@ class TocDrawer extends StatelessWidget {
                       ),
                     )
                   : ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                      itemCount: entries.length,
+                      itemCount: widget.entries.length,
                       itemBuilder: (context, index) {
-                        final entry = entries[index];
+                        final entry = widget.entries[index];
                         return _TocTile(
                           entry: entry,
-                          active: _isActiveEntry(index),
-                          onTap: () => onSelected(entry),
+                          active: index == _activeIndex,
+                          onTap: () => widget.onSelected(entry),
                         );
                       },
                     ),
@@ -95,16 +155,6 @@ class TocDrawer extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  bool _isActiveEntry(int index) {
-    if (entries.isEmpty) {
-      return false;
-    }
-    final activeIndex = (progressRatio * entries.length)
-        .floor()
-        .clamp(0, entries.length - 1);
-    return index == activeIndex;
   }
 }
 
