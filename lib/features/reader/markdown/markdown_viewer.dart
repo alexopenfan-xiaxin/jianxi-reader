@@ -199,12 +199,22 @@ class MarkdownViewerState extends State<MarkdownViewer>
   void _startFileWatch() {
     _fileWatchSub?.cancel();
     try {
-      _fileWatchSub = widget.file.watch().listen((event) {
-        if (event.type == FileSystemEvent.modify) {
-          debugPrint('[MarkdownViewer] file watch event, scheduling reload');
-          _scheduleReload();
-        }
-      });
+      _fileWatchSub = widget.file.watch().listen(
+        (event) {
+          if (event.type == FileSystemEvent.modify) {
+            debugPrint('[MarkdownViewer] file watch event, scheduling reload');
+            try {
+              _scheduleReload();
+            } catch (e) {
+              debugPrint('[MarkdownViewer] error in _scheduleReload: $e');
+            }
+          }
+        },
+        onError: (e) {
+          debugPrint('[MarkdownViewer] file watch error: $e');
+          _fileWatchSub = null;
+        },
+      );
     } catch (e) {
       debugPrint('[MarkdownViewer] file watch not supported: $e');
     }
@@ -338,6 +348,10 @@ class MarkdownViewerState extends State<MarkdownViewer>
         .clamp(0, _sections.length);
     if (newCount == _visibleSectionCount) return;
     final allVisible = newCount >= _sections.length;
+    if (allVisible && _fullData == null) {
+      debugPrint('[MarkdownViewer] error: _fullData is null when allVisible is true');
+      return;
+    }
     final displayData = allVisible
         ? _fullData!
         : _sections.sublist(0, newCount).map((s) => s.content).join();

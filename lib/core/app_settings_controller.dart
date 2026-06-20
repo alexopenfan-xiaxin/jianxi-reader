@@ -433,11 +433,17 @@ class AppSettingsController extends ChangeNotifier {
   }
 
   static double _normalizeFontSize(double value) {
+    if (value.isNaN || value.isInfinite) {
+      return readingFontSizeDefault;
+    }
     final clamped = value.clamp(readingFontSizeMin, readingFontSizeMax);
     return (clamped * 10).roundToDouble() / 10;
   }
 
   static double _normalizeLineHeight(double value) {
+    if (value.isNaN || value.isInfinite) {
+      return readingLineHeightDefault;
+    }
     final clamped = value.clamp(readingLineHeightMin, readingLineHeightMax);
     return (clamped * 100).roundToDouble() / 100;
   }

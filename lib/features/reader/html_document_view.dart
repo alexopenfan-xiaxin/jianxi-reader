@@ -255,7 +255,9 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
           onPageFinished: (_) {
             if (mounted) {
               setState(() => _isLoading = false);
-              unawaited(_finishPageLoad());
+              _finishPageLoad().catchError((e) {
+                debugPrint('[HtmlDocumentView] finish page load error: $e');
+              });
             }
           },
         ),
