@@ -87,6 +87,7 @@ class _ReaderPageState extends State<ReaderPage> {
   bool _progressHintVisible = false;
   Timer? _saveProgressTimer;
   Timer? _hideProgressTimer;
+  Timer? _hideProgressDelayedTimer;
 
   /// `true` when the current document is rendered via WebView (HTML).
   bool _isHtmlDocument = false;
@@ -111,6 +112,7 @@ class _ReaderPageState extends State<ReaderPage> {
   void dispose() {
     _saveProgressTimer?.cancel();
     _hideProgressTimer?.cancel();
+    _hideProgressDelayedTimer?.cancel();
     _saveProgressNow();
     _searchController.removeListener(_handleSearchStateChanged);
     _searchController.dispose();
@@ -194,7 +196,8 @@ class _ReaderPageState extends State<ReaderPage> {
       if (mounted) {
         setState(() => _progressHintVisible = false);
         // Remove widget after fade-out animation completes.
-        Future.delayed(const Duration(milliseconds: 300), () {
+        _hideProgressDelayedTimer?.cancel();
+        _hideProgressDelayedTimer = Timer(const Duration(milliseconds: 300), () {
           if (mounted) setState(() => _showProgressHint = false);
         });
       }

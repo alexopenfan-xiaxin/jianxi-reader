@@ -232,6 +232,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   bool _isApplyingSearch = false;
   String _lastAppliedSearchQuery = '';
   Timer? _searchDebounce;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -291,6 +292,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   }
 
   Future<void> _loadHtml() async {
+    final generation = ++_loadGeneration;
     _isSearchScriptReady = false;
     _isScrollBridgeReady = false;
     _lastAppliedSearchQuery = '';
@@ -326,7 +328,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
     // so it runs in the same JS context as the loaded page.
     html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
     final baseUrl = widget.file.parent.uri.toString();
-    if (!mounted) {
+    if (generation != _loadGeneration || !mounted) {
       return;
     }
     await _controller.loadHtmlString(html, baseUrl: baseUrl);
