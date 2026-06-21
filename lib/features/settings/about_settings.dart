@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '171';
+  static const _fallbackBuildNumber = '172';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -139,7 +139,6 @@ class _AboutPageState extends State<AboutPage> {
           return;
         }
         final newVersion = response.headers.value('x-apk-version');
-        await response.drain<void>();
         client.close(force: true);
         if (!mounted) return;
         setState(() => _isChecking = false);
