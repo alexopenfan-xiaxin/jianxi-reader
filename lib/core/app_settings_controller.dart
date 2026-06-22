@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReadingScalePreset {
@@ -117,9 +116,6 @@ class ReadingPalette {
 }
 
 class AppSettingsController extends ChangeNotifier {
-  static const _predictiveBackChannel = MethodChannel(
-    'com.jianxi.reader/predictive_back',
-  );
   static const readingFontSizeMin = 14.0;
   static const readingFontSizeMax = 28.0;
   static const readingFontSizeDefault = 18.0;
@@ -283,7 +279,6 @@ class AppSettingsController extends ChangeNotifier {
     );
     _predictiveBackEnabled =
         preferences.getBool(_predictiveBackEnabledKey) ?? false;
-    await _syncPredictiveBackEnabled();
     notifyListeners();
   }
 
@@ -398,26 +393,13 @@ class AppSettingsController extends ChangeNotifier {
 
   Future<void> setPredictiveBackEnabled(bool enabled) async {
     if (_predictiveBackEnabled == enabled) {
-      await _syncPredictiveBackEnabled();
       return;
     }
     _predictiveBackEnabled = enabled;
     notifyListeners();
-    await _syncPredictiveBackEnabled();
     final prefs = _prefs ?? await SharedPreferences.getInstance();
     _prefs = prefs;
     await prefs.setBool(_predictiveBackEnabledKey, enabled);
-  }
-
-  Future<void> _syncPredictiveBackEnabled() async {
-    try {
-      await _predictiveBackChannel.invokeMethod<void>(
-        'setPredictiveBackEnabled',
-        {'enabled': _predictiveBackEnabled},
-      );
-    } on MissingPluginException {
-      // Non-Android platforms keep the setting for a future Android launch.
-    }
   }
 
   static ThemeMode _themeModeFromName(String? name) {

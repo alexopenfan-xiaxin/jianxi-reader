@@ -5,10 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.view.HapticFeedbackConstants
-import android.window.BackEvent
-import android.window.OnBackAnimationCallback
-import android.window.OnBackInvokedCallback
-import android.window.OnBackInvokedDispatcher
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -20,11 +16,8 @@ class MainActivity : FlutterActivity() {
     private val APK_CHANNEL = "com.jianxi.reader/apk_install"
     private val DOCUMENT_CHANNEL = "com.jianxi.reader/document_access"
     private val HAPTIC_CHANNEL = "com.jianxi.reader/haptics"
-    private val PREDICTIVE_BACK_CHANNEL = "com.jianxi.reader/predictive_back"
     private val DOCUMENT_PICK_REQUEST = 21013
     private var pendingDocumentPickResult: MethodChannel.Result? = null
-    private var predictiveBackCallback: OnBackInvokedCallback? = null
-    private var predictiveBackChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -105,63 +98,11 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
-        predictiveBackChannel = MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            PREDICTIVE_BACK_CHANNEL
-        ).also { channel ->
-            channel.setMethodCallHandler { call, result ->
-                if (call.method != "setPredictiveBackEnabled") {
-                    result.notImplemented()
-                    return@setMethodCallHandler
-                }
-                setPredictiveBackEnabled(call.argument<Boolean>("enabled") == true)
-                result.success(true)
-            }
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-    }
-
-    override fun onDestroy() {
-        setPredictiveBackEnabled(false)
-        super.onDestroy()
-    }
-
-    private fun setPredictiveBackEnabled(enabled: Boolean) {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            return
-        }
-        val dispatcher = onBackInvokedDispatcher
-        predictiveBackCallback?.let(dispatcher::unregisterOnBackInvokedCallback)
-        predictiveBackCallback = null
-        if (!enabled) {
-            return
-        }
-        val callback = object : OnBackAnimationCallback {
-            override fun onBackStarted(backEvent: BackEvent) {
-                predictiveBackChannel?.invokeMethod("started", null)
-            }
-
-            override fun onBackProgressed(backEvent: BackEvent) {
-                predictiveBackChannel?.invokeMethod("progressed", backEvent.progress.toDouble())
-            }
-
-            override fun onBackCancelled() {
-                predictiveBackChannel?.invokeMethod("cancelled", null)
-            }
-
-            override fun onBackInvoked() {
-                predictiveBackChannel?.invokeMethod("invoked", null)
-            }
-        }
-        predictiveBackCallback = callback
-        dispatcher.registerOnBackInvokedCallback(
-            OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-            callback
-        )
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
