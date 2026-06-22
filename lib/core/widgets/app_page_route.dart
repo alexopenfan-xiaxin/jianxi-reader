@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 
 PageRouteBuilder<T> appPageRoute<T>({
@@ -89,6 +91,12 @@ class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
 
   @override
   Widget build(BuildContext context) {
+    final predictiveBackEnabled = context.select<AppSettingsController, bool>(
+      (settings) => settings.predictiveBackEnabled,
+    );
+    if (predictiveBackEnabled) {
+      return PopScope(canPop: true, child: widget.child);
+    }
     return PopScope(
       canPop: true,
       child: Stack(

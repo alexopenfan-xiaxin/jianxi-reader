@@ -57,6 +57,8 @@ class _LibraryPageState extends State<LibraryPage>
 
   @override
   Widget build(BuildContext context) {
+    final landscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
     return SafeArea(
       child: Consumer<LibraryController>(
         builder: (context, controller, _) {
@@ -100,7 +102,7 @@ class _LibraryPageState extends State<LibraryPage>
                           AppSpacing.lg,
                           controller.errorMessage == null ? 82 : AppSpacing.md,
                           AppSpacing.lg,
-                          118,
+                          landscape ? AppSpacing.lg : 118,
                         ),
                         sliver: _LibraryAnimatedContent(
                           controller: controller,
@@ -134,7 +136,7 @@ class _LibraryPageState extends State<LibraryPage>
               if (!_selectionActive)
                 Positioned(
                   right: AppSpacing.lg,
-                  bottom: 86,
+                  bottom: landscape ? AppSpacing.lg : 86,
                   child: _FloatingImportButton(
                     key: const ValueKey('import_button'),
                     importing: controller.isImporting,

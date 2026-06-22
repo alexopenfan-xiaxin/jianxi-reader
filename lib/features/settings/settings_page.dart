@@ -29,20 +29,25 @@ class SettingsPage extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                82,
-                AppSpacing.lg,
-                AppSpacing.lg,
+            child: LayoutBuilder(
+              builder: (context, constraints) => ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  82,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                children: [
+                  _SettingsResponsiveCards(
+                    wide: _isWideSettingsLayout(context, constraints),
+                    children: const [
+                      _AppearanceEntry(),
+                      _ReadingSettingsEntry(),
+                      _AboutEntry(),
+                    ],
+                  ),
+                ],
               ),
-              children: const [
-                _AppearanceEntry(),
-                SizedBox(height: AppSpacing.sm),
-                _ReadingSettingsEntry(),
-                SizedBox(height: AppSpacing.sm),
-                _AboutEntry(),
-              ],
             ),
           ),
           const Positioned(
@@ -434,26 +439,43 @@ class ReadingSettingsPage extends StatelessWidget {
       backgroundColor: palette.parchment,
       appBar: _settingsPageAppBar(context, '阅读体验'),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.xl,
-          ),
-          children: [
-            Text(
-              '调整阅读主题、页边距、字号和行距，只影响文档阅读内容。',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: palette.muted,
-                    letterSpacing: 0,
+        child: LayoutBuilder(
+          builder: (context, constraints) => ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: _isWideSettingsLayout(context, constraints)
+                        ? 900
+                        : double.infinity,
                   ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const AppCard(
-              child: ReadingSettingsPanel(showPreview: true),
-            ),
-          ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '调整阅读主题、页边距、字号和行距，只影响文档阅读内容。',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: palette.muted,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      const AppCard(
+                        child: ReadingSettingsPanel(showPreview: true),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -504,6 +526,48 @@ class _CardTitle extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+bool _isWideSettingsLayout(BuildContext context, BoxConstraints constraints) {
+  return MediaQuery.orientationOf(context) == Orientation.landscape &&
+      constraints.maxWidth >= 640;
+}
+
+class _SettingsResponsiveCards extends StatelessWidget {
+  const _SettingsResponsiveCards({
+    required this.wide,
+    required this.children,
+  });
+
+  final bool wide;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!wide) {
+      return Column(
+        children: [
+          for (var index = 0; index < children.length; index++) ...[
+            children[index],
+            if (index != children.length - 1)
+              const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - AppSpacing.md) / 2;
+        return Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: [
+            for (final child in children) SizedBox(width: width, child: child),
+          ],
+        );
+      },
     );
   }
 }

@@ -54,7 +54,7 @@ class _AppearanceEntryText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('外观', style: Theme.of(context).textTheme.titleMedium);
+    return Text('外观与动画', style: Theme.of(context).textTheme.titleMedium);
   }
 }
 
@@ -70,26 +70,32 @@ class AppearancePage extends StatelessWidget {
           AppFontFamily appFontFamily,
           ThemeMode themeMode,
           LibraryViewMode libraryViewMode,
+          bool predictiveBackEnabled,
         })>((settings) => (
           visualMode: settings.visualMode,
           appFontFamily: settings.appFontFamily,
           themeMode: settings.themeMode,
           libraryViewMode: settings.libraryViewMode,
+          predictiveBackEnabled: settings.predictiveBackEnabled,
         ));
     final settings = context.read<AppSettingsController>();
     final palette = context.palette;
     return Scaffold(
       backgroundColor: palette.parchment,
-      appBar: _settingsPageAppBar(context, '外观'),
+      appBar: _settingsPageAppBar(context, '外观与动画'),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.xl,
-          ),
-          children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) => ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
+            children: [
+              _SettingsResponsiveCards(
+                wide: _isWideSettingsLayout(context, constraints),
+                children: [
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +127,6 @@ class AppearancePage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +154,6 @@ class AppearancePage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +191,6 @@ class AppearancePage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +218,22 @@ class AppearancePage extends StatelessWidget {
                 ],
               ),
             ),
-          ],
+            AppCard(
+              child: SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: values.predictiveBackEnabled,
+                onChanged: settings.setPredictiveBackEnabled,
+                secondary: const Icon(Icons.swipe_rounded),
+                title: const Text('预测性返回手势'),
+                subtitle: const Text(
+                  'Android 13 及以上使用系统返回动画；关闭后保留应用左侧边缘返回。',
+                ),
+              ),
+            ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

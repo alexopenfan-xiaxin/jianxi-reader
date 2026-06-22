@@ -240,7 +240,10 @@ class _ReaderPageState extends State<ReaderPage> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final landscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final appBarHeight = landscape ? 48.0 : kToolbarHeight;
+    final topPadding = MediaQuery.of(context).padding.top + appBarHeight;
     final settings = context.select<AppSettingsController, _ReaderDisplaySettings>(
       (settings) => (
         readingTheme: settings.readingTheme,
@@ -273,6 +276,7 @@ class _ReaderPageState extends State<ReaderPage> {
         onBackToTop: _jumpToTop,
       ),
       appBar: AppBar(
+        toolbarHeight: appBarHeight,
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor:

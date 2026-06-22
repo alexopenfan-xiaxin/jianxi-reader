@@ -137,6 +137,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _visualModeKey = 'settings.visualMode';
   static const _readingFontFamilyKey = 'settings.readingFontFamily';
   static const _appFontFamilyKey = 'settings.appFontFamily';
+  static const _predictiveBackEnabledKey = 'settings.predictiveBackEnabled';
 
   SharedPreferences? _prefs;
 
@@ -149,6 +150,7 @@ class AppSettingsController extends ChangeNotifier {
   AppVisualMode _visualMode = AppVisualMode.classic;
   ReadingFontFamily _readingFontFamily = ReadingFontFamily.system;
   AppFontFamily _appFontFamily = AppFontFamily.system;
+  bool _predictiveBackEnabled = false;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -171,6 +173,8 @@ class AppSettingsController extends ChangeNotifier {
   AppFontFamily get appFontFamily => _appFontFamily;
 
   String? get appFontFamilyValue => _appFontFamily.fontFamily;
+
+  bool get predictiveBackEnabled => _predictiveBackEnabled;
 
   bool get liquidGlassEnabled => _visualMode == AppVisualMode.liquidGlass;
 
@@ -273,6 +277,8 @@ class AppSettingsController extends ChangeNotifier {
     _appFontFamily = _appFontFamilyFromName(
       preferences.getString(_appFontFamilyKey),
     );
+    _predictiveBackEnabled =
+        preferences.getBool(_predictiveBackEnabledKey) ?? false;
     notifyListeners();
   }
 
@@ -383,6 +389,17 @@ class AppSettingsController extends ChangeNotifier {
     _appFontFamily = fontFamily;
     notifyListeners();
     await _persist(_appFontFamilyKey, fontFamily.name);
+  }
+
+  Future<void> setPredictiveBackEnabled(bool enabled) async {
+    if (_predictiveBackEnabled == enabled) {
+      return;
+    }
+    _predictiveBackEnabled = enabled;
+    notifyListeners();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    await prefs.setBool(_predictiveBackEnabledKey, enabled);
   }
 
   static ThemeMode _themeModeFromName(String? name) {

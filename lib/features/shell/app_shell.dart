@@ -106,38 +106,91 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: AnimatedSwitcher(
-              duration: AppMotion.slow,
-              switchInCurve: AppMotion.emphasized,
-              switchOutCurve: AppMotion.exit,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: AppMotion.emphasized,
-                  ),
-                  child: child,
-                );
-              },
-              child: IndexedStack(
-                index: _currentIndex,
-                children: const [LibraryPage(), SettingsPage()],
-              ),
-            ),
+    final landscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final content = AnimatedSwitcher(
+      duration: AppMotion.slow,
+      switchInCurve: AppMotion.emphasized,
+      switchOutCurve: AppMotion.exit,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: AppMotion.emphasized,
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _FloatingBottomNav(
+          child: child,
+        );
+      },
+      child: IndexedStack(
+        index: _currentIndex,
+        children: const [LibraryPage(), SettingsPage()],
+      ),
+    );
+    return Scaffold(
+      extendBody: !landscape,
+      body: Row(
+        children: [
+          if (landscape)
+            _LandscapeNavigationRail(
               currentIndex: _currentIndex,
               onChanged: (index) => setState(() => _currentIndex = index),
             ),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(child: content),
+                if (!landscape)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _FloatingBottomNav(
+                      currentIndex: _currentIndex,
+                      onChanged: (index) => setState(() => _currentIndex = index),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LandscapeNavigationRail extends StatelessWidget {
+  const _LandscapeNavigationRail({
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.parchment,
+        border: Border(right: BorderSide(color: palette.hairline)),
+      ),
+      child: NavigationRail(
+        minWidth: 72,
+        selectedIndex: currentIndex,
+        onDestinationSelected: onChanged,
+        labelType: NavigationRailLabelType.all,
+        backgroundColor: Colors.transparent,
+        destinations: const [
+          NavigationRailDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book_rounded),
+            label: Text('文库'),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded),
+            label: Text('设置'),
           ),
         ],
       ),
