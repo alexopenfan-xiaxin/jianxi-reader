@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../app_settings_controller.dart';
@@ -45,10 +46,56 @@ class _EdgeSwipeBackPage extends StatefulWidget {
 }
 
 class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
+  static const _predictiveBackChannel = MethodChannel(
+    'com.jianxi.reader/predictive_back',
+  );
+  static final _systemBackProgress = ValueNotifier<double>(0);
+  static final _activePages = <_EdgeSwipeBackPageState>{};
   static const _edgeWidth = 26.0;
   static const _dismissDistance = 92.0;
   double _dragOffset = 0;
   bool _tracking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _activePages.add(this);
+    _predictiveBackChannel.setMethodCallHandler(_handlePredictiveBackEvent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final settings = context.read<AppSettingsController>();
+        settings.setPredictiveBackEnabled(settings.predictiveBackEnabled);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _activePages.remove(this);
+    super.dispose();
+  }
+
+  static Future<void> _handlePredictiveBackEvent(MethodCall call) async {
+    switch (call.method) {
+      case 'started':
+        _systemBackProgress.value = 0;
+      case 'progressed':
+        final progress = call.arguments as double?;
+        _systemBackProgress.value = (progress ?? 0).clamp(0.0, 1.0);
+      case 'cancelled':
+        _systemBackProgress.value = 0;
+      case 'invoked':
+        _systemBackProgress.value = 0;
+        final currentPage = _activePages.where((page) {
+          return page.mounted && ModalRoute.of(page.context)?.isCurrent == true;
+        }).lastOrNull;
+        if (currentPage == null) {
+          await SystemNavigator.pop();
+          return;
+        }
+        await Navigator.of(currentPage.context).maybePop();
+    }
+  }
 
   void _handleDragStart(DragStartDetails details) {
     final canPop = Navigator.of(context).canPop();
@@ -95,7 +142,24 @@ class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
       (settings) => settings.predictiveBackEnabled,
     );
     if (predictiveBackEnabled) {
-      return PopScope(canPop: true, child: widget.child);
+      return PopScope(
+        canPop: true,
+        child: ValueListenableBuilder<double>(
+          valueListenable: _systemBackProgress,
+          builder: (context, progress, child) {
+            if (ModalRoute.of(context)?.isCurrent != true || progress == 0) {
+              return child!;
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) => Transform.translate(
+                offset: Offset(constraints.maxWidth * progress, 0),
+                child: child,
+              ),
+            );
+          },
+          child: widget.child,
+        ),
+      );
     }
     return PopScope(
       canPop: true,

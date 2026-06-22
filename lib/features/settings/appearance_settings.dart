@@ -226,7 +226,7 @@ class AppearancePage extends StatelessWidget {
                 secondary: const Icon(Icons.swipe_rounded),
                 title: const Text('预测性返回手势'),
                 subtitle: const Text(
-                  'Android 13 及以上使用系统返回动画；关闭后保留应用左侧边缘返回。',
+                  'Android 14 及以上按系统手势预览返回；关闭后保留应用左侧边缘返回。',
                 ),
               ),
             ),
