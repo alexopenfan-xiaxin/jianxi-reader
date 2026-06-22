@@ -158,7 +158,7 @@ class MainActivity : FlutterActivity() {
             }
         }
         predictiveBackCallback = callback
-        dispatcher.registerOnBackAnimationCallback(
+        dispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             callback
         )
