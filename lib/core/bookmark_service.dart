@@ -103,15 +103,16 @@ class BookmarkService {
       createdAtMillis: DateTime.now().millisecondsSinceEpoch,
       note: note,
     );
-    all.add(bookmark);
-    await _save(all);
+    await _replaceAll(all, [...all, bookmark]);
     return bookmark;
   }
 
   static Future<void> remove(String bookmarkId) async {
     final all = await loadAll();
-    all.removeWhere((b) => b.id == bookmarkId);
-    await _save(all);
+    await _replaceAll(
+      all,
+      all.where((bookmark) => bookmark.id != bookmarkId).toList(),
+    );
   }
 
   static Future<void> update({
@@ -123,7 +124,7 @@ class BookmarkService {
     final index = all.indexWhere((b) => b.id == bookmarkId);
     if (index != -1) {
       final old = all[index];
-      all[index] = ReadingBookmark(
+      final updated = ReadingBookmark(
         id: old.id,
         documentId: old.documentId,
         progressRatio: old.progressRatio,
@@ -131,24 +132,29 @@ class BookmarkService {
         createdAtMillis: old.createdAtMillis,
         note: note ?? old.note,
       );
-      await _save(all);
+      final next = List<ReadingBookmark>.from(all)..[index] = updated;
+      await _replaceAll(all, next);
     }
   }
 
   static Future<void> removeForDocument(String documentId) async {
     final all = await loadAll();
-    all.removeWhere((b) => b.documentId == documentId);
-    await _save(all);
+    await _replaceAll(
+      all,
+      all.where((bookmark) => bookmark.documentId != documentId).toList(),
+    );
   }
 
-  static Future<void> _save(List<ReadingBookmark> bookmarks) async {
-    try {
-      final file = await _file;
-      final json = bookmarks.map((b) => b.toJson()).toList();
-      await file.writeAsString(jsonEncode(json));
-    } catch (e) {
-      debugPrint('[BookmarkService] save failed: $e');
-    }
+  static Future<void> _replaceAll(
+    List<ReadingBookmark> current,
+    List<ReadingBookmark> next,
+  ) async {
+    final file = await _file;
+    final json = next.map((bookmark) => bookmark.toJson()).toList();
+    await file.writeAsString(jsonEncode(json));
+    current
+      ..clear()
+      ..addAll(next);
   }
 
   static void clearCache() {

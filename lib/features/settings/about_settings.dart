@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '175';
+  static const _fallbackBuildNumber = '176';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -311,7 +311,17 @@ class _AboutPageState extends State<AboutPage> {
     }
 
     if (!mounted) return;
-    await _channel.invokeMethod('installApk', {'path': filePath});
+    try {
+      await _channel.invokeMethod('installApk', {'path': filePath});
+    } on PlatformException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('无法打开安装程序，请检查未知应用安装权限后重试'),
+          ),
+        );
+      }
+    }
   }
 
   Future<bool> _ensureInstallPermission() async {

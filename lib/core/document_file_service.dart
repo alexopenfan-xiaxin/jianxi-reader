@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/library/document_entry.dart';
+import 'document_identity.dart';
 import 'file_rules.dart';
 import 'reading_progress_service.dart';
 
@@ -380,6 +381,7 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     await _clearDocumentMetadata(preferences, document.path);
+    await DocumentIdentityService.removePath(document.path);
   }
 
   @override
@@ -569,6 +571,7 @@ class DocumentFileService implements DocumentLibraryService {
     final tags = preferences.getStringList(_documentTagsKey(oldPath));
     await ReadingProgressService.moveProgress(oldPath, newPath);
     await _clearDocumentMetadata(preferences, oldPath);
+    await DocumentIdentityService.movePath(oldPath, newPath);
     if (recentOpened != null) {
       await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
     }

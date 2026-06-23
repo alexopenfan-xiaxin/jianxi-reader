@@ -33,8 +33,12 @@ class MainActivity : FlutterActivity() {
                 "installApk" -> {
                     val path = call.argument<String>("path")
                     if (path != null) {
-                        installApk(path)
-                        result.success(true)
+                        try {
+                            installApk(path)
+                            result.success(true)
+                        } catch (error: Exception) {
+                            result.error("INSTALL_FAILED", "无法打开安装程序", error.message)
+                        }
                     } else {
                         result.error("INVALID_PATH", "安装包路径为空", null)
                     }
@@ -350,6 +354,9 @@ class MainActivity : FlutterActivity() {
 
     private fun installApk(path: String) {
         val file = File(path)
+        if (!file.isFile) {
+            throw IOException("安装包不存在或无法读取")
+        }
         val uri = FileProvider.getUriForFile(
             this,
             "$packageName.fileprovider",
