@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '176';
+  static const _fallbackBuildNumber = '177';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -89,8 +89,9 @@ class _AboutPageState extends State<AboutPage> {
       if (mounted) {
         setState(() => _packageInfo = info);
       }
-    }).catchError((_) {
+    }).catchError((Object error) {
       // Keep the about card usable if package metadata is unavailable.
+      debugPrint('[AboutPage] failed to load package info: $error');
     });
     _estimateCacheSize();
   }
@@ -114,8 +115,8 @@ class _AboutPageState extends State<AboutPage> {
       if (mounted) {
         setState(() => _estimatedCacheSize = total);
       }
-    } catch (_) {
-      // Silently ignore estimation failures.
+    } catch (Object error) {
+      debugPrint('[AboutPage] cache estimation failed: $error');
     } finally {
       if (mounted) {
         setState(() => _isEstimatingCache = false);

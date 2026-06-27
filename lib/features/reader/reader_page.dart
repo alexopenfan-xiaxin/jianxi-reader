@@ -584,16 +584,19 @@ class _ReaderPageState extends State<ReaderPage> {
     switch (action) {
       case _ReaderMenuAction.bookmark:
         await _addBookmark();
+        return;
       case _ReaderMenuAction.rename:
         final renamed = await showRenameDocumentDialog(context, _document);
         if (renamed != null && mounted) {
           setState(() => _document = renamed);
         }
+        return;
       case _ReaderMenuAction.remove:
         final removed = await removeDocumentFromLibrary(context, _document);
         if (removed && mounted) {
           Navigator.of(context).pop();
         }
+        return;
     }
   }
 
