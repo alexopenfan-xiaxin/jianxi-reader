@@ -115,7 +115,7 @@ class _AboutPageState extends State<AboutPage> {
       if (mounted) {
         setState(() => _estimatedCacheSize = total);
       }
-    } catch (Object error) {
+    } catch (error) {
       debugPrint('[AboutPage] cache estimation failed: $error');
     } finally {
       if (mounted) {
