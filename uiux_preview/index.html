@@ -1,0 +1,2602 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440, initial-scale=1" />
+<title>简兮阅读器 · UI/UX 优化方案对照</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     简兮 · 设计系统 (Editorial / Literary / Refined)
+     字体梯度: Fraunces (display serif) + Noto Serif SC (中文衬线) + Inter (UI)
+     色板: 简牍米黄 + 墨色 + 青铜钴蓝
+     ============================================================ */
+
+  :root {
+    /* —— 颜色：纸、墨、青铜 — */
+    --paper:        #F4EFE6;   /* 简牍本色 */
+    --paper-2:      #EBE4D6;   /* 阴影面 */
+    --paper-3:      #DFD6C2;   /* 深纸面 */
+    --ink:          #1A1714;   /* 墨色 */
+    --ink-2:        #2D2924;
+    --ink-3:        #4A443C;
+    --ink-mute:     #8A8278;
+    --ink-faint:    #B8B0A2;
+
+    --bronze:       #7A5C3E;   /* 青铜钴蓝（替代纯蓝） */
+    --bronze-2:     #5C4529;
+    --cinnabar:     #B33A3A;   /* 朱砂红 - 强调色 */
+    --jade:         #4A6B4E;   /* 玉绿 - 成功/书签 */
+    --indigo:       #2A3A5C;   /* 靛蓝 - 链接 */
+
+    /* —— 字号梯度 (Major Third 1.250) — */
+    --t-12: 11px;
+    --t-13: 12px;
+    --t-14: 13px;
+    --t-15: 14px;
+    --t-16: 15px;
+    --t-17: 16px;
+    --t-18: 17px;
+    --t-19: 19px;
+    --t-21: 21px;
+    --t-24: 24px;
+    --t-28: 28px;
+    --t-34: 34px;
+    --t-42: 42px;
+
+    /* —— 间距 — */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 20px;
+    --s-6: 24px;
+    --s-7: 32px;
+    --s-8: 40px;
+    --s-9: 48px;
+    --s-10: 64px;
+
+    /* —— 圆角 — */
+    --r-1: 6px;
+    --r-2: 10px;
+    --r-3: 14px;
+    --r-4: 20px;
+    --r-pill: 999px;
+
+    /* —— 阴影 — */
+    --sh-1: 0 1px 2px rgba(26,23,20,0.04), 0 1px 1px rgba(26,23,20,0.03);
+    --sh-2: 0 2px 6px rgba(26,23,20,0.05), 0 8px 24px rgba(26,23,20,0.04);
+    --sh-3: 0 4px 12px rgba(26,23,20,0.06), 0 24px 48px rgba(26,23,20,0.08);
+    --sh-4: 0 12px 36px rgba(26,23,20,0.12), 0 48px 96px rgba(26,23,20,0.10);
+  }
+
+  /* —— 重置与基础 — */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    font-family: 'Inter', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: var(--t-15);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(122,92,62,0.06) 0%, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(42,58,92,0.05) 0%, transparent 50%),
+      /* paper grain */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1   0 0 0 0 0.09   0 0 0 0 0.08  0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* —— 排版 — */
+  .display {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 400;
+    font-variation-settings: 'opsz' 144, 'SOFT' 50;
+    letter-spacing: -0.022em;
+  }
+  .display-em {
+    font-style: italic;
+    font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 1;
+  }
+  .serif {
+    font-family: 'Noto Serif SC', 'Fraunces', serif;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ============================================================
+     页面骨架
+     ============================================================ */
+  .shell {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--s-9) var(--s-8) var(--s-10);
+  }
+
+  /* —— 页眉 — */
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: var(--s-5);
+    margin-bottom: var(--s-8);
+  }
+  .masthead .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-mute);
+    margin-bottom: var(--s-3);
+  }
+  .masthead h1 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 400;
+    font-size: 88px;
+    line-height: 0.95;
+    letter-spacing: -0.034em;
+    color: var(--ink);
+  }
+  .masthead h1 .accent {
+    font-style: italic;
+    color: var(--bronze-2);
+    font-variation-settings: 'opsz' 144, 'SOFT' 100, 'WONK' 1;
+  }
+  .masthead .meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    color: var(--ink-mute);
+    line-height: 1.8;
+  }
+  .masthead .meta strong { color: var(--ink); font-weight: 600; }
+
+  /* —— Lede — */
+  .lede {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: var(--s-8);
+    margin-bottom: var(--s-9);
+    padding-bottom: var(--s-8);
+    border-bottom: 1px solid var(--ink-faint);
+  }
+  .lede .summary {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: var(--t-24);
+    line-height: 1.32;
+    letter-spacing: -0.012em;
+    color: var(--ink-2);
+  }
+  .lede .summary .em { font-style: italic; color: var(--bronze-2); }
+  .lede .specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-5);
+    align-content: start;
+  }
+  .lede .spec {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+  .lede .spec dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+  }
+  .lede .spec dd {
+    font-size: var(--t-15);
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* —— 章节标题 — */
+  .chapter {
+    margin: var(--s-10) 0 var(--s-7);
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    align-items: baseline;
+    gap: var(--s-6);
+  }
+  .chapter .num {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 56px;
+    color: var(--bronze);
+    font-style: italic;
+    line-height: 1;
+  }
+  .chapter h2 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 500;
+    font-size: 44px;
+    letter-spacing: -0.022em;
+    color: var(--ink);
+  }
+  .chapter h2 .cn {
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 600;
+  }
+  .chapter .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+    margin-top: var(--s-2);
+  }
+
+  /* —— 章节引言 — */
+  .chapter-intro {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: var(--s-6);
+    margin-bottom: var(--s-8);
+  }
+  .chapter-intro .spacer { }
+  .chapter-intro p {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: var(--t-19);
+    line-height: 1.6;
+    color: var(--ink-2);
+    max-width: 720px;
+  }
+  .chapter-intro p em {
+    font-style: italic;
+    color: var(--bronze-2);
+  }
+
+  /* ============================================================
+     对比区：Before / After 双手机框
+     ============================================================ */
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-6);
+    margin-bottom: var(--s-7);
+  }
+  .pair.reversed {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pair-vert {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr;
+    gap: var(--s-6);
+    margin-bottom: var(--s-7);
+  }
+
+  .phone-frame {
+    background: var(--ink);
+    border-radius: 44px;
+    padding: 12px;
+    box-shadow: var(--sh-4);
+    position: relative;
+  }
+  .phone-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 44px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .phone-screen {
+    background: var(--paper);
+    border-radius: 32px;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 375 / 812;
+    position: relative;
+  }
+  .phone-status {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 28px 0 32px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    z-index: 5;
+  }
+  .phone-status.dark { color: #fff; }
+  .phone-status .right { display: flex; gap: 6px; align-items: center; }
+  .phone-notch {
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 110px; height: 28px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 4;
+  }
+
+  .phone-label {
+    margin-top: var(--s-3);
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+  }
+  .phone-label .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+  }
+  .phone-label h3 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: var(--t-21);
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.012em;
+  }
+  .phone-label h3 .cn { font-family: 'Noto Serif SC', serif; font-weight: 600; }
+  .phone-label .desc {
+    font-size: var(--t-14);
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
+  /* —— 角标 / 标签 — */
+  .badge-before {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 6px 10px;
+    background: rgba(179, 58, 58, 0.08);
+    color: var(--cinnabar);
+    border: 1px solid rgba(179, 58, 58, 0.2);
+    border-radius: var(--r-pill);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin-bottom: var(--s-3);
+  }
+  .badge-after {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 6px 10px;
+    background: rgba(74, 107, 78, 0.10);
+    color: var(--jade);
+    border: 1px solid rgba(74, 107, 78, 0.2);
+    border-radius: var(--r-pill);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-12);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin-bottom: var(--s-3);
+  }
+  .badge-before::before, .badge-after::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ============================================================
+     旧版（Before）—— 复刻当前实现
+     ============================================================ */
+  /* —— 旧版 Library — */
+  .lib-old { padding: 60px 0 100px; }
+  .lib-old .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 17px; height: 52px;
+  }
+  .lib-old .topbar .left { display: flex; align-items: center; gap: 8px; }
+  .lib-old .topbar .doc-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #0066CC 0%, #004499 100%);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px;
+  }
+  .lib-old .topbar h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .lib-old .topbar .right { display: flex; gap: 2px; }
+  .lib-old .topbar .iconbtn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+  }
+  .lib-old .search-input {
+    margin: 8px 17px; padding: 0 12px;
+    height: 36px;
+    background: rgba(118,118,128,0.12);
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 15px; color: var(--ink-mute);
+  }
+  .lib-old .section-head {
+    padding: 16px 17px 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; color: var(--ink-mute);
+    text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;
+  }
+  .lib-old .doc-tile {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 17px; min-height: 56px;
+  }
+  .lib-old .doc-tile .badge {
+    width: 48px; height: 48px;
+    background: #E0E8F0; color: #0066CC;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .lib-old .doc-tile .body { flex: 1; min-width: 0; }
+  .lib-old .doc-tile .body .title {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lib-old .doc-tile .body .meta {
+    font-size: 12px; color: var(--ink-mute);
+    display: flex; gap: 6px;
+  }
+  .lib-old .doc-tile .more-btn {
+    width: 32px; height: 32px;
+    color: var(--ink-mute);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lib-old .fab {
+    position: absolute;
+    right: 17px; bottom: 100px;
+    width: 60px; height: 60px;
+    background: #0066CC; color: #fff;
+    border-radius: 30px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,102,204,0.3);
+  }
+  .lib-old .bottombar {
+    position: absolute; left: 17px; right: 17px; bottom: 17px;
+    height: 60px;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 20px;
+    display: flex;
+  }
+  .lib-old .bottombar .tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--ink-mute); font-size: 10px;
+  }
+  .lib-old .bottombar .tab.active {
+    color: #0066CC;
+    background: rgba(0,102,204,0.1);
+    border-radius: 16px;
+    margin: 4px;
+  }
+
+  /* —— 旧版 Reader — */
+  .reader-old { padding: 60px 17px 17px; height: 100%; }
+  .reader-old .appbar {
+    position: absolute; top: 44px; left: 0; right: 0;
+    height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px;
+  }
+  .reader-old .appbar .back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: #0066CC;
+  }
+  .reader-old .appbar .actions { display: flex; gap: 0; }
+  .reader-old .appbar .actions .iconbtn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: #0066CC;
+  }
+  .reader-old .progress {
+    position: absolute; top: 88px; left: 0; right: 0;
+    height: 3px;
+    background: rgba(0,0,0,0.05);
+  }
+  .reader-old .progress .fill { width: 35%; height: 100%; background: #0066CC; }
+  .reader-old .doc-content {
+    margin-top: 36px;
+    font-family: 'Noto Serif SC', serif;
+    color: var(--ink);
+  }
+  .reader-old .doc-content h1 {
+    font-size: 28px; line-height: 1.2; font-weight: 700; margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+  .reader-old .doc-content h2 {
+    font-size: 20px; line-height: 1.3; font-weight: 700; margin: 18px 0 10px;
+  }
+  .reader-old .doc-content p { font-size: 16px; line-height: 1.7; margin: 10px 0; }
+  .reader-old .doc-content code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    background: rgba(118,118,128,0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .reader-old .prev-read {
+    position: absolute; left: 17px; right: 17px; top: 105px;
+    background: #0066CC; color: #fff;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px;
+    box-shadow: var(--sh-2);
+  }
+
+  /* —— 旧版 Settings — */
+  .settings-old { padding: 60px 17px 100px; }
+  .settings-old .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 16px; height: 52px;
+  }
+  .settings-old .topbar .left { display: flex; align-items: center; gap: 12px; }
+  .settings-old .topbar .gear {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, #F5F5F7 0%, #E8E8EB 100%);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+  }
+  .settings-old .topbar h1 { font-size: 28px; font-weight: 700; }
+  .settings-old .topbar .face {
+    width: 48px; height: 48px;
+    background: #F5E6D3;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .settings-old .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--sh-1);
+  }
+  .settings-old .card .icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: #E8F0FE; color: #0066CC;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .settings-old .card .body { flex: 1; }
+  .settings-old .card .title { font-size: 15px; font-weight: 600; }
+  .settings-old .card .desc { font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
+  .settings-old .card .chevron { color: var(--ink-faint); }
+
+  /* ============================================================
+     新版（After）—— 优化方案
+     ============================================================ */
+
+  /* —— 新版 Library — */
+  .lib-new {
+    background: var(--paper);
+    height: 100%;
+    position: relative;
+    padding: 60px 0 100px;
+    background-image:
+      linear-gradient(180deg, rgba(244,239,230,0) 0%, rgba(235,228,214,0.4) 100%),
+      /* bamboo strip subtle vertical lines */
+      repeating-linear-gradient(90deg, transparent 0 49px, rgba(26,23,20,0.015) 49px 50px);
+  }
+  .lib-new .topbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 24px 18px;
+  }
+  .lib-new .topbar .brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .lib-new .topbar .mark {
+    width: 32px; height: 32px;
+    background: var(--ink);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--paper);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 18px; font-weight: 700;
+  }
+  .lib-new .topbar .title-block { display: flex; flex-direction: column; }
+  .lib-new .topbar .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--bronze);
+  }
+  .lib-new .topbar h1 {
+    font-family: 'Noto Serif SC', 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .lib-new .topbar .right { display: flex; gap: 6px; }
+  .lib-new .topbar .tune {
+    display: flex; align-items: center; gap: 4px;
+    height: 32px; padding: 0 10px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--r-pill);
+    font-size: 12px; font-weight: 600;
+  }
+  .lib-new .view-toggle {
+    display: flex; gap: 0;
+    margin: 0 24px 16px;
+    background: var(--paper-2);
+    padding: 3px;
+    border-radius: var(--r-pill);
+    width: fit-content;
+  }
+  .lib-new .view-toggle button {
+    border: 0; background: transparent;
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 12px; font-weight: 600;
+    color: var(--ink-3);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .lib-new .view-toggle button.active {
+    background: var(--ink); color: var(--paper);
+  }
+
+  /* 新版 doc-tile */
+  .lib-new .doc-tile {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(26,23,20,0.06);
+    position: relative;
+    transition: background 200ms ease;
+  }
+  .lib-new .doc-tile:hover { background: rgba(26,23,20,0.02); }
+  .lib-new .doc-tile .num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--ink-faint);
+    width: 22px;
+  }
+  .lib-new .doc-tile .body { flex: 1; min-width: 0; }
+  .lib-new .doc-tile .body .row1 {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .lib-new .doc-tile .body .title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1;
+  }
+  .lib-new .doc-tile .body .row2 {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+  .lib-new .doc-tile .body .tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 6px;
+    background: rgba(122,92,62,0.08);
+    color: var(--bronze-2);
+    border-radius: var(--r-1);
+    font-size: 10px; font-weight: 600;
+  }
+  .lib-new .doc-tile .more {
+    width: 28px; height: 28px;
+    color: var(--ink-faint);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .lib-new .fab {
+    position: absolute;
+    right: 24px; bottom: 96px;
+    width: 52px; height: 52px;
+    background: var(--cinnabar);
+    color: #fff;
+    border-radius: 26px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(179,58,58,0.32), 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .lib-new .bottombar {
+    position: absolute; left: 24px; right: 24px; bottom: 24px;
+    height: 56px;
+    background: rgba(244,239,230,0.84);
+    backdrop-filter: blur(28px) saturate(140%);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    border: 1px solid rgba(26,23,20,0.08);
+    border-radius: 28px;
+    display: flex;
+    box-shadow: var(--sh-2);
+  }
+  .lib-new .bottombar .tab {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink-mute);
+  }
+  .lib-new .bottombar .tab.active {
+    color: var(--ink);
+  }
+  .lib-new .bottombar .tab.active .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cinnabar);
+  }
+
+  /* —— 新版 Reader — */
+  .reader-new { padding: 56px 28px 28px; height: 100%; position: relative; }
+  .reader-new .appbar {
+    position: absolute; top: 48px; left: 0; right: 0;
+    height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px;
+  }
+  .reader-new .appbar .back {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+  }
+  .reader-new .appbar .right { display: flex; gap: 2px; }
+  .reader-new .appbar .iconbtn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+    border-radius: 22px;
+  }
+  .reader-new .progress {
+    position: absolute; top: 92px; left: 28px; right: 28px;
+    height: 2px;
+    background: rgba(26,23,20,0.08);
+  }
+  .reader-new .progress .fill {
+    width: 38%; height: 100%;
+    background: var(--cinnabar);
+    border-radius: 1px;
+  }
+  .reader-new .progress .chapter-dot {
+    position: absolute; top: -3px; left: 20%;
+    width: 8px; height: 8px;
+    background: var(--cinnabar);
+    border-radius: 50%;
+    border: 2px solid var(--paper);
+  }
+  .reader-new .doc-content {
+    margin-top: 44px;
+    font-family: 'Noto Serif SC', 'Fraunces', serif;
+    color: var(--ink);
+  }
+  .reader-new .doc-content h1 {
+    font-size: 26px; line-height: 1.25; font-weight: 700; margin-bottom: 12px;
+    letter-spacing: -0.015em;
+  }
+  .reader-new .doc-content .meta-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--bronze);
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(26,23,20,0.08);
+  }
+  .reader-new .doc-content h2 {
+    font-size: 19px; line-height: 1.3; font-weight: 700; margin: 22px 0 10px;
+  }
+  .reader-new .doc-content h2::before {
+    content: '§';
+    color: var(--cinnabar);
+    font-style: italic;
+    margin-right: 6px;
+  }
+  .reader-new .doc-content p {
+    font-size: 15.5px; line-height: 1.85; margin: 12px 0;
+    color: var(--ink-2);
+    text-align: justify;
+  }
+  .reader-new .doc-content p:first-letter {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: 38px; font-weight: 600;
+    float: left;
+    line-height: 0.9;
+    margin: 4px 8px 0 0;
+    color: var(--cinnabar);
+  }
+  .reader-new .doc-content .pull-quote {
+    border-left: 3px solid var(--cinnabar);
+    padding: 8px 0 8px 16px;
+    margin: 20px 0;
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--bronze-2);
+    line-height: 1.5;
+  }
+  .reader-new .doc-content code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--paper-2);
+    color: var(--ink-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .reader-new .prev-read {
+    position: absolute; left: 28px; right: 28px; bottom: 28px;
+    background: var(--ink); color: var(--paper);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px;
+    box-shadow: var(--sh-3);
+  }
+  .reader-new .prev-read .col { display: flex; flex-direction: column; }
+  .reader-new .prev-read .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--ink-faint);
+    margin-bottom: 2px;
+  }
+  .reader-new .prev-read .dismiss {
+    color: var(--ink-faint);
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  /* —— 新版 Settings — */
+  .settings-new { padding: 60px 24px 100px; }
+  .settings-new .topbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 0 24px;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 24px;
+  }
+  .settings-new .topbar .left { display: flex; align-items: flex-end; gap: 14px; }
+  .settings-new .topbar .num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 42px; line-height: 0.9;
+    color: var(--bronze);
+  }
+  .settings-new .topbar h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px; font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .settings-new .topbar h1 small {
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--ink-mute);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+  .settings-new .topbar .right { display: flex; gap: 6px; }
+  .settings-new .topbar .iconbtn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-3);
+  }
+
+  .settings-new .group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--bronze);
+    margin: 20px 4px 10px;
+  }
+
+  .settings-new .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(26,23,20,0.06);
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .settings-new .row .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--paper-2);
+    color: var(--ink-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .settings-new .row .body { flex: 1; min-width: 0; }
+  .settings-new .row .title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .settings-new .row .desc {
+    font-size: 11px; color: var(--ink-mute); margin-top: 1px;
+  }
+  .settings-new .row .arrow {
+    color: var(--ink-faint);
+    font-size: 14px;
+  }
+
+  /* ============================================================
+     组件放大对比区
+     ============================================================ */
+  .component-section {
+    margin: var(--s-10) 0 var(--s-8);
+  }
+  .component-block {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--s-7);
+    margin-bottom: var(--s-9);
+    align-items: start;
+  }
+  .component-block .annot {
+    position: sticky;
+    top: var(--s-5);
+  }
+  .component-block .annot .num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 28px;
+    color: var(--bronze);
+    line-height: 1;
+  }
+  .component-block .annot h3 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: 26px; font-weight: 500;
+    margin: 6px 0 12px;
+    color: var(--ink);
+    letter-spacing: -0.014em;
+  }
+  .component-block .annot h3 .cn { font-family: 'Noto Serif SC', serif; font-weight: 600; }
+  .component-block .annot p {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ink-3);
+    margin-bottom: 10px;
+  }
+  .component-block .annot .delta {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--paper-2);
+    border-left: 2px solid var(--cinnabar);
+    border-radius: 0 8px 8px 0;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+  .component-block .annot .delta strong {
+    color: var(--cinnabar);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .component-block .annot .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .component-block .annot .metric {
+    padding: 8px 10px;
+    background: rgba(26,23,20,0.03);
+    border-radius: 8px;
+  }
+  .component-block .annot .metric dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+  }
+  .component-block .annot .metric dd {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .component-block .annot .metric dd em {
+    font-style: italic;
+    color: var(--cinnabar);
+  }
+
+  .component-canvas {
+    background: var(--paper-2);
+    border-radius: var(--r-4);
+    padding: var(--s-7);
+    border: 1px solid rgba(26,23,20,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .component-canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(26,23,20,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,23,20,0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .component-canvas > * { position: relative; }
+
+  .canvas-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .canvas-head .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-mute);
+  }
+  .canvas-head .title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* —— AppBar 对比 — */
+  .appbar-canvas { padding: 0 16px; background: var(--paper); border-radius: 12px; border: 1px solid rgba(26,23,20,0.08); }
+  .appbar-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0; height: 44px;
+  }
+  .appbar-row.old { color: #0066CC; font-family: 'Inter', sans-serif; }
+  .appbar-row.old .iconbtn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .appbar-row.old .actions { display: flex; gap: 0; }
+  .appbar-row.old .title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 600;
+  }
+
+  .appbar-row.new { font-family: 'Noto Serif SC', serif; color: var(--ink); }
+  .appbar-row.new .back {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .appbar-row.new .right { display: flex; gap: 0; }
+  .appbar-row.new .iconbtn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .appbar-row.new .title-block { display: flex; flex-direction: column; flex: 1; align-items: center; }
+  .appbar-row.new .title {
+    font-size: 14px; font-weight: 600;
+    line-height: 1.2;
+  }
+  .appbar-row.new .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    color: var(--bronze);
+  }
+
+  /* —— Doc Tile 对比 — */
+  .tile-old {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+  }
+  .tile-old .badge {
+    width: 48px; height: 48px;
+    background: #E0E8F0; color: #0066CC;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .tile-old .body { flex: 1; min-width: 0; }
+  .tile-old .title {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tile-old .meta {
+    font-size: 12px; color: var(--ink-mute);
+    margin-top: 2px;
+  }
+
+  .tile-new {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(26,23,20,0.06);
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .tile-new .num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--ink-faint);
+    width: 20px;
+  }
+  .tile-new .body { flex: 1; min-width: 0; }
+  .tile-new .row1 {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .tile-new .title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1;
+  }
+  .tile-new .pin {
+    color: var(--cinnabar);
+    font-size: 12px;
+  }
+  .tile-new .row2 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--ink-mute);
+  }
+  .tile-new .tag {
+    padding: 2px 6px;
+    background: rgba(122,92,62,0.08);
+    color: var(--bronze-2);
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 10px;
+  }
+  .tile-new .more {
+    color: var(--ink-faint);
+    font-size: 16px;
+  }
+
+  /* —— TOC 对比 — */
+  .toc-old, .toc-new {
+    background: #fff;
+    border-radius: 14px;
+    padding: 8px;
+    width: 280px;
+    border: 1px solid rgba(26,23,20,0.08);
+  }
+  .toc-old .head, .toc-new .head {
+    padding: 10px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .toc-old .head h3, .toc-new .head h3 {
+    font-size: 16px; font-weight: 700;
+  }
+  .toc-old .item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--ink-2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toc-old .item.h2 { padding-left: 24px; font-size: 13px; color: var(--ink-mute); }
+  .toc-old .item.h3 { padding-left: 36px; font-size: 12px; color: var(--ink-faint); }
+  .toc-old .item.active { background: rgba(0,102,204,0.1); color: #0066CC; font-weight: 600; }
+
+  .toc-new .item {
+    padding: 10px 12px 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--ink-2);
+    display: flex; align-items: center; gap: 10px;
+    position: relative;
+  }
+  .toc-new .item.h2 { padding-left: 24px; font-size: 13px; color: var(--ink-3); }
+  .toc-new .item.h3 { padding-left: 38px; font-size: 12px; color: var(--ink-mute); }
+  .toc-new .item .level-bar {
+    position: absolute; left: 6px; top: 8px; bottom: 8px;
+    width: 2px; background: transparent;
+  }
+  .toc-new .item.h1 .level-bar { background: var(--cinnabar); }
+  .toc-new .item.h2 .level-bar { left: 18px; background: var(--bronze); }
+  .toc-new .item.h3 .level-bar { left: 32px; background: var(--ink-faint); }
+  .toc-new .item.h1 { font-family: 'Noto Serif SC', serif; font-weight: 700; }
+  .toc-new .item.active { background: var(--paper-2); color: var(--cinnabar); font-weight: 600; }
+
+  /* —— 字号滑块对比 — */
+  .slider-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 0;
+  }
+  .slider-row .label {
+    font-size: 12px; font-weight: 600; color: var(--ink-3);
+    width: 64px;
+  }
+  .slider-row .bar {
+    flex: 1; height: 4px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 2px;
+    position: relative;
+  }
+  .slider-row .bar .fill { height: 100%; border-radius: 2px; }
+  .slider-row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    width: 40px;
+    text-align: right;
+  }
+  .slider-old .bar .fill { background: #0066CC; width: 50%; }
+  .slider-old .dot {
+    position: absolute; right: 50%; top: 50%;
+    transform: translate(50%, -50%);
+    width: 18px; height: 18px;
+    background: #fff;
+    border: 2px solid #0066CC;
+    border-radius: 50%;
+  }
+  .slider-new .bar { background: rgba(26,23,20,0.08); }
+  .slider-new .bar .fill { background: var(--cinnabar); width: 60%; }
+  .slider-new .dot {
+    position: absolute; right: 40%; top: 50%;
+    transform: translate(50%, -50%);
+    width: 18px; height: 18px;
+    background: var(--ink);
+    border: 3px solid var(--paper);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .slider-new .val { color: var(--cinnabar); font-weight: 600; }
+
+  /* —— 排版对比 — */
+  .type-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .type-card {
+    padding: 24px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid rgba(26,23,20,0.06);
+  }
+  .type-card .sample-h {
+    font-size: 24px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .type-card .sample-sub {
+    font-size: 12px; color: var(--ink-mute);
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.14em;
+  }
+  .type-card .sample-body { font-size: 14px; line-height: 1.6; color: var(--ink-3); }
+  .type-old .sample-h { font-family: 'Inter', sans-serif; letter-spacing: -0.3px; color: var(--ink); }
+  .type-new .sample-h {
+    font-family: 'Noto Serif SC', 'Fraunces', serif;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+  .type-new .sample-body {
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  /* —— 液态玻璃对比 — */
+  .glass-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .glass-card {
+    height: 200px;
+    border-radius: 18px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-card .label {
+    position: absolute; top: 12px; left: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  }
+  .glass-card .title {
+    position: absolute; bottom: 16px; left: 16px; right: 16px;
+    font-size: 15px; font-weight: 600;
+  }
+  .glass-old {
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: var(--ink);
+  }
+  .glass-old::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,102,204,0.05) 0%, transparent 50%);
+  }
+  .glass-old .label { color: #0066CC; }
+
+  .glass-new {
+    background: rgba(244,239,230,0.72);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(26,23,20,0.08);
+    color: var(--ink);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.6),
+      inset 0 -1px 0 rgba(26,23,20,0.05),
+      0 8px 24px rgba(26,23,20,0.08);
+  }
+  .glass-new::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(122,92,62,0.4) 50%, transparent 100%);
+  }
+  .glass-new::after {
+    content: '';
+    position: absolute; bottom: -50%; right: -20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(179,58,58,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .glass-new .label { color: var(--cinnabar); }
+
+  /* —— 颜色系统对比 — */
+  .palette-old, .palette-new {
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(26,23,20,0.06);
+  }
+  .palette-old { background: #fff; }
+  .palette-new { background: var(--paper); }
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .palette-grid .swatch {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+  }
+
+  /* —— 索引图 — */
+  .index-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: var(--s-7) 0;
+  }
+  .index-card {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid rgba(26,23,20,0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 200ms ease;
+  }
+  .index-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sh-3);
+    border-color: var(--cinnabar);
+  }
+  .index-card .num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 24px;
+    color: var(--bronze);
+  }
+  .index-card h4 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px; font-weight: 600;
+    margin: 4px 0 6px;
+    color: var(--ink);
+  }
+  .index-card p {
+    font-size: 12px; color: var(--ink-mute);
+    line-height: 1.5;
+  }
+  .index-card .tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 6px;
+    background: var(--paper-2);
+    color: var(--bronze-2);
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    border-radius: 4px;
+  }
+
+  /* —— 页脚 — */
+  .colophon {
+    margin-top: var(--s-10);
+    padding-top: var(--s-7);
+    border-top: 1px solid var(--ink);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--s-6);
+  }
+  .colophon h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-mute);
+    margin-bottom: 8px;
+  }
+  .colophon p {
+    font-size: 12px;
+    color: var(--ink-3);
+    line-height: 1.6;
+  }
+  .colophon em {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: var(--bronze-2);
+  }
+
+  /* —— 装饰元素 — */
+  .ornament {
+    display: flex; align-items: center; justify-content: center;
+    margin: var(--s-8) 0;
+    gap: 12px;
+    color: var(--bronze);
+  }
+  .ornament::before, .ornament::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--bronze), transparent);
+  }
+  .ornament span {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 0.4em;
+  }
+
+  /* —— 动画 — */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in {
+    opacity: 0;
+    animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .fade-in.d1 { animation-delay: 100ms; }
+  .fade-in.d2 { animation-delay: 200ms; }
+  .fade-in.d3 { animation-delay: 300ms; }
+  .fade-in.d4 { animation-delay: 400ms; }
+  .fade-in.d5 { animation-delay: 500ms; }
+
+  @media (max-width: 1024px) {
+    .pair, .pair-vert, .type-pair, .glass-pair {
+      grid-template-columns: 1fr;
+    }
+    .pair-vert { grid-template-columns: 1fr; }
+    .component-block { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ====================== 页眉 ====================== -->
+  <header class="masthead fade-in">
+    <div>
+      <div class="eyebrow">Jianxi Reader · Vol. 02 · No. 07 · Issue 0277</div>
+      <h1>
+        简兮<span class="accent">UI/UX</span><br/>
+        界面优化方案
+      </h1>
+    </div>
+    <div class="meta">
+      <strong>VERSION</strong> &nbsp; 2.7.7+177<br/>
+      <strong>FRAMEWORK</strong> &nbsp; Flutter 3.44<br/>
+      <strong>DESIGN</strong> &nbsp; Editorial · 简牍水墨<br/>
+      <strong>DATE</strong> &nbsp; 2026.06.27
+    </div>
+  </header>
+
+  <!-- ====================== 导语 ====================== -->
+  <section class="lede fade-in d1">
+    <p class="summary">
+      一份面向<em class="em">简兮阅读器</em>的界面优化设计书。我们不重写一切——我们重写那些
+      <em class="em">沉默的细节</em>：拥挤的顶栏、缺失的引导、参差的字号、墨色之外没有呼吸的暗调。
+      下面 7 个章节，对应 7 处可立即落地的优化。
+    </p>
+    <dl class="specs">
+      <div class="spec">
+        <dt>美学方向</dt>
+        <dd>简牍水墨 · Editorial Literary</dd>
+      </div>
+      <div class="spec">
+        <dt>字体梯度</dt>
+        <dd>Fraunces · Noto Serif SC · Inter</dd>
+      </div>
+      <div class="spec">
+        <dt>主色板</dt>
+        <dd>纸 #F4EFE6 · 墨 #1A1714 · 朱砂 #B33A3A</dd>
+      </div>
+      <div class="spec">
+        <dt>目标用户</dt>
+        <dd>深度阅读者 / 文字工作者 / Markdown 重度用户</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ====================== 目录 ====================== -->
+  <section class="index-grid fade-in d2">
+    <a class="index-card" href="#ch1">
+      <div class="num">I</div>
+      <h4>Library 书架</h4>
+      <p>顶栏收口 · 文档卡重排 · 液态玻璃一致化</p>
+      <span class="tag">3 Components</span>
+    </a>
+    <a class="index-card" href="#ch2">
+      <div class="num">II</div>
+      <h4>Reader 阅读</h4>
+      <p>AppBar 精简 · 排版·导引·章节节点</p>
+      <span class="tag">4 Components</span>
+    </a>
+    <a class="index-card" href="#ch3">
+      <div class="num">III</div>
+      <h4>Settings 设置</h4>
+      <p>扁平化分类 · 删除陪伴图标</p>
+      <span class="tag">2 Components</span>
+    </a>
+    <a class="index-card" href="#ch4">
+      <div class="num">IV</div>
+      <h4>Liquid Glass 玻璃</h4>
+      <p>浅色增强 · 暗色降饱和 · 性能预算</p>
+      <span class="tag">System</span>
+    </a>
+    <a class="index-card" href="#ch5">
+      <div class="num">V</div>
+      <h4>Typography 排版</h4>
+      <p>字阶收敛 · 衬线中文 · 西文衬线</p>
+      <span class="tag">Foundation</span>
+    </a>
+    <a class="index-card" href="#ch6">
+      <div class="num">VI</div>
+      <h4>Color 色彩</h4>
+      <p>纸墨替代纯白黑 · 朱砂替代纯蓝</p>
+      <span class="tag">Foundation</span>
+    </a>
+  </section>
+
+  <div class="ornament"><span>简 兮 · 卷 二</span></div>
+
+  <!-- =====================================================
+       CHAPTER I  ·  LIBRARY
+       ===================================================== -->
+  <section id="ch1">
+    <div class="chapter fade-in">
+      <div class="num">I</div>
+      <div>
+        <h2><span class="cn">书架</span> · Library</h2>
+        <div class="tag">Chapter I · 3 Component Reforms</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        当前 Library 顶栏挤了 3 个图标按钮 (40×40 + 2px)，FAB 与空状态 CTA 重复，文档卡 2 行省略时
+        状态图标常被裁切。我们重写为<em>收口、留白、编号、衬线</em>四件套。
+      </p>
+    </div>
+
+    <!-- 1.1 Library 整页 -->
+    <div class="pair fade-in">
+      <div>
+        <span class="badge-before">BEFORE · 当前实现</span>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="lib-old">
+              <div class="topbar">
+                <div class="left">
+                  <div class="doc-icon">简</div>
+                  <h1>书架</h1>
+                </div>
+                <div class="right">
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="search-input">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+                搜索
+              </div>
+              <div class="section-head"><span>最近阅读</span><span>查看全部</span></div>
+              <div class="doc-tile">
+                <div class="badge">MD</div>
+                <div class="body">
+                  <div class="title">深入理解 Java 虚拟机（第 3 版）</div>
+                  <div class="meta"><span>已读 35%</span><span>·</span><span>5 天前</span></div>
+                </div>
+                <div class="more-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                </div>
+              </div>
+              <div class="doc-tile">
+                <div class="badge" style="background:#FCE4EC;color:#C2185B">TXT</div>
+                <div class="body">
+                  <div class="title">苏轼词集 · 卷一</div>
+                  <div class="meta"><span>已读 12%</span><span>·</span><span>3 天前</span></div>
+                </div>
+                <div class="more-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                </div>
+              </div>
+              <div class="doc-tile">
+                <div class="badge" style="background:#E8F5E9;color:#2E7D32">HTML</div>
+                <div class="body">
+                  <div class="title">Product Design Principles 2024</div>
+                  <div class="meta"><span>未开始</span><span>·</span><span>1 周前</span></div>
+                </div>
+                <div class="more-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                </div>
+              </div>
+              <div class="section-head"><span>全部文档</span><span>12 个</span></div>
+              <div class="doc-tile">
+                <div class="badge">MD</div>
+                <div class="body">
+                  <div class="title">TypeScript Handbook 5.4</div>
+                  <div class="meta"><span>未开始</span></div>
+                </div>
+              </div>
+              <div class="doc-tile">
+                <div class="badge" style="background:#FFF3E0;color:#E65100">MD</div>
+                <div class="body">
+                  <div class="title">Rust 程序设计语言（第二版）</div>
+                  <div class="meta"><span>未开始</span></div>
+                </div>
+              </div>
+              <div class="fab">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+              <div class="bottombar">
+                <div class="tab active">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v3H3zm0 6h18v3H3zm0 6h18v3H3z"/></svg>
+                  书架
+                </div>
+                <div class="tab">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  设置
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">Before · 简兮 v2.7.7</div>
+            <h3>当前书架</h3>
+            <p class="desc">48×48 类型徽标 + Inter 标题 + 1 行元信息。底栏使用 20px 圆角 + 半透明白，FAB 60×60 蓝圆。</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="badge-after">AFTER · 优化方案</span>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="lib-new">
+              <div class="topbar">
+                <div class="brand">
+                  <div class="mark">简</div>
+                  <div class="title-block">
+                    <div class="eyebrow">Jianxi · 简兮</div>
+                    <h1>书架</h1>
+                  </div>
+                </div>
+                <div class="right">
+                  <div class="tune">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                    调序
+                  </div>
+                </div>
+              </div>
+              <div class="view-toggle">
+                <button class="active">列表</button>
+                <button>书架</button>
+              </div>
+              <div class="doc-tile">
+                <div class="num">01</div>
+                <div class="body">
+                  <div class="row1">
+                    <div class="title">深入理解 Java 虚拟机</div>
+                    <span style="color:var(--cinnabar);font-size:10px;">●</span>
+                  </div>
+                  <div class="row2">
+                    <span>5 天前</span>
+                    <span class="tag">技术</span>
+                    <span>已读 35%</span>
+                  </div>
+                </div>
+                <div class="more">⋯</div>
+              </div>
+              <div class="doc-tile">
+                <div class="num">02</div>
+                <div class="body">
+                  <div class="row1">
+                    <div class="title">苏轼词集 · 卷一</div>
+                  </div>
+                  <div class="row2">
+                    <span>3 天前</span>
+                    <span class="tag" style="background:rgba(179,58,58,0.08);color:var(--cinnabar);">文学</span>
+                    <span>已读 12%</span>
+                  </div>
+                </div>
+                <div class="more">⋯</div>
+              </div>
+              <div class="doc-tile">
+                <div class="num">03</div>
+                <div class="body">
+                  <div class="row1">
+                    <div class="title">Product Design Principles 2024</div>
+                  </div>
+                  <div class="row2">
+                    <span>1 周前</span>
+                    <span class="tag" style="background:rgba(42,58,92,0.08);color:var(--indigo);">设计</span>
+                    <span>未开始</span>
+                  </div>
+                </div>
+                <div class="more">⋯</div>
+              </div>
+              <div class="doc-tile">
+                <div class="num">04</div>
+                <div class="body">
+                  <div class="row1">
+                    <div class="title">TypeScript Handbook 5.4</div>
+                  </div>
+                  <div class="row2">
+                    <span>2 周前</span>
+                    <span class="tag" style="background:rgba(74,107,78,0.08);color:var(--jade);">编程</span>
+                    <span>未开始</span>
+                  </div>
+                </div>
+                <div class="more">⋯</div>
+              </div>
+              <div class="doc-tile">
+                <div class="num">05</div>
+                <div class="body">
+                  <div class="row1">
+                    <div class="title">Rust 程序设计语言</div>
+                  </div>
+                  <div class="row2">
+                    <span>2 周前</span>
+                    <span class="tag" style="background:rgba(122,92,62,0.08);color:var(--bronze-2);">系统</span>
+                    <span>未开始</span>
+                  </div>
+                </div>
+                <div class="more">⋯</div>
+              </div>
+              <div class="fab">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+              <div class="bottombar">
+                <div class="tab active">
+                  <div class="dot"></div>
+                  书架
+                </div>
+                <div class="tab">
+                  设置
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">After · 优化方案 v2.8</div>
+            <h3><span class="cn">重塑书架</span></h3>
+            <p class="desc">取消类型徽标，代之以编号 + 标签色块；调序按钮收口为单 chip；FAB 朱砂红 + 衬线中文。底栏文字替代图标，dot 指示激活态。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1.2 Doc Tile 组件拆解 -->
+    <div class="component-block">
+      <div class="annot">
+        <div class="num">i.</div>
+        <h3><span class="cn">文档卡</span> · Document Tile</h3>
+        <p>
+          当前 48×48 类型徽标占用太多视觉权重，标题与状态图标同行的 2 行省略会裁掉置顶/外链图标。
+          新版用<strong>编号 + 标签色块</strong>替代徽标，标题独占一行，状态点挪到 meta 行，与标签并列。
+        </p>
+        <div class="delta">
+          <strong>改动</strong>
+          类型徽标 → 编号 <em>i. ii. iii.</em>；状态图标（置顶/外链）移到 meta 行；标签改成 4 套语义化颜色。
+        </div>
+        <dl class="metrics">
+          <div class="metric"><dt>触达区</dt><dd>+18<em>%</em></dd></div>
+          <div class="metric"><dt>视觉密度</dt><dd>−22<em>%</em></dd></div>
+        </dl>
+      </div>
+      <div class="component-canvas">
+        <div class="canvas-head">
+          <div>
+            <div class="label">Component · Document Tile</div>
+            <div class="title">BEFORE → AFTER</div>
+          </div>
+          <div class="label" style="color:var(--cinnabar);">1:1 scale</div>
+        </div>
+        <div class="type-pair" style="grid-template-columns: 1fr 1fr;">
+          <div>
+            <div class="tile-old">
+              <div class="badge">MD</div>
+              <div class="body">
+                <div class="title">深入理解 Java 虚拟机</div>
+                <div class="meta">已读 35% · 5 天前</div>
+              </div>
+              <div class="more-btn" style="color:var(--ink-faint);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+              </div>
+            </div>
+            <div class="tile-old">
+              <div class="badge" style="background:#FCE4EC;color:#C2185B">TXT</div>
+              <div class="body">
+                <div class="title">苏轼词集</div>
+                <div class="meta">已读 12% · 3 天前</div>
+              </div>
+              <div class="more-btn" style="color:var(--ink-faint);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+              </div>
+            </div>
+            <div class="tile-old">
+              <div class="badge" style="background:#E8F5E9;color:#2E7D32">HTML</div>
+              <div class="body">
+                <div class="title">Product Design</div>
+                <div class="meta">未开始</div>
+              </div>
+              <div class="more-btn" style="color:var(--ink-faint);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+              </div>
+            </div>
+            <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-mute);margin-top:8px;text-transform:uppercase;letter-spacing:0.14em;">Before · 60% visual weight on badge</div>
+          </div>
+          <div>
+            <div class="tile-new">
+              <div class="num">i.</div>
+              <div class="body">
+                <div class="row1">
+                  <div class="title">深入理解 Java 虚拟机</div>
+                  <span class="pin">●</span>
+                </div>
+                <div class="row2">
+                  <span>5 天前</span>
+                  <span class="tag">技术</span>
+                  <span>35%</span>
+                </div>
+              </div>
+              <div class="more">⋯</div>
+            </div>
+            <div class="tile-new">
+              <div class="num">ii.</div>
+              <div class="body">
+                <div class="row1">
+                  <div class="title">苏轼词集</div>
+                </div>
+                <div class="row2">
+                  <span>3 天前</span>
+                  <span class="tag" style="background:rgba(179,58,58,0.08);color:var(--cinnabar);">文学</span>
+                  <span>12%</span>
+                </div>
+              </div>
+              <div class="more">⋯</div>
+            </div>
+            <div class="tile-new">
+              <div class="num">iii.</div>
+              <div class="body">
+                <div class="row1">
+                  <div class="title">Product Design</div>
+                </div>
+                <div class="row2">
+                  <span>1 周前</span>
+                  <span class="tag" style="background:rgba(42,58,92,0.08);color:var(--indigo);">设计</span>
+                  <span>未开始</span>
+                </div>
+              </div>
+              <div class="more">⋯</div>
+            </div>
+            <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--jade);margin-top:8px;text-transform:uppercase;letter-spacing:0.14em;">After · 编号 + 标签色块</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="ornament"><span>·  ·  ·</span></div>
+
+  <!-- =====================================================
+       CHAPTER II  ·  READER
+       ===================================================== -->
+  <section id="ch2">
+    <div class="chapter fade-in">
+      <div class="num">II</div>
+      <div>
+        <h2><span class="cn">阅读</span> · Reader</h2>
+        <div class="tag">Chapter II · 4 Component Reforms</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        AppBar 4 个 action + back 共 5 个控件，挤在 375 宽屏上；进度条 3px 几乎无视觉反馈；
+        "上次阅读" 浮窗 2 秒就消失。新版采用<em>衬线中文 + 朱砂强调 + drop cap 起首字母大写</em>，
+        把阅读器推向 Apple Books 级别的文字美学。
+      </p>
+    </div>
+
+    <!-- 2.1 Reader 整页 -->
+    <div class="pair">
+      <div>
+        <span class="badge-before">BEFORE · 当前实现</span>
+        <div class="phone-frame">
+          <div class="phone-screen" style="background:#fff;">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="reader-old" style="height:100%;">
+              <div class="appbar">
+                <div class="back">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </div>
+                <div class="title" style="font-size:13px;color:var(--ink);font-weight:600;">深入理解 Java 虚拟机</div>
+                <div class="actions">
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.6-7.6l-4.2 4.2M9.6 14.4l-4.2 4.2m13.2 0l-4.2-4.2M9.6 9.6L5.4 5.4"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="progress"><div class="fill"></div></div>
+              <div class="doc-content" style="margin-top:48px;">
+                <h1>第三部分 · 虚拟机执行子系统</h1>
+                <h2>第 8 章 · 虚拟机字节码执行引擎</h2>
+                <p>代码编译的结果从本地机器码转变为<strong>字节码</strong>，是存储格式发展的一小步，
+                却是编程语言发展的一大步。</p>
+                <p>在 Java 虚拟机中，<code>invokevirtual</code>指令用于调用对象的实例方法，
+                根据对象的实际类型进行分派（虚方法分派）。这是 Java 多态性的核心机制之一。</p>
+                <p>虚拟机在执行方法时，会在栈帧中创建<strong>局部变量表</strong>、
+                操作数栈、动态连接、方法返回地址等结构。</p>
+              </div>
+              <div class="prev-read">
+                <span>📍 继续阅读：虚方法分派</span>
+                <span>→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">Before · 简兮 v2.7.7</div>
+            <h3>当前阅读器</h3>
+            <p class="desc">蓝色调强调 + 36×36 图标按钮 + 3px 顶部进度 + Inter 标题 + 1 行标题。</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="badge-after">AFTER · 优化方案</span>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="reader-new" style="height:100%;">
+              <div class="appbar">
+                <div class="back">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </div>
+                <div class="title-block">
+                  <div class="subtitle">CH · 08 / 12</div>
+                  <div class="title">虚拟机执行子系统</div>
+                </div>
+                <div class="right">
+                  <div class="iconbtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="progress">
+                <div class="fill"></div>
+                <div class="chapter-dot" style="left:35%;"></div>
+                <div class="chapter-dot" style="left:65%;background:var(--ink-faint);"></div>
+              </div>
+              <div class="doc-content">
+                <h1>虚拟机字节码执行引擎</h1>
+                <div class="meta-line">CHAPTER Ⅷ · VOL. 03</div>
+                <p><span style="float:left;font-family:'Fraunces',serif;font-size:42px;font-weight:500;line-height:0.85;margin:6px 8px 0 0;color:var(--cinnabar);">代</span>码编译的结果从本地机器码转变为字节码，
+                是存储格式发展的一小步，却是编程语言发展的一大步。在 Java 虚拟机中，
+                <code>invokevirtual</code>指令用于调用对象的实例方法，根据对象的实际类型进行分派。</p>
+                <div class="pull-quote">
+                  栈帧是虚拟机运行时数据区中的基本结构，承载方法执行的全部上下文。
+                </div>
+                <h2>运行时栈帧结构</h2>
+                <p>虚拟机在执行方法时，会在栈帧中创建<strong>局部变量表</strong>、
+                操作数栈、动态连接、方法返回地址等结构。其中局部变量表与操作数栈的容量
+                在编译期就已确定，写入方法表的 Code 属性中。</p>
+                <h2>方法调用</h2>
+                <p>方法调用阶段的任务是确定被调用方法的版本，暂时还不涉及方法内部的具体运行过程。
+                Class 文件的编译过程不包含传统编译中的"连接"步骤，一切方法调用在 Class 文件里
+                存储的都只是符号引用，而不是方法在实际运行时内存布局中的入口地址（直接引用）。</p>
+              </div>
+              <div class="prev-read">
+                <div class="col">
+                  <div class="eyebrow">LAST READ</div>
+                  <div style="font-family:'Noto Serif SC',serif;font-weight:600;">§ 8.3 虚方法分派</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span class="dismiss">忽略</span>
+                  <span style="background:var(--cinnabar);color:#fff;padding:6px 12px;border-radius:14px;font-weight:600;">继续 →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">After · 优化方案 v2.8</div>
+            <h3><span class="cn">编辑式阅读</span></h3>
+            <p class="desc">Noto Serif SC 中文 + Fraunces 西文 · 衬线 drop cap 起首字母大写 · 章节节点浮在进度条上 · 底部"上次阅读"带 dismiss。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2.2 TOC 抽屉 -->
+    <div class="component-block">
+      <div class="annot">
+        <div class="num">ii.</div>
+        <h3><span class="cn">目录抽屉</span> · TOC Drawer</h3>
+        <p>
+          当前 ListTile(dense) 高度 48px，H1/H2/H3 仅靠颜色区分层级；无滑动手柄；"返回顶部"
+          远离列表。新版加左侧<strong>层级条</strong> + 顶部滑动手柄 + 底部"返回顶部"固定。
+        </p>
+        <div class="delta">
+          <strong>改动</strong>
+          ListTile dense 48→56；新增 3px 层级色条；H1 用衬线 + 朱砂；H2/H3 缩进 12/24。
+        </div>
+        <dl class="metrics">
+          <div class="metric"><dt>触达区</dt><dd>+17<em>%</em></dd></div>
+          <div class="metric"><dt>层级辨识</dt><dd>3 级</dd></div>
+        </dl>
+      </div>
+      <div class="component-canvas">
+        <div class="canvas-head">
+          <div>
+            <div class="label">Component · TOC Drawer</div>
+            <div class="title">BEFORE → AFTER</div>
+          </div>
+          <div class="label" style="color:var(--cinnabar);">280 × 540</div>
+        </div>
+        <div class="type-pair">
+          <div>
+            <div class="toc-old">
+              <div class="head">
+                <h3>目录</h3>
+                <span style="color:var(--ink-mute);font-size:12px;">12 章</span>
+              </div>
+              <div class="item h1 active">第 8 章 · 字节码执行引擎</div>
+              <div class="item h2">8.1 运行时栈帧结构</div>
+              <div class="item h2">8.2 方法调用</div>
+              <div class="item h3">8.2.1 解析</div>
+              <div class="item h3">8.2.2 分派</div>
+              <div class="item h2">8.3 虚方法分派</div>
+              <div class="item h2">8.4 虚拟机动态分派的实现</div>
+              <div class="item h1">第 9 章 · 类加载及执行子系统的案例</div>
+              <div class="item h2">9.1 案例分析</div>
+            </div>
+            <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-mute);margin-top:8px;text-transform:uppercase;letter-spacing:0.14em;">Before · 48px / 2 levels</div>
+          </div>
+          <div>
+            <div class="toc-new">
+              <div class="head" style="border-bottom:1px solid rgba(26,23,20,0.08);">
+                <div>
+                  <h3 style="font-family:'Noto Serif SC',serif;">目录</h3>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--bronze);text-transform:uppercase;letter-spacing:0.14em;margin-top:2px;">CONTENTS · 12 / 30</div>
+                </div>
+                <div style="width:24px;height:4px;background:var(--ink-faint);border-radius:2px;"></div>
+              </div>
+              <div class="item h1 active">
+                <div class="level-bar"></div>
+                第 8 章 · 字节码执行引擎
+              </div>
+              <div class="item h2">
+                <div class="level-bar"></div>
+                8.1 运行时栈帧结构
+              </div>
+              <div class="item h2">
+                <div class="level-bar"></div>
+                8.2 方法调用
+              </div>
+              <div class="item h3">
+                <div class="level-bar"></div>
+                8.2.1 解析
+              </div>
+              <div class="item h3">
+                <div class="level-bar"></div>
+                8.2.2 分派
+              </div>
+              <div class="item h2">
+                <div class="level-bar"></div>
+                8.3 虚方法分派
+              </div>
+              <div class="item h2">
+                <div class="level-bar"></div>
+                8.4 虚拟机动态分派的实现
+              </div>
+              <div class="item h1">
+                <div class="level-bar"></div>
+                第 9 章 · 类加载及执行子系统的案例
+              </div>
+              <div class="item h2">
+                <div class="level-bar"></div>
+                9.1 案例分析
+              </div>
+              <div style="margin-top:8px;padding:10px 12px;border-top:1px solid rgba(26,23,20,0.08);display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);">
+                <span>↑ 返回顶部</span>
+                <span style="font-family:'JetBrains Mono',monospace;color:var(--ink-mute);">38%</span>
+              </div>
+            </div>
+            <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--jade);margin-top:8px;text-transform:uppercase;letter-spacing:0.14em;">After · 56px / 3 levels / drag-handle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="ornament"><span>·  ·  ·</span></div>
+
+  <!-- =====================================================
+       CHAPTER III  ·  SETTINGS
+       ===================================================== -->
+  <section id="ch3">
+    <div class="chapter fade-in">
+      <div class="num">III</div>
+      <div>
+        <h2><span class="cn">设置</span> · Settings</h2>
+        <div class="tag">Chapter III · 2 Component Reforms</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        当前 Settings 三个入口卡片平铺，"陪伴图标"（笑脸）功能不明。删除陪伴图标，
+        把<em>外观 / 阅读 / 文档 / 存储 / 关于</em>分类聚合，用衬线编号 + 短标签。
+      </p>
+    </div>
+
+    <div class="pair">
+      <div>
+        <span class="badge-before">BEFORE · 当前实现</span>
+        <div class="phone-frame">
+          <div class="phone-screen" style="background:#F2F2F7;">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="settings-old">
+              <div class="topbar">
+                <div class="left">
+                  <div class="gear">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  </div>
+                  <h1>设置</h1>
+                </div>
+                <div class="face">☻</div>
+              </div>
+              <div class="card">
+                <div class="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">外观与动画</div>
+                  <div class="desc">主题 · 视觉模式 · 字体</div>
+                </div>
+                <div class="chevron">›</div>
+              </div>
+              <div class="card">
+                <div class="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">阅读体验</div>
+                  <div class="desc">字号 · 行距 · 页边距</div>
+                </div>
+                <div class="chevron">›</div>
+              </div>
+              <div class="card">
+                <div class="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">关于应用</div>
+                  <div class="desc">版本 · 开源 · 缓存清理</div>
+                </div>
+                <div class="chevron">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">Before · 简兮 v2.7.7</div>
+            <h3>当前设置</h3>
+            <p class="desc">3 个圆角白卡 + 蓝灰图标 + 灰色 F2F2F7 背景。笑脸"陪伴图标"功能不明。</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="badge-after">AFTER · 优化方案</span>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">9:41<span class="right">● ● 100%</span></div>
+            <div class="phone-notch"></div>
+            <div class="settings-new">
+              <div class="topbar">
+                <div class="left">
+                  <div class="num">Ⅲ</div>
+                  <h1>
+                    设置
+                    <small>Preferences</small>
+                  </h1>
+                </div>
+                <div class="right">
+                  <div class="iconbtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+                  </div>
+                  <div class="iconbtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div class="group-label">A · 外观</div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">主题</div>
+                  <div class="desc">浅色 / 深色 / 跟随系统</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12c0-5 4-9 9-9s9 4 9 9-4 9-9 9-9-4-9-9z"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">视觉模式</div>
+                  <div class="desc">经典 / 液态玻璃</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+
+              <div class="group-label">B · 阅读</div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">阅读主题 · 字号 · 行距</div>
+                  <div class="desc">默认 / 纸张 / 护眼 · 16pt · 1.55</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+
+              <div class="group-label">C · 文档</div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">首页视图</div>
+                  <div class="desc">列表</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l-4 4 4 4M15 11l4 4-4 4"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">预测性返回手势</div>
+                  <div class="desc">已开启</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+
+              <div class="group-label">D · 存储</div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">缓存</div>
+                  <div class="desc">12.4 MB · 清理</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+
+              <div class="group-label">E · 关于</div>
+              <div class="row">
+                <div class="icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div class="body">
+                  <div class="title">版本 2.7.7 (build 177)</div>
+                  <div class="desc">开源 · 交流群</div>
+                </div>
+                <div class="arrow">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">
+          <div>
+            <div class="tag">After · 优化方案 v2.8</div>
+            <h3><span class="cn">章节化设置</span></h3>
+            <p class="desc">5 个分组（外观/阅读/文档/存储/关于）用衬线大写编号；删除"陪伴图标"；米色纸面背景 + 衬线中文标题。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="ornament"><span>·  ·  ·</span></div>
+
+  <!-- =====================================================
+       CHAPTER IV  ·  LIQUID GLASS
+       ===================================================== -->
+  <section id="ch4">
+    <div class="chapter fade-in">
+      <div class="num">IV</div>
+      <div>
+        <h2><span class="cn">液态玻璃</span> · Liquid Glass</h2>
+        <div class="tag">Chapter IV · System Foundation</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        浅色液态玻璃与暗色差异大，浅色看起来"半透明白卡"，与"液态"语义不符。
+        新方案：浅色增强<em>顶光 + 内描边 + 投影</em>，暗色降饱和<em>收敛 5 色 rim 到 1 色</em>。
+      </p>
+    </div>
+
+    <div class="component-canvas" style="margin-bottom:32px;">
+      <div class="canvas-head">
+        <div>
+          <div class="label">System · Liquid Glass Surface</div>
+          <div class="title">BEFORE → AFTER</div>
+        </div>
+        <div class="label" style="color:var(--cinnabar);">300 × 200</div>
+      </div>
+      <div class="glass-pair" style="grid-template-columns:1fr 1fr;">
+        <div class="glass-old">
+          <div class="label">Before · 浅色 + Liquid</div>
+          <div class="title" style="font-family:'Inter',sans-serif;">玻璃卡片</div>
+        </div>
+        <div class="glass-new">
+          <div class="label">After · 浅色 + Liquid</div>
+          <div class="title" style="font-family:'Noto Serif SC',serif;">玻璃卡片</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament"><span>·  ·  ·</span></div>
+
+  <!-- =====================================================
+       CHAPTER V  ·  TYPOGRAPHY
+       ===================================================== -->
+  <section id="ch5">
+    <div class="chapter fade-in">
+      <div class="num">V</div>
+      <div>
+        <h2><span class="cn">排版</span> · Typography</h2>
+        <div class="tag">Chapter V · Foundation</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        当前 Inter 是 UI 主力，但中文场景下中文也用 Inter 渲染——失去汉字的衬线张力。
+        新方案：<em>Noto Serif SC（中文衬线）+ Fraunces（西文衬线）+ Inter（UI 数字 / 英文）</em>三层搭配。
+      </p>
+    </div>
+
+    <div class="component-block">
+      <div class="annot">
+        <div class="num">v.</div>
+        <h3><span class="cn">字体梯度</span> · Type Stack</h3>
+        <p>
+          中文衬线 Noto Serif SC 重现简牍时代木刻字的张力；Fraunces 提供 9-144 字阶支持
+          optical sizing；Inter 保留 UI 数字 / 英文场景的现代感。
+        </p>
+        <div class="delta">
+          <strong>字阶</strong>
+          Noto Serif SC (display) · Fraunces (西文 display) · Inter (UI) · JetBrains Mono (数字 / 元数据)
+        </div>
+        <dl class="metrics">
+          <div class="metric"><dt>字族</dt><dd>3 + 1</dd></div>
+          <div class="metric"><dt>字阶</dt><dd>12</dd></div>
+        </dl>
+      </div>
+      <div class="component-canvas">
+        <div class="canvas-head">
+          <div>
+            <div class="label">Foundation · Typography</div>
+            <div class="title">BEFORE → AFTER</div>
+          </div>
+        </div>
+        <div class="type-pair">
+          <div class="type-card type-old">
+            <div class="sample-h">深入理解 Java 虚拟机</div>
+            <div class="sample-sub">Inter · 17px · w600</div>
+            <div class="sample-body">代码编译的结果从本地机器码转变为字节码，是存储格式发展的一小步，却是编程语言发展的一大步。在 Java 虚拟机中，invokevirtual 指令用于调用对象的实例方法。</div>
+          </div>
+          <div class="type-card type-new">
+            <div class="sample-h">深入理解 Java 虚拟机</div>
+            <div class="sample-sub" style="color:var(--bronze);">Noto Serif SC · 18px · w600 · -0.01em</div>
+            <div class="sample-body">代码编译的结果从本地机器码转变为字节码，是存储格式发展的一小步，却是编程语言发展的一大步。在 Java 虚拟机中，<em style="font-family:'Fraunces',serif;font-style:italic;">invokevirtual</em> 指令用于调用对象的实例方法。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament"><span>·  ·  ·</span></div>
+
+  <!-- =====================================================
+       CHAPTER VI  ·  COLOR
+       ===================================================== -->
+  <section id="ch6">
+    <div class="chapter fade-in">
+      <div class="num">VI</div>
+      <div>
+        <h2><span class="cn">色彩</span> · Color</h2>
+        <div class="tag">Chapter VI · Foundation</div>
+      </div>
+    </div>
+    <div class="chapter-intro">
+      <div class="spacer"></div>
+      <p>
+        当前 Apple 风的纯白 (#FFFFFF) + 纯黑 (#000000) + 纯蓝 (#0066CC) 缺乏纸张质感。
+        新方案：<em>简牍米黄</em>取代纯白作 canvas，<em>墨色</em>取代纯黑作 ink，<em>朱砂红</em>取代纯蓝作 accent。
+      </p>
+    </div>
+
+    <div class="component-block">
+      <div class="annot">
+        <div class="num">vi.</div>
+        <h3><span class="cn">色板</span> · Palette</h3>
+        <p>
+          米色纸 + 墨 + 朱砂 三主色构成「简兮」品牌语义；青铜、玉绿、靛蓝作为二级语义色；
+          完整 12 色调色板用于标签 / 书架封面。
+        </p>
+        <div class="delta">
+          <strong>主色板</strong>
+          paper #F4EFE6 · ink #1A1714 · cinnabar #B33A3A · bronze #7A5C3E · jade #4A6B4E · indigo #2A3A5C
+        </div>
+      </div>
+      <div class="component-canvas">
+        <div class="canvas-head">
+          <div>
+            <div class="label">Foundation · Color Palette</div>
+            <div class="title">简兮色板 · v2.8</div>
+          </div>
+        </div>
+        <div class="palette-new">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-mute);">Primary · 三原</div>
+          <div class="palette-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="swatch" style="background:#F4EFE6;color:var(--ink-3);">
+              <div style="font-weight:700;">PAPER</div>
+              <div>#F4EFE6</div>
+            </div>
+            <div class="swatch" style="background:#1A1714;color:#F4EFE6;">
+              <div style="font-weight:700;">INK</div>
+              <div>#1A1714</div>
+            </div>
+            <div class="swatch" style="background:#B33A3A;color:#fff;">
+              <div style="font-weight:700;">CINNABAR</div>
+              <div>#B33A3A</div>
+            </div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-mute);margin-top:16px;">Semantic · 语义</div>
+          <div class="palette-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="swatch" style="background:#7A5C3E;color:#fff;">BRONZE · #7A5C3E</div>
+            <div class="swatch" style="background:#4A6B4E;color:#fff;">JADE · #4A6B4E</div>
+            <div class="swatch" style="background:#2A3A5C;color:#fff;">INDIGO · #2A3A5C</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-mute);margin-top:16px;">Tag · 12 色标签</div>
+          <div class="palette-grid">
+            <div class="swatch" style="background:#B33A3A;color:#fff;">01</div>
+            <div class="swatch" style="background:#7A5C3E;color:#fff;">02</div>
+            <div class="swatch" style="background:#4A6B4E;color:#fff;">03</div>
+            <div class="swatch" style="background:#2A3A5C;color:#fff;">04</div>
+            <div class="swatch" style="background:#C97A2A;color:#fff;">05</div>
+            <div class="swatch" style="background:#5C3A6B;color:#fff;">06</div>
+            <div class="swatch" style="background:#2A5C6B;color:#fff;">07</div>
+            <div class="swatch" style="background:#6B4A2A;color:#fff;">08</div>
+            <div class="swatch" style="background:#3A6B5C;color:#fff;">09</div>
+            <div class="swatch" style="background:#6B2A4A;color:#fff;">10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament"><span>— 完 —</span></div>
+
+  <!-- ====================== 页脚 ====================== -->
+  <footer class="colophon">
+    <div>
+      <h4>Design System</h4>
+      <p>Editorial · Literary · 简牍水墨</p>
+      <p>克制 · 留白 · 编号 · 衬线</p>
+    </div>
+    <div>
+      <h4>Typography</h4>
+      <p><em>Fraunces</em> · 9-144 opsz · variable</p>
+      <p>Noto Serif SC · 思源宋体</p>
+      <p>Inter · UI sans</p>
+    </div>
+    <div>
+      <h4>Document</h4>
+      <p>UIUX优化计划.md · 2026.06.27</p>
+      <p>对应版本 <em>2.7.7+177</em></p>
+      <p>下一版本 <em>2.8.0+178</em></p>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

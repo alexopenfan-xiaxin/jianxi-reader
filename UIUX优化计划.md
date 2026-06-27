@@ -7,7 +7,38 @@
 
 ---
 
-## 0. 项目 UI/UX 现状速写
+## 0. 可视化交付物（重要）
+
+> 本次优化计划已构建**可运行的视觉对比预览**，请优先查阅：
+
+```
+/workspace/uiux_preview/
+├── index.html          ← 6 章 Before/After 设计稿（手机框 + 组件拆解）
+├── MANIFEST.md         ← 设计令牌 + 组件对照表
+└── snap.js             ← 本地导出 PNG 用（需本地 playwright）
+```
+
+**预览入口**：[`uiux_preview/index.html`](file:///workspace/uiux_preview/index.html)（本地起 `python3 -m http.server 8123` 后访问 `http://localhost:8123/`）
+
+预览中包括：
+
+1. **I · 书架**：整页 Before/After + 文档卡组件拆解
+2. **II · 阅读**：整页 Before/After + 目录抽屉组件拆解
+3. **III · 设置**：整页 Before/After（5 分组 vs 3 入口）
+4. **IV · 液态玻璃**：浅色/暗色 玻璃面对比
+5. **V · 排版**：Inter vs Noto Serif SC + Fraunces
+6. **VI · 色彩**：3 主色 + 3 语义色 + 10 色标签色板
+
+设计方向：**Editorial Literary · 简牍水墨**——
+
+- **字体梯度**：Fraunces（西文衬线 variable）+ Noto Serif SC（中文衬线）+ Inter（UI）+ JetBrains Mono（数字）
+- **色板**：简牍米黄 `#F4EFE6` · 墨色 `#1A1714` · 朱砂 `#B33A3A` · 青铜 `#7A5C3E` · 玉绿 `#4A6B4E` · 靛蓝 `#2A3A5C`
+
+下面 §1 起为本计划的**问题清单 + 改进方案 + 落地路线图**，与预览对应。
+
+---
+
+## 1. 项目 UI/UX 现状速写
 
 | 维度 | 现状 | 评价 |
 | --- | --- | --- |
@@ -31,13 +62,13 @@
   2. **可发现性**差（液态玻璃、阅读模式、标签、排序、书签等"暗能力"没有引导）。
   3. **部分自绘图标与 Material 图标混用**，视觉一致度下降。
   4. **动效叠加较多**（Liquid Glass + Stagger + SliverTransition + SliverAnimatedList 同步触发），对中低端设备有压力。
-  5. **暗色 MetalFx 模式 + 强制 classic 的散点逻辑**让视觉一致度有反复（见 §3.4）。
+  5. **暗色 MetalFx 模式 + 强制 classic 的散点逻辑**让视觉一致度有反复（见 §4.4）。
 
 ---
 
-## 1. 信息架构与导航
+## 2. 信息架构与导航
 
-### 1.1 当前结构
+### 2.1 当前结构
 
 ```
 AppShell (IndexedStack)
@@ -53,17 +84,17 @@ AppShell (IndexedStack)
      └── AboutPage (push)
 ```
 
-### 1.2 问题
+### 2.2 问题
 
 | # | 问题 | 影响 | 证据 |
 | --- | --- | --- | --- |
-| 1.2.1 | 底部仅 2 个 tab，所有二级功能（标签、收藏、书架分组）只能通过 modal sheet 间接触达 | 不可发现性差 | `_FloatingBottomNav` 只渲染 home / settings 两项 |
-| 1.2.2 | Library 顶栏右侧 `_HeaderIconButton` 连续两个 40×40 + 2px 间距，搜索/排序/导入三个能力互相挤压 | 触达效率低，拥挤 | `library_toolbar.dart:316-338` |
-| 1.2.3 | Settings 是平铺的 3 个入口卡片（外观/阅读/关于），没有"账户"、"存储"、"实验功能"等扩展位 | 后续新增功能无处安放 | `settings_page.dart:41-48` |
-| 1.2.4 | AboutPage 混入了「缓存清理」功能，与"关于"语义不匹配 | 信息分组混乱 | `about_settings.dart:648-672` |
-| 1.2.5 | 顶部右侧 48px 高的「设置陪伴图标」（自绘小动物笑脸）出现原因不明，与功能无关 | 视觉噪音 | `settings_page.dart:283-370` |
+| 2.2.1 | 底部仅 2 个 tab，所有二级功能（标签、收藏、书架分组）只能通过 modal sheet 间接触达 | 不可发现性差 | `_FloatingBottomNav` 只渲染 home / settings 两项 |
+| 2.2.2 | Library 顶栏右侧 `_HeaderIconButton` 连续两个 40×40 + 2px 间距，搜索/排序/导入三个能力互相挤压 | 触达效率低，拥挤 | `library_toolbar.dart:316-338` |
+| 2.2.3 | Settings 是平铺的 3 个入口卡片（外观/阅读/关于），没有"账户"、"存储"、"实验功能"等扩展位 | 后续新增功能无处安放 | `settings_page.dart:41-48` |
+| 2.2.4 | AboutPage 混入了「缓存清理」功能，与"关于"语义不匹配 | 信息分组混乱 | `about_settings.dart:648-672` |
+| 2.2.5 | 顶部右侧 48px 高的「设置陪伴图标」（自绘小动物笑脸）出现原因不明，与功能无关 | 视觉噪音 | `settings_page.dart:283-370` |
 
-### 1.3 建议
+### 2.3 建议
 
 **A. 短期：保留 2 tab 但重塑 Library 顶栏**
 
@@ -95,9 +126,9 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 2. Library 页面深度优化
+## 3. Library 页面深度优化
 
-### 2.1 列表/书架双视图
+### 3.1 列表/书架双视图
 
 #### 现状
 
@@ -110,11 +141,11 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.1.1 | 列表/书架切换是硬切，没有交叉淡入或 morph 过渡 | `_LibrarySliverTransition` 只对 `switchKey` 变化淡入，未对 viewMode 切换做形变 |
-| 2.1.2 | 书架封面色对比度过高（深色封面 + 白字），小屏（如 360 宽）看不清封面类型标签 | `_ShelfTypeMark` 白字 + 0.18 透明背景，4-5 个字符溢出风险 |
-| 2.1.3 | 书架 `childAspectRatio: 0.72` 在窄屏（< 360）导致封面信息被裁切（"全部文档"标题只显示一行） | `library_shelf_view.dart:20` |
-| 2.1.4 | 列表视图 "最近阅读" 与 "全部文档" 分组在搜索时仍显示（`_RecentReadingSliver` 在 `searchQuery.isEmpty` 时才隐藏） | `library_list_view.dart:101` |
-| 2.1.5 | 列表项的"多选 ✓/○ 图标"绝对定位在右上角，selected 态会顶开右侧 `IconButton(more_horiz)`，选中时无菜单 → OK；但未选时菜单和选中圈重叠区域有 12×12 视觉冲突 | `library_list_view.dart:594-605` |
+| 3.1.1 | 列表/书架切换是硬切，没有交叉淡入或 morph 过渡 | `_LibrarySliverTransition` 只对 `switchKey` 变化淡入，未对 viewMode 切换做形变 |
+| 3.1.2 | 书架封面色对比度过高（深色封面 + 白字），小屏（如 360 宽）看不清封面类型标签 | `_ShelfTypeMark` 白字 + 0.18 透明背景，4-5 个字符溢出风险 |
+| 3.1.3 | 书架 `childAspectRatio: 0.72` 在窄屏（< 360）导致封面信息被裁切（"全部文档"标题只显示一行） | `library_shelf_view.dart:20` |
+| 3.1.4 | 列表视图 "最近阅读" 与 "全部文档" 分组在搜索时仍显示（`_RecentReadingSliver` 在 `searchQuery.isEmpty` 时才隐藏） | `library_list_view.dart:101` |
+| 3.1.5 | 列表项的"多选 ✓/○ 图标"绝对定位在右上角，selected 态会顶开右侧 `IconButton(more_horiz)`，选中时无菜单 → OK；但未选时菜单和选中圈重叠区域有 12×12 视觉冲突 | `library_list_view.dart:594-605` |
 
 #### 建议
 
@@ -124,7 +155,7 @@ SettingsPage (2)        — 设置
 4. **统一"多选"操作区**：选中态出现时，把右侧 `more_horiz` 替换为"已选 N" 计数（保持单行高度不变），用 `AnimatedSwitcher` 做过渡。
 5. **书架 "最近阅读" 与"全部文档"分组策略**：搜索 query 存在时，把整个 shelves 收起成单一结果列表，避免视觉混乱。
 
-### 2.2 文档卡片（List Tile）
+### 3.2 文档卡片（List Tile）
 
 #### 现状（`_DocumentTile`）
 
@@ -136,10 +167,10 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.2.1 | 标题 `titleMedium` 17px，置顶/外链图标放在行内，2 行省略时图标常常被裁掉 | `library_list_view.dart:530-565` |
-| 2.2.2 | 标签摘要行用 `Wrap + Expanded` 抢占时间摘要空间，标签 >2 时时间被压到看不见 | `_DocumentMetaRow:1087-1118` |
-| 2.2.3 | hover 缩放 `0.98` 在液态玻璃模式下视觉抖动明显（缩放时 backdrop 重计算） | `_DocumentTileState:469-471` |
-| 2.2.4 | 长按进入"多选"，但多选模式无文字提示（只在 Semantics hint 里有"长按多选"） | `library_list_view.dart:489-492` |
+| 3.2.1 | 标题 `titleMedium` 17px，置顶/外链图标放在行内，2 行省略时图标常常被裁掉 | `library_list_view.dart:530-565` |
+| 3.2.2 | 标签摘要行用 `Wrap + Expanded` 抢占时间摘要空间，标签 >2 时时间被压到看不见 | `_DocumentMetaRow:1087-1118` |
+| 3.2.3 | hover 缩放 `0.98` 在液态玻璃模式下视觉抖动明显（缩放时 backdrop 重计算） | `_DocumentTileState:469-471` |
+| 3.2.4 | 长按进入"多选"，但多选模式无文字提示（只在 Semantics hint 里有"长按多选"） | `library_list_view.dart:489-492` |
 
 #### 建议
 
@@ -148,15 +179,15 @@ SettingsPage (2)        — 设置
 3. **hover 缩放改用 `transform: scale(0.985)` + 更短时长 (120ms)**，减少液态玻璃 backdrop 重算成本。
 4. **多选首次触发**时弹出一次性 Snackbar 提示「长按其他文档可连续多选」，3 秒后自动消失。这是 Apple Music / Photos 通用做法。
 
-### 2.3 头部（`_FixedLibraryHeader` / `_SelectionHeader`）
+### 3.3 头部（`_FixedLibraryHeader` / `_SelectionHeader`）
 
 #### 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.3.1 | 头部使用自绘 `_DocumentTypeIconPainter` + `_LibraryHomeIcon` (48×48) + "首页" 标题，单独看略显空旷，但与"设置页" 头部用同结构（48×48 + 标题）保持一致 — 这点**做对了** | `library_toolbar.dart:218-248` |
-| 2.3.2 | 多选头部 `_SelectionHeader` 的"批量清除阅读进度"图标 `history_toggle_off_rounded` 与"清缓存"图标视觉接近，新用户难区分 | `library_toolbar.dart:177-180` |
-| 2.3.3 | 多选头部只显示"已选择 N 个"，无"全选 / 反选"快捷入口 | `library_toolbar.dart:158-165` |
+| 3.3.1 | 头部使用自绘 `_DocumentTypeIconPainter` + `_LibraryHomeIcon` (48×48) + "首页" 标题，单独看略显空旷，但与"设置页" 头部用同结构（48×48 + 标题）保持一致 — 这点**做对了** | `library_toolbar.dart:218-248` |
+| 3.3.2 | 多选头部 `_SelectionHeader` 的"批量清除阅读进度"图标 `history_toggle_off_rounded` 与"清缓存"图标视觉接近，新用户难区分 | `library_toolbar.dart:177-180` |
+| 3.3.3 | 多选头部只显示"已选择 N 个"，无"全选 / 反选"快捷入口 | `library_toolbar.dart:158-165` |
 
 #### 建议
 
@@ -165,7 +196,7 @@ SettingsPage (2)        — 设置
    - "批量清除阅读进度" → `Icons.bookmark_remove_rounded`（更直观）
    - "批量刷新" → `Icons.cloud_download_rounded`（区分于列表项的 `refresh_rounded`）
 
-### 2.4 浮动导入按钮（`_FloatingImportButton`）
+### 3.4 浮动导入按钮（`_FloatingImportButton`）
 
 #### 现状
 
@@ -177,8 +208,8 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.4.1 | FAB 在小屏（360 宽）会与"全部文档"列表项的水平 padding 24px 冲突，视觉上贴在边缘 | `library_page.dart:140-145` |
-| 2.4.2 | 液态玻璃 FAB 的 `borderColor: Colors.white.withOpacity(0.34)` 在浅色背景下几乎不可见，FAB 与背景"分离感"减弱 | `library_toolbar.dart:402-413` |
+| 3.4.1 | FAB 在小屏（360 宽）会与"全部文档"列表项的水平 padding 24px 冲突，视觉上贴在边缘 | `library_page.dart:140-145` |
+| 3.4.2 | 液态玻璃 FAB 的 `borderColor: Colors.white.withOpacity(0.34)` 在浅色背景下几乎不可见，FAB 与背景"分离感"减弱 | `library_toolbar.dart:402-413` |
 
 #### 建议
 
@@ -186,15 +217,15 @@ SettingsPage (2)        — 设置
 2. **多选模式自动隐藏 FAB**（已有逻辑 `if (!_selectionActive)` 保留即可）。
 3. **FAB 长按弹菜单**（不增加视觉占位）：单次点击 = 导入；长按 = 弹出「从最近打开 / 从系统选择 / 从 URL 导入」三选（其中"从 URL"预留）。
 
-### 2.5 搜索页（`_LibrarySearchPage`）
+### 3.5 搜索页（`_LibrarySearchPage`）
 
 #### 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.5.1 | 搜索是独立页面（push），而非内联展开（用户需"返回"才能看到列表） | `library_search_page.dart` |
-| 2.5.2 | 搜索页"全部 / 标签" 切换在搜索结果下方，搜索结果为空时，"全部 / 标签"位置孤悬在屏幕中间 | `library_search_page.dart:86-103` |
-| 2.5.3 | 搜索结果直接复用 `_SearchResultTile`（一种紧凑 tile），但与主列表的 `_DocumentTile` 视觉差异大（无类型徽标、无更多菜单） | `library_search_page.dart:273-309` |
+| 3.5.1 | 搜索是独立页面（push），而非内联展开（用户需"返回"才能看到列表） | `library_search_page.dart` |
+| 3.5.2 | 搜索页"全部 / 标签" 切换在搜索结果下方，搜索结果为空时，"全部 / 标签"位置孤悬在屏幕中间 | `library_search_page.dart:86-103` |
+| 3.5.3 | 搜索结果直接复用 `_SearchResultTile`（一种紧凑 tile），但与主列表的 `_DocumentTile` 视觉差异大（无类型徽标、无更多菜单） | `library_search_page.dart:273-309` |
 
 #### 建议
 
@@ -204,7 +235,7 @@ SettingsPage (2)        — 设置
    - 内容搜索基于 `SearchIndexService`（项目已有但需确认使用），无结果时给"清除筛选"快捷按钮。
 3. **统一搜索结果 tile 视觉**：复用 `_DocumentTile`，去掉长按多选、保留 more menu。
 
-### 2.6 标签系统
+### 3.6 标签系统
 
 #### 现状
 
@@ -216,9 +247,9 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 2.6.1 | 用户**首次进 App**完全不知道标签怎么用；无引导 | — |
-| 2.6.2 | 6 色调色板对 4 标签以上用户颜色重复感强 | `_tagColor()` |
-| 2.6.3 | 标签可置顶（pinned），但 Library 主列表并不展示 pinned 标签，置顶仅在搜索页/标签编辑器可见，置顶的实际价值低 | `library_controller.dart` |
+| 3.6.1 | 用户**首次进 App**完全不知道标签怎么用；无引导 | — |
+| 3.6.2 | 6 色调色板对 4 标签以上用户颜色重复感强 | `_tagColor()` |
+| 3.6.3 | 标签可置顶（pinned），但 Library 主列表并不展示 pinned 标签，置顶仅在搜索页/标签编辑器可见，置顶的实际价值低 | `library_controller.dart` |
 
 #### 建议
 
@@ -229,9 +260,9 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 3. Reader 页面深度优化
+## 4. Reader 页面深度优化
 
-### 3.1 顶部 AppBar
+### 4.1 顶部 AppBar
 
 #### 现状
 
@@ -244,11 +275,11 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 3.1.1 | Action 4 个 + Back 1 个，AppBar 拥挤，尤其在窄屏 (360 宽) | `reader_page.dart:339-409` |
-| 3.1.2 | 标题区 `Icon + 8px + Expanded(Text)` 没有"次要信息"（如章节、字数） | `reader_page.dart:313-336` |
-| 3.1.3 | 文档操作在液态玻璃模式下用 `IconButton(more_horiz)`，在经典模式下用 `PopupMenuButton` — 体验不一致 | `reader_page.dart:377-408` |
-| 3.1.4 | 文档操作菜单项只有"添加书签 / 重命名 / 移出"，缺失"分享、复制标题、跳到行号"等扩展 | `_ReaderMenuAction` 仅 3 项 |
-| 3.1.5 | `_handleAction` switch 中 `bookmark` 用 `try/catch` 包了 `DocumentIdentityService.getOrCreateId`，但错误信息直接吐给用户 — 应该 fallback 到本地路径 id | `reader_page.dart:603-634` |
+| 4.1.1 | Action 4 个 + Back 1 个，AppBar 拥挤，尤其在窄屏 (360 宽) | `reader_page.dart:339-409` |
+| 4.1.2 | 标题区 `Icon + 8px + Expanded(Text)` 没有"次要信息"（如章节、字数） | `reader_page.dart:313-336` |
+| 4.1.3 | 文档操作在液态玻璃模式下用 `IconButton(more_horiz)`，在经典模式下用 `PopupMenuButton` — 体验不一致 | `reader_page.dart:377-408` |
+| 4.1.4 | 文档操作菜单项只有"添加书签 / 重命名 / 移出"，缺失"分享、复制标题、跳到行号"等扩展 | `_ReaderMenuAction` 仅 3 项 |
+| 4.1.5 | `_handleAction` switch 中 `bookmark` 用 `try/catch` 包了 `DocumentIdentityService.getOrCreateId`，但错误信息直接吐给用户 — 应该 fallback 到本地路径 id | `reader_page.dart:603-634` |
 
 #### 建议
 
@@ -266,15 +297,15 @@ SettingsPage (2)        — 设置
    - **新增**：分享（拷贝路径/标题）、在文件管理器中打开、跳到行号、复制 Markdown 纯文本。
 4. **书签 fallback**：当 `DocumentIdentityService.getOrCreateId` 失败时，用 `document.path.hashCode` 作为稳定 id，并 `debugPrint` 记录异常，不向用户报错。
 
-### 3.2 进度条与"上次阅读到这里"
+### 4.2 进度条与"上次阅读到这里"
 
 #### 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 3.2.1 | 进度条 3px 太细，对长文档（> 10 屏）几乎没有视觉反馈 | `reader_page.dart:702-741` |
-| 3.2.2 | "上次阅读到这里" 浮窗 2 秒后自动消失，用户来不及点击 | `reader_page.dart:194-204` |
-| 3.2.3 | 进度保存间隔 500ms + 离开页 `_saveProgressNow()` 双写，频繁写 SharedPreferences | `reader_page.dart:162-182` |
+| 4.2.1 | 进度条 3px 太细，对长文档（> 10 屏）几乎没有视觉反馈 | `reader_page.dart:702-741` |
+| 4.2.2 | "上次阅读到这里" 浮窗 2 秒后自动消失，用户来不及点击 | `reader_page.dart:194-204` |
+| 4.2.3 | 进度保存间隔 500ms + 离开页 `_saveProgressNow()` 双写，频繁写 SharedPreferences | `reader_page.dart:162-182` |
 
 #### 建议
 
@@ -290,16 +321,16 @@ SettingsPage (2)        — 设置
    - 离开页立即保存，但加 `if (changed) await save()` 守卫
    - 节流用 `Timer? + lastWriteAt` 双层控制
 
-### 3.3 目录抽屉（`TocDrawer`）
+### 4.3 目录抽屉（`TocDrawer`）
 
 #### 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 3.3.1 | 抽屉高度按内容自适应，**不显示滑动手柄**（`drawer: Drawer` 没有 `showDragHandle`） | `toc_drawer.dart:84-87` |
-| 3.3.2 | 顶部 padding 24px (AppSpacing.lg) 过大，让文档名只能 1 行 | `toc_drawer.dart:91-119` |
-| 3.3.3 | 列表项 `ListTile(dense: true)` 高度 48px 固定，多级目录视觉差异小（H2 / H3 / H4 都是 16/14 灰度变化） | `toc_drawer.dart:161-200` |
-| 3.3.4 | "返回顶部"按钮放在顶部，但当 TOC 很短时，按钮离 list 太远 | `toc_drawer.dart:120-127` |
+| 4.3.1 | 抽屉高度按内容自适应，**不显示滑动手柄**（`drawer: Drawer` 没有 `showDragHandle`） | `toc_drawer.dart:84-87` |
+| 4.3.2 | 顶部 padding 24px (AppSpacing.lg) 过大，让文档名只能 1 行 | `toc_drawer.dart:91-119` |
+| 4.3.3 | 列表项 `ListTile(dense: true)` 高度 48px 固定，多级目录视觉差异小（H2 / H3 / H4 都是 16/14 灰度变化） | `toc_drawer.dart:161-200` |
+| 4.3.4 | "返回顶部"按钮放在顶部，但当 TOC 很短时，按钮离 list 太远 | `toc_drawer.dart:120-127` |
 
 #### 建议
 
@@ -311,7 +342,7 @@ SettingsPage (2)        — 设置
    - 激活态：左侧 3px 蓝色实心条 + primary background
 4. **"返回顶部"放底部**：与 list 一起 `bottomSheet` 风格固定。
 
-### 3.4 智能滚动条（`SmartScrollbar`）
+### 4.4 智能滚动条（`SmartScrollbar`）
 
 #### 现状
 
@@ -323,9 +354,9 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 3.4.1 | 快速模式判断是瞬时速度，移动设备上 2500 px/s 阈值偏激进（很多滚动场景下都会触发） | `smart_scrollbar.dart:47-50` |
-| 3.4.2 | 拖动 thumb 时直接 `_onScrollbarDragStart` → scrollbar 不会实际跟随手指移动（因为没接管 ScrollController 的 jumpTo） | `smart_scrollbar.dart:165-177` |
-| 3.4.3 | 自定义 overlay（HTML 模式）的 thumb 颜色对比度过低（0.22 alpha on light） | `smart_scrollbar.dart:243-249` |
+| 4.4.1 | 快速模式判断是瞬时速度，移动设备上 2500 px/s 阈值偏激进（很多滚动场景下都会触发） | `smart_scrollbar.dart:47-50` |
+| 4.4.2 | 拖动 thumb 时直接 `_onScrollbarDragStart` → scrollbar 不会实际跟随手指移动（因为没接管 ScrollController 的 jumpTo） | `smart_scrollbar.dart:165-177` |
+| 4.4.3 | 自定义 overlay（HTML 模式）的 thumb 颜色对比度过低（0.22 alpha on light） | `smart_scrollbar.dart:243-249` |
 
 #### 建议
 
@@ -333,7 +364,7 @@ SettingsPage (2)        — 设置
 2. **thumb 拖动接管滚动**：使用 `Listener` + `onPointerMove` + `ScrollController.position.jumpTo(thumbTop / maxTop * maxScroll)`。
 3. **thumb 颜色加深到 0.4 alpha**，并加 1px hairline border 提升可见度。
 
-### 3.5 阅读显示设置（`showReadingDisplaySheet`）
+### 4.5 阅读显示设置（`showReadingDisplaySheet`）
 
 #### 现状
 
@@ -344,9 +375,9 @@ SettingsPage (2)        — 设置
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 3.5.1 | 预览卡片字号、行距、字体都跟随设置实时变化，但**没有同步切换阅读主题** — 用户切换"纸张"后预览仍是默认色 | `reading_settings_panel.dart:225-308` |
-| 3.5.2 | 字号滑块的 `_ReadingValueSlider` 预设（紧凑/标准/宽松）始终用 `readingScalePresets` (3 个固定值)，但**行距**滑块也用同一组预设，行距预设 = 字号预设（不同行高），容易误解 | `reading_settings_panel.dart:155-189` |
-| 3.5.3 | 字号范围 14-28，行距 1.2-2.0，但**没有跨设置联动**（行距没随字号自适应） | `AppSettingsController` |
+| 4.5.1 | 预览卡片字号、行距、字体都跟随设置实时变化，但**没有同步切换阅读主题** — 用户切换"纸张"后预览仍是默认色 | `reading_settings_panel.dart:225-308` |
+| 4.5.2 | 字号滑块的 `_ReadingValueSlider` 预设（紧凑/标准/宽松）始终用 `readingScalePresets` (3 个固定值)，但**行距**滑块也用同一组预设，行距预设 = 字号预设（不同行高），容易误解 | `reading_settings_panel.dart:155-189` |
+| 4.5.3 | 字号范围 14-28，行距 1.2-2.0，但**没有跨设置联动**（行距没随字号自适应） | `AppSettingsController` |
 
 #### 建议
 
@@ -354,7 +385,7 @@ SettingsPage (2)        — 设置
 2. **字号 / 行距预设分离**：字号 14/16/18/21/24、行距 1.4/1.55/1.7/1.85/2.0。
 3. **联动**：行距滑块 = 字号 × 0.06 + 0.85（线性插值），用户仍可手动覆盖。
 
-### 3.6 阅读中的导航能力（缺失项）
+### 4.6 阅读中的导航能力（缺失项）
 
 - [ ] **大纲快速跳转**：长按 TOC 抽屉的某一项 → 直接跳到下一个同级。
 - [ ] **页内书签**：长按某行 → 添加书签到该位置（不是当前位置）。
@@ -364,24 +395,24 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 4. Settings 页面深度优化
+## 5. Settings 页面深度优化
 
-### 4.1 现状概览
+### 5.1 现状概览
 
 - 顶栏 48×48 自绘设置图标 + "设置" 标题 + 48×48 自绘"陪伴"图标（笑脸）。
 - 3 个入口卡片：外观与动画 / 阅读体验 / 关于应用。
 - 卡片宽度：竖屏单列，横屏 (≥ 640) 双列。
 
-### 4.2 问题
+### 5.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 4.2.1 | "陪伴图标"（笑脸）功能不明，视觉上像 logo 又有违和感 | `settings_page.dart:283-370` |
-| 4.2.2 | 三个卡片入口**跳转深度太浅**（点开就直接是完整设置页），可探索性差 | `settings_page.dart:42-48` |
-| 4.2.3 | 外观设置（visualMode / appFontFamily / themeMode / libraryViewMode / predictiveBack）混杂在同一个"外观与动画"页里 — 分类边界模糊 | `appearance_settings.dart:99-232` |
-| 4.2.4 | 关于页混入了"缓存清理"，语义错位 | `about_settings.dart:648-672` |
+| 5.2.1 | "陪伴图标"（笑脸）功能不明，视觉上像 logo 又有违和感 | `settings_page.dart:283-370` |
+| 5.2.2 | 三个卡片入口**跳转深度太浅**（点开就直接是完整设置页），可探索性差 | `settings_page.dart:42-48` |
+| 5.2.3 | 外观设置（visualMode / appFontFamily / themeMode / libraryViewMode / predictiveBack）混杂在同一个"外观与动画"页里 — 分类边界模糊 | `appearance_settings.dart:99-232` |
+| 5.2.4 | 关于页混入了"缓存清理"，语义错位 | `about_settings.dart:648-672` |
 
-### 4.3 建议
+### 5.3 建议
 
 **A. 重构 Settings 一级入口（短期）**
 
@@ -417,32 +448,32 @@ SettingsPage (2)        — 设置
 
 - 把它替换成 Settings 入口的"快捷操作"小按钮：`PopUpMenuButton` 包含"实验功能 / 反馈"等二级入口。
 
-### 4.4 关于页（About）优化
+### 5.4 关于页（About）优化
 
 - 现状：`AppCard` 堆叠版本信息、QQ 群、开源地址、邮箱、缓存清理、版本检查。
 - 建议：拆分为「关于（只展示元信息）」「存储（缓存 + 清理）」「更新（手动检查）」三页。
 
 ---
 
-## 5. 液态玻璃模式（Liquid Glass）统一性
+## 6. 液态玻璃模式（Liquid Glass）统一性
 
-### 5.1 现状
+### 6.1 现状
 
 - `LiquidGlassSurface` 是统一的玻璃面板组件，参数化 `borderRadius / color / borderColor / blurSigma / boxShadow / innerHighlight / tintPrimary / chromaticEdge / edgeHighlight / metalFxDarkEffect`。
 - `LiquidGlassTokens` 定义了 Android 模糊参数、MetalFx 暗色色板、各类容器 alpha。
 - 暗色模式 + 液态玻璃 + `metalFxDarkEffect: true` → 启用 `metalFxCyan / Mint / Rose / Gold / Blue` 5 色 rim/reflection 效果。
 
-### 5.2 问题
+### 6.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 5.2.1 | 浅色 + 液态玻璃的"光泽感"较暗色弱很多，视觉上更接近"半透明白卡"，与"液态玻璃"品牌感不符 | `liquid_glass.dart:84-115` |
-| 5.2.2 | 暗色 MetalFx 的 chromatic edge 用了 `cyan/rose/gold/blue` 4 色 rim，转角处可能出现"赛博朋克"感，与"简兮"品牌风格（克制、水墨）冲突 | `liquid_glass.dart:18-25` |
-| 5.2.3 | 多个液态玻璃面板叠加（AppBar + BottomNav + Drawer）时，BackdropFilter 链造成 GPU 压力 — 中低端设备滚动有卡顿 | 项目内未做性能基准 |
-| 5.2.4 | `liquidGlassHeaderColor / liquidGlassContainerColor / liquidGlassCardColor` 等辅助函数散落在 `liquid_glass.dart` 末尾，调用方众多（`AppCard` / `_FixedLibraryHeader` / `_SelectionHeader` / `glass_segmented_control.dart` / `_SortSheet` / `_TagEditorSheet` / `ReaderPage`），但**没有统一预览** — 设计师难验证 | — |
-| 5.2.5 | 部分组件**强制回退**到 classic：`_DocumentTileState` 中 `forceClassicCard = liquidGlass && Theme.brightness == dark` — 即"暗色 + 液态玻璃"下文档卡片用 classic，**但同时**其他卡片（如 `_RecentDocumentCard`）仍用液态玻璃，**视觉不统一** | `library_list_view.dart:486-488` |
+| 6.2.1 | 浅色 + 液态玻璃的"光泽感"较暗色弱很多，视觉上更接近"半透明白卡"，与"液态玻璃"品牌感不符 | `liquid_glass.dart:84-115` |
+| 6.2.2 | 暗色 MetalFx 的 chromatic edge 用了 `cyan/rose/gold/blue` 4 色 rim，转角处可能出现"赛博朋克"感，与"简兮"品牌风格（克制、水墨）冲突 | `liquid_glass.dart:18-25` |
+| 6.2.3 | 多个液态玻璃面板叠加（AppBar + BottomNav + Drawer）时，BackdropFilter 链造成 GPU 压力 — 中低端设备滚动有卡顿 | 项目内未做性能基准 |
+| 6.2.4 | `liquidGlassHeaderColor / liquidGlassContainerColor / liquidGlassCardColor` 等辅助函数散落在 `liquid_glass.dart` 末尾，调用方众多（`AppCard` / `_FixedLibraryHeader` / `_SelectionHeader` / `glass_segmented_control.dart` / `_SortSheet` / `_TagEditorSheet` / `ReaderPage`），但**没有统一预览** — 设计师难验证 | — |
+| 6.2.5 | 部分组件**强制回退**到 classic：`_DocumentTileState` 中 `forceClassicCard = liquidGlass && Theme.brightness == dark` — 即"暗色 + 液态玻璃"下文档卡片用 classic，**但同时**其他卡片（如 `_RecentDocumentCard`）仍用液态玻璃，**视觉不统一** | `library_list_view.dart:486-488` |
 
-### 5.3 建议
+### 6.3 建议
 
 1. **浅色液态玻璃增强**：
    - `boxShadow` 默认 `blurRadius: 24, offset: (0, 12), color: black.withOpacity(0.08)`
@@ -463,26 +494,26 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 6. 排版 / 字体 / 间距 一致性
+## 7. 排版 / 字体 / 间距 一致性
 
-### 6.1 现状
+### 7.1 现状
 
 - 字体：`Inter` (默认) / `LXGWWenKai` (中文)。
 - 字号梯度：`displayLarge 40, headlineLarge 34, titleLarge 21, titleMedium 17, bodyLarge 17, bodyMedium 14, labelLarge 17, labelMedium 14`。
 - 间距：`AppSpacing.xxs/xs/sm/md/lg/xl/xxl` = 4/8/12/17/24/32/48。
 - 圆角：`AppRadii.sm 8 / md 11 / lg 18 / pill 9999`。
 
-### 6.2 问题
+### 7.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 6.2.1 | `headlineLarge 34` 在仓库内**几乎未使用**（只在 `TextTheme` 定义），造成字号梯度有断点 | 全仓搜索 |
-| 6.2.2 | `displayLarge 40` 同上 | 全仓搜索 |
-| 6.2.3 | 大量手写 `fontSize: 11 / 12 / 14 / 17 / 20 / 21 / 22` 散布在 `library_list_view.dart` / `library_toolbar.dart` / `appearance_settings.dart` / `about_settings.dart` / `library_shelf_view.dart` / `toc_drawer.dart` / `_RecentDocumentCard` 等 |  |
-| 6.2.4 | 圆角 12 / 13 / 14 / 18 / 30 / 42 / pill 散落 |  |
-| 6.2.5 | 间距 10 / 11 / 12 / 16 / 24 / 32 / 38 / 64 / 82 / 86 / 92 / 100 混用 |  |
+| 7.2.1 | `headlineLarge 34` 在仓库内**几乎未使用**（只在 `TextTheme` 定义），造成字号梯度有断点 | 全仓搜索 |
+| 7.2.2 | `displayLarge 40` 同上 | 全仓搜索 |
+| 7.2.3 | 大量手写 `fontSize: 11 / 12 / 14 / 17 / 20 / 21 / 22` 散布在 `library_list_view.dart` / `library_toolbar.dart` / `appearance_settings.dart` / `about_settings.dart` / `library_shelf_view.dart` / `toc_drawer.dart` / `_RecentDocumentCard` 等 |  |
+| 7.2.4 | 圆角 12 / 13 / 14 / 18 / 30 / 42 / pill 散落 |  |
+| 7.2.5 | 间距 10 / 11 / 12 / 16 / 24 / 32 / 38 / 64 / 82 / 86 / 92 / 100 混用 |  |
 
-### 6.3 建议
+### 7.3 建议
 
 1. **建立 `AppTextStyle` 速查表**（与 `AppRadii` / `AppSpacing` 同样为静态类），把字号的"用途"显式命名：
    - `AppTextStyle.cardTitle` 17/600/-0.374
@@ -507,24 +538,24 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 7. 颜色 / 主题一致性
+## 8. 颜色 / 主题一致性
 
-### 7.1 现状
+### 8.1 现状
 
 - `AppColors` (静态) + `AppPalette` (ThemeExtension) 双层。
 - 浅色 canvas: #FFFFFF, parchment: #F5F5F7, dark canvas: #0A0A0C, dark parchment: #000000。
 - 暗色 ink: #FFFFFF, muted: #CCCCCC, 浅色 ink: #1D1D1F, muted: #7A7A7A。
 
-### 7.2 问题
+### 8.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 7.2.1 | 暗色 `parchment: #000000` 与 `canvas: #0A0A0C` 几乎不可分，造成列表与背景边界感弱 | `design_tokens.dart:171-183` |
-| 7.2.2 | 暗色 `card: #1C1C1E` 比 `canvas #0A0A0C` 亮 12%，AppBar 透明 + 模糊时**视觉上**反而比列表项更深 — 反直觉 | 同上 |
-| 7.2.3 | 标签 `tagColor` 6 套硬编码颜色（`#2F6BFF / #0F8B6B / #9A5A00 / #C2415B / #6D5BD0 / #087EA4`）没有与 `AppColors` 关联 | `library_list_view.dart:1153-1167` |
-| 7.2.4 | 书架封面 `_CoverStyle._styles` 6 套深色渐变硬编码，没有语义关联 | `library_shelf_view.dart:317-375` |
+| 8.2.1 | 暗色 `parchment: #000000` 与 `canvas: #0A0A0C` 几乎不可分，造成列表与背景边界感弱 | `design_tokens.dart:171-183` |
+| 8.2.2 | 暗色 `card: #1C1C1E` 比 `canvas #0A0A0C` 亮 12%，AppBar 透明 + 模糊时**视觉上**反而比列表项更深 — 反直觉 | 同上 |
+| 8.2.3 | 标签 `tagColor` 6 套硬编码颜色（`#2F6BFF / #0F8B6B / #9A5A00 / #C2415B / #6D5BD0 / #087EA4`）没有与 `AppColors` 关联 | `library_list_view.dart:1153-1167` |
+| 8.2.4 | 书架封面 `_CoverStyle._styles` 6 套深色渐变硬编码，没有语义关联 | `library_shelf_view.dart:317-375` |
 
-### 7.3 建议
+### 8.3 建议
 
 1. **暗色 parchment 提到 `#0E0E10`**，与 `canvas #0A0A0C` 形成微差。
 2. **暗色 `card` 用 `#1C1C1E` 但 `parchment` 改为 `#101012`**，让 AppBar 浮在内容之上。
@@ -535,24 +566,24 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 8. 动效与性能
+## 9. 动效与性能
 
-### 8.1 现状
+### 9.1 现状
 
 - 5 档 `AppMotion` (110/160/240/320/420ms) + 6 条 `Curves`。
 - 3 档 `SpringCurve` (bouncy / snappy / gentle)。
 - `LiquidGlassSurface` 用 `BackdropFilter` + 多次 `DecoratedBox` + 自绘 `_MetalFxDarkReflection` / `_LiquidGlassChromaticEdge` / `_LiquidGlassEdgeHighlight` / `_MetalFxDarkRim`。
 
-### 8.2 问题
+### 9.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 8.2.1 | Library 首屏同时触发 4 个动画层：Sliver 切换淡入 + StaggeredFadeIn（前 12 项） + SliverAnimatedList + AppBar liquid glass 模糊 | `library_list_view.dart:67-115` |
-| 8.2.2 | 液态玻璃 AppBar 的 `BackdropFilter` 紧贴屏幕顶部，但**底栏/底栏指示器也用 `BackdropFilter`**，三个滤镜同时存在时 GPU 压力叠加 | `app_shell.dart:147-150`, `reader_page.dart:286-298` |
-| 8.2.3 | `_StaggeredFadeIn` 限制 12 项，但当 Library 一次有 30+ 文档且切到列表视图时，仍有 12 项同时动画 — 仍可能掉帧 | `library_list_view.dart:16-19` |
-| 8.2.4 | 自绘图标（`_DocumentTypeIconPainter` / `_SettingsHomeIconPainter` / `_SettingsCompanionIconPainter` / `_LibraryStateIllustrationPainter`）每次重绘都新建 Paint 对象 — 性能次优 | `library_toolbar.dart:250-313` |
+| 9.2.1 | Library 首屏同时触发 4 个动画层：Sliver 切换淡入 + StaggeredFadeIn（前 12 项） + SliverAnimatedList + AppBar liquid glass 模糊 | `library_list_view.dart:67-115` |
+| 9.2.2 | 液态玻璃 AppBar 的 `BackdropFilter` 紧贴屏幕顶部，但**底栏/底栏指示器也用 `BackdropFilter`**，三个滤镜同时存在时 GPU 压力叠加 | `app_shell.dart:147-150`, `reader_page.dart:286-298` |
+| 9.2.3 | `_StaggeredFadeIn` 限制 12 项，但当 Library 一次有 30+ 文档且切到列表视图时，仍有 12 项同时动画 — 仍可能掉帧 | `library_list_view.dart:16-19` |
+| 9.2.4 | 自绘图标（`_DocumentTypeIconPainter` / `_SettingsHomeIconPainter` / `_SettingsCompanionIconPainter` / `_LibraryStateIllustrationPainter`）每次重绘都新建 Paint 对象 — 性能次优 | `library_toolbar.dart:250-313` |
 
-### 8.3 建议
+### 9.3 建议
 
 1. **动画分阶段**：
    - 阶段 1 (0-200ms): Sliver 切换淡入
@@ -566,25 +597,25 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 9. 可发现性 / 空状态 / 错误
+## 10. 可发现性 / 空状态 / 错误
 
-### 9.1 现状
+### 10.1 现状
 
 - 空状态：`_EmptyState`（"未有简牍" + 导入按钮）、`_NoResultsState`（"未寻得匹配文档"）、`_SearchEmptyState`。
 - 错误状态：`_ErrorBanner`（红色 ⚠ + 文本）、`_ReaderError`（AppCard + 错误文字）、`_GlobalErrorCard`（全屏 Material，含重试按钮）。
 - Loading：`_LoadingState`（居中 CircularProgressIndicator）。
 
-### 9.2 问题
+### 10.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 9.2.1 | "未有简牍" 状态有**两个**导入入口（空状态按钮 + 右下角浮动 FAB），用户首次进入会困惑 | `library_empty_state.dart:232-239` + `library_toolbar.dart:340-422` |
-| 9.2.2 | Reader 错误状态文案"读取文档失败：$e"对普通用户不友好 | `reader_page.dart:517-522` |
-| 9.2.3 | Library `_ErrorBanner` 没有"重试"按钮 | `library_empty_state.dart:29-53` |
-| 9.2.4 | 全局错误 `_GlobalErrorCard` 用 Material `#F8F1E6` 背景，**与 AppPalette 完全脱钩** | `main.dart:70-119` |
-| 9.2.5 | "上次阅读到这里"浮窗 2 秒自动消失，但用户点击后没有明显的"已跳转"反馈 | `reader_page.dart:194-204` |
+| 10.2.1 | "未有简牍" 状态有**两个**导入入口（空状态按钮 + 右下角浮动 FAB），用户首次进入会困惑 | `library_empty_state.dart:232-239` + `library_toolbar.dart:340-422` |
+| 10.2.2 | Reader 错误状态文案"读取文档失败：$e"对普通用户不友好 | `reader_page.dart:517-522` |
+| 10.2.3 | Library `_ErrorBanner` 没有"重试"按钮 | `library_empty_state.dart:29-53` |
+| 10.2.4 | 全局错误 `_GlobalErrorCard` 用 Material `#F8F1E6` 背景，**与 AppPalette 完全脱钩** | `main.dart:70-119` |
+| 10.2.5 | "上次阅读到这里"浮窗 2 秒自动消失，但用户点击后没有明显的"已跳转"反馈 | `reader_page.dart:194-204` |
 
-### 9.3 建议
+### 10.3 建议
 
 1. **空状态只保留 1 个导入入口**（FAB），空状态中央放说明性文字 + 副 CTA「从示例库导入」（提供几个内置示例文档）。
 2. **错误状态友好化**：
@@ -596,24 +627,24 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 10. 可访问性（Accessibility）
+## 11. 可访问性（Accessibility）
 
-### 10.1 现状
+### 11.1 现状
 
 - 关键组件有 `Semantics(label / hint / button / selected)`：`_DocumentTile`、`_RecentDocumentCard`、`_ShelfDocumentCard`、搜索框、TOC tile。
 - 触控目标：FAB 60×60、底部 tab 104×52、Header icon 40×40（**小于 44 建议**）、Chip chip 28px 圆点。
 
-### 10.2 问题
+### 11.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 10.2.1 | Header 右侧 icon button 仅 40×40 — 小于 iOS HIG 44×44 / Android Material 48×48 建议 | `library_toolbar.dart:329-336` |
-| 10.2.2 | TOC drawer 的 `_TocTile` ListTile dense 模式是 48px，但多行 `Text(maxLines: 2)` 实际占用更高 — 不够触达 | `toc_drawer.dart:176-200` |
-| 10.2.3 | Reader 进度条只有 3px，TalkBack 用户无法感知"已读 50%" | `reader_page.dart:702-741` |
-| 10.2.4 | 自绘 icon (`_DocumentTypeIconPainter` / `_SettingsHomeIconPainter`) 没有 `Semantics(label: '文档' / '设置')` | — |
-| 10.2.5 | Reader 搜索结果计数 `_ReaderSearchCount` 文字"0/0"对屏幕阅读器没有语义 | `reader_page.dart:790-816` |
+| 11.2.1 | Header 右侧 icon button 仅 40×40 — 小于 iOS HIG 44×44 / Android Material 48×48 建议 | `library_toolbar.dart:329-336` |
+| 11.2.2 | TOC drawer 的 `_TocTile` ListTile dense 模式是 48px，但多行 `Text(maxLines: 2)` 实际占用更高 — 不够触达 | `toc_drawer.dart:176-200` |
+| 11.2.3 | Reader 进度条只有 3px，TalkBack 用户无法感知"已读 50%" | `reader_page.dart:702-741` |
+| 11.2.4 | 自绘 icon (`_DocumentTypeIconPainter` / `_SettingsHomeIconPainter`) 没有 `Semantics(label: '文档' / '设置')` | — |
+| 11.2.5 | Reader 搜索结果计数 `_ReaderSearchCount` 文字"0/0"对屏幕阅读器没有语义 | `reader_page.dart:790-816` |
 
-### 10.3 建议
+### 11.3 建议
 
 1. **Header icon button 40→44px**（最小可触达）。
 2. **TOC tile 高度 48→56px**（多行标题 + 触达余量）。
@@ -623,23 +654,23 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 11. 响应式 / 多窗口 / 平板
+## 12. 响应式 / 多窗口 / 平板
 
-### 11.1 现状
+### 12.1 现状
 
 - 横屏（landscape）：Library 用 `_LandscapeNavigationRail` (72 宽) + 主内容；Reader / Settings 在横屏下用 `LayoutBuilder` 限制 maxWidth 900。
 - 书架 grid：宽 ≥ 620 → 3 列，否则 2 列。
 - Settings 卡片：宽 ≥ 640 + landscape → 2 列。
 
-### 11.2 问题
+### 12.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 11.2.1 | 平板（800+）和桌面窗口（如折叠屏展开）的响应式断点不充分 — Library 列表/书架没有"三列 + 边栏"布局 | `library_list_view.dart` 无断点逻辑 |
-| 11.2.2 | Reader 在 ≥ 900 宽时 maxContent 900，但**目录抽屉**仍是全屏 Drawer，**没有分栏**布局 | `reader_page.dart` 无 master-detail |
-| 11.2.3 | Windows 平台：触屏手势（长按多选、滑动）正常，但 hover 状态没有视觉反馈 | — |
+| 12.2.1 | 平板（800+）和桌面窗口（如折叠屏展开）的响应式断点不充分 — Library 列表/书架没有"三列 + 边栏"布局 | `library_list_view.dart` 无断点逻辑 |
+| 12.2.2 | Reader 在 ≥ 900 宽时 maxContent 900，但**目录抽屉**仍是全屏 Drawer，**没有分栏**布局 | `reader_page.dart` 无 master-detail |
+| 12.2.3 | Windows 平台：触屏手势（长按多选、滑动）正常，但 hover 状态没有视觉反馈 | — |
 
-### 11.3 建议
+### 12.3 建议
 
 1. **大屏 Library 分栏**：
    - ≥ 840: 左侧 280px 文档列表 + 右侧 200px 元信息（标签、时间、进度）+ 中央主内容
@@ -654,22 +685,22 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 12. 国际化（i18n）
+## 13. 国际化（i18n）
 
-### 12.1 现状
+### 13.1 现状
 
 - `MaterialApp.locale: Locale('zh', 'CN')` + `supportedLocales: [Locale('zh', 'CN')]`。
 - 全部文案**硬编码中文**在 widget 树中。
 
-### 12.2 问题
+### 13.2 问题
 
 | # | 问题 | 证据 |
 | --- | --- | --- |
-| 12.2.1 | 完全没有 `intl` / `flutter_localizations` 翻译机制 — 仅声明 supportedLocales 是空的 | `app.dart:40-46` |
-| 12.2.2 | 文案散落在 100+ 个 widget 中，提取到 ARB 文件的工作量很大 |  |
-| 12.2.3 | 错误描述 `document_error_describer.dart` 也硬编码中文 | — |
+| 13.2.1 | 完全没有 `intl` / `flutter_localizations` 翻译机制 — 仅声明 supportedLocales 是空的 | `app.dart:40-46` |
+| 13.2.2 | 文案散落在 100+ 个 widget 中，提取到 ARB 文件的工作量很大 |  |
+| 13.2.3 | 错误描述 `document_error_describer.dart` 也硬编码中文 | — |
 
-### 12.3 建议
+### 13.3 建议
 
 1. **引入 `flutter_localizations` + `intl`**：
    ```yaml
@@ -684,14 +715,14 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 13. 测试与质量保障
+## 14. 测试与质量保障
 
-### 13.1 现状
+### 14.1 现状
 
 - 3 个测试文件：`app_settings_controller_test.dart` / `file_rules_test.dart` / `library_page_test.dart` / `widget_test.dart`。
 - 无 `pumpAndSettle` 端到端测试；无 visual regression。
 
-### 13.2 建议
+### 14.2 建议
 
 1. **补 Reader 页面测试**：搜索 → 跳转 → 加书签 → 跳到行号。
 2. **补 Library 多选测试**：长按 → 多选 → 批量删 → SnackBar 验证。
@@ -700,7 +731,7 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 14. 改进路线图
+## 15. 改进路线图
 
 ### Phase 0 (1 周) — 视觉一致性快赢
 - 收敛字号到 `AppTextStyle` 速查表，替换 50+ 处手写 `fontSize`。
@@ -736,7 +767,7 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 15. 关键决策记录
+## 16. 关键决策记录
 
 | 决策 | 理由 | 影响 |
 | --- | --- | --- |
@@ -748,7 +779,7 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 16. 风险与待确认
+## 17. 风险与待确认
 
 | 风险 | 影响 | 建议 |
 | --- | --- | --- |
@@ -759,7 +790,7 @@ SettingsPage (2)        — 设置
 
 ---
 
-## 17. 立即可推进的 5 件事
+## 18. 立即可推进的 5 件事
 
 1. **删除 `forceClassic` 硬编码**，统一卡片视觉。
 2. **Header icon button 40→44px**（一行改动）。
@@ -771,5 +802,336 @@ SettingsPage (2)        — 设置
 
 ---
 
+## 19. 关键组件视觉规格（ASCII 速查）
+
+> 本节是**自包含的速查表**，方便阅读者在不打开 HTML 预览的情况下也能理解每个组件的设计决策。
+> 完整的视觉对比请参考 §0 提到的 `uiux_preview/index.html`。
+
+### 19.1 Library 顶栏（Before / After）
+
+**Before**（当前实现）：
+
+```
+┌─────────────────────────────────────────────────────┐
+│ [📘 蓝渐变 简]  书架       [🔍40px] [☰40px]  ← 2px  │
+├─────────────────────────────────────────────────────┤
+│ [🔍 搜索]                                          │
+├─────────────────────────────────────────────────────┤
+│ 最近阅读                                  查看全部  │
+│ ...                                                 │
+└─────────────────────────────────────────────────────┘
+   36×36 蓝图标    Inter 22/700 标题    2 个 iconbtn
+```
+
+**After**（优化方案）：
+
+```
+┌─────────────────────────────────────────────────────┐
+│ [简  墨色 32×32]            [▥ 调序]  ← 单 chip    │
+│  JIANXI · 简兮              列表 ▸ 书架            │
+│  书架                                               │
+├─────────────────────────────────────────────────────┤
+│ ┌─列表─┐ ┌─书架─┐                                  │
+│ └──────┘                                            │
+├─────────────────────────────────────────────────────┤
+│ i.  深入理解 Java 虚拟机                  ⋯         │
+│     5 天前  ·  [技术]  ·  35%                      │
+│                                                     │
+│ ii. 苏轼词集 · 卷一                       ⋯         │
+│     3 天前  ·  [文学]  ·  12%                      │
+│                                                     │
+│ iii.Product Design Principles 2024        ⋯         │
+│     1 周前 ·  [设计]  ·  未开始                    │
+└─────────────────────────────────────────────────────┘
+   Noto Serif SC 编号 + 衬线中文标题 + 标签色块
+```
+
+### 19.2 Reader 页面（Before / After）
+
+**Before**：
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 9:41 ● ● 100%                                       │
+│        ┌──── 110×28 黑色刘海 ────┐                  │
+├─────────────────────────────────────────────────────┤
+│ [← 蓝] 深入理解Java虚拟机    [☰][🔍][A][⋮]   ← 5 个│
+├─────────────────────────────────────────────────────┤
+│ ▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░  3px 蓝进度 │
+│                                                     │
+│  ## 虚拟机执行子系统                                │
+│  ### 第 8 章                                        │
+│                                                     │
+│  代码编译的结果从本地机器码转变为字节码，           │
+│  是存储格式发展的一小步，却是编程语言发展的一大步。 │
+│                                                     │
+│  ┌───────────────────────────────────┐              │
+│  │ 📍 继续阅读：虚方法分派      →    │  ← 2s 消失  │
+│  └───────────────────────────────────┘              │
+└─────────────────────────────────────────────────────┘
+```
+
+**After**：
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 9:41 ● ● 100%                                       │
+│        ┌──── 110×28 黑色刘海 ────┐                  │
+├─────────────────────────────────────────────────────┤
+│ [← 墨]   CH · 08 / 12      [☰][⋯]    ← 3 个        │
+│         虚拟机执行子系统                            │
+├─────────────────────────────────────────────────────┤
+│ ▓▓▓▓●░░░░░░░●░░░░░░░░░░░░░  2px 朱砂 + 章节节点   │
+│                                                     │
+│  虚拟机字节码执行引擎                               │
+│  CHAPTER Ⅷ · VOL. 03                               │
+│                                                     │
+│  ┌──┐                                               │
+│  │代│码编译的结果从本地机器码转变为字节码，         │
+│  └──┘是存储格式发展的一小步，却是编程语言发展的   │
+│  ↑ drop cap 42px 衬线朱砂                          │
+│  一大步。...                                        │
+│                                                     │
+│  § 运行时栈帧结构                                   │
+│  虚拟机在执行方法时...                              │
+│                                                     │
+│  │ 栈帧是虚拟机运行时数据区中的基本结构，           │
+│  │ 承载方法执行的全部上下文。        ← 朱砂 3px 引线│
+│                                                     │
+│ ┌──────────────────┐  ┌────┐ ┌─────┐               │
+│ │ LAST READ        │  │忽略│ │继续→│ ← 5s 永驻     │
+│ │ § 8.3 虚方法分派  │  └────┘ └─────┘  墨底         │
+│ └──────────────────┘                                │
+└─────────────────────────────────────────────────────┘
+   Noto Serif SC 26/700 + Fraunces italic 西文
+```
+
+### 19.3 目录抽屉（Before / After）
+
+**Before**：
+
+```
+┌──────────────────────────────────┐
+│ 目录                  12 章      │  ← 无拖动条
+├──────────────────────────────────┤
+│ ▓ 第 8 章 · 字节码执行引擎  48px │
+│   8.1 运行时栈帧结构        灰   │
+│   8.2 方法调用                  │
+│     8.2.1 解析                  │  ← 颜色区分
+│     8.2.2 分派                  │
+│   8.3 虚方法分派                │
+└──────────────────────────────────┘
+   Inter 14/13/12 三级灰
+```
+
+**After**：
+
+```
+┌──────────────────────────────────┐
+│ 目录                              │
+│ CONTENTS · 12 / 30       ━━━━   │  ← 拖动条 4px
+├──────────────────────────────────┤
+│ ┃ 第 8 章 · 字节码执行引擎  56px │  ← 衬线 H1
+│ ┃   8.1 运行时栈帧结构         │  ← 青铜左条
+│ ┃   8.2 方法调用                │
+│ ┃     8.2.1 解析                │  ← 浅灰左条
+│ ┃     8.2.2 分派                │
+│ ┃   8.3 虚方法分派              │
+│ ┃ 第 9 章 · 类加载及执行子系统  │
+├──────────────────────────────────┤
+│ ↑ 返回顶部                    38% │  ← 固定底栏
+└──────────────────────────────────┘
+   3 级色条 (朱砂/青铜/灰) + 衬线 H1
+```
+
+### 19.4 Settings（Before / After）
+
+**Before**：
+
+```
+┌──────────────────────────────────┐
+│ [⚙灰48]  设置         [☻48笑脸] │  ← 陪伴图标
+├──────────────────────────────────┤
+│ ┌──────────────────────────────┐ │
+│ │ [☀] 外观与动画         ›    │ │
+│ │      主题 · 视觉模式 · 字体  │ │
+│ └──────────────────────────────┘ │
+│ ┌──────────────────────────────┐ │
+│ │ [📖] 阅读体验         ›     │ │
+│ └──────────────────────────────┘ │
+│ ┌──────────────────────────────┐ │
+│ │ [ⓘ] 关于应用          ›     │ │
+│ └──────────────────────────────┘ │
+└──────────────────────────────────┘
+   灰白 3 卡 (#FFFFFF on #F2F2F7)
+```
+
+**After**：
+
+```
+┌──────────────────────────────────┐
+│ Ⅲ  设置          [🔍] [⋮]        │  ← 衬线编号 + Preferences
+│    Preferences                    │
+├──────────────────────────────────┤
+│ A · 外观                          │  ← 衬线分组
+│ ┌─[☀] 主题               ›─┐    │
+│ ├─[⭕] 视觉模式           ›─┤    │
+│ │   经典 / 液态玻璃          │    │
+│ B · 阅读                          │
+│ ┌─[📖] 阅读主题·字号·行距   ›─┐  │
+│ │   默认·16pt·1.55           │   │
+│ C · 文档                          │
+│ ┌─[⊞] 首页视图·列表     ›─┐      │
+│ ├─[↔] 预测性返回·已开启  ›─┤      │
+│ D · 存储                          │
+│ ┌─[⏱] 缓存·12.4MB·清理  ›─┐      │
+│ E · 关于                          │
+│ ┌─[ⓘ] 版本 2.7.7+177    ›─┐      │
+└──────────────────────────────────┘
+   5 分组 + 米黄纸面 + 1px 墨分割线
+```
+
+### 19.5 液态玻璃（Before / After）
+
+**Before**：
+
+```css
+.bg = rgba(255,255,255, 0.6)
+.backdrop-filter = blur(20px)
+.border = 1px solid rgba(255,255,255, 0.4)
+.tint = linear-gradient(135deg, rgba(0,102,204,0.05), transparent)
+```
+
+视觉：浅色 + 液态玻璃 → "半透明白卡"，**液态感弱**
+
+**After**：
+
+```css
+.bg = rgba(244,239,230, 0.72)        /* 简牍米黄 */
+.backdrop-filter = blur(28px) saturate(160%)
+.border = 1px solid rgba(26,23,20, 0.08)
+.box-shadow = inset 0 1px 0 rgba(255,255,255,0.6),
+              inset 0 -1px 0 rgba(26,23,20,0.05),
+              0 8px 24px rgba(26,23,20,0.08)
+.top-highlight = 1px 渐变 (0 → 0.4 bronze 50% → 0)
+.corner-glow = radial cinnabar 12% 右下
+```
+
+视觉：浅色 + 液态玻璃 → 真正的"水光玻璃"——顶光 + 内描边 + 投影 + 朱砂右下晕染
+
+### 19.6 排版（Before / After）
+
+**Before**：
+
+```
+深入理解 Java 虚拟机                ← Inter 17/600
+H1: Inter, 17/600, -0.3px, w600
+   "代码编译的结果从本地机器码转变为字节码，        ← Inter 14
+   是存储格式发展的一小步..."
+   "invokevirtual"  ← Inter 14 (无字体语义)
+```
+
+**After**：
+
+```
+深入理解 Java 虚拟机                ← Noto Serif SC 18/600
+H1: Noto Serif SC, 18/600, -0.01em
+   "代码编译的结果从本地机器码转变为字节码，        ← Noto Serif SC 14
+   是存储格式发展的一小步..."
+   "invokevirtual"  ← Fraunces italic 14 (强调代码术语)
+```
+
+**字体映射**：
+
+| 场景 | 字体 | 字号 / 字重 | 字间距 |
+|---|---|---|---|
+| H1 中文 | Noto Serif SC | 26/700 | -0.015em |
+| H1 西文 | Fraunces | 28/600 | -0.022em |
+| 正文中文 | Noto Serif SC | 15.5/400 | 0 |
+| 正文西文 | Inter | 15/400 | 0 |
+| 章节标记 | Noto Serif SC | 19/700 + `§` 朱砂 italic | 0 |
+| 引用 | Fraunces / Noto Serif SC italic | 18/400 | 0 |
+| 数字 / 元数据 | JetBrains Mono | 9-12/600 | 0.18em |
+| UI 标签 | Inter | 12/600 | 0.14em |
+
+### 19.7 色彩（Before / After）
+
+**Before**：
+
+```
+#FFFFFF  纯白 canvas
+#000000  纯黑 ink
+#0066CC  纯蓝 action
+#5856D6  紫 secondary
+#34C759  绿 success
+```
+
+**After**：
+
+```
+#F4EFE6  PAPER        简牍米黄 canvas
+#1A1714  INK          墨色 ink
+#B33A3A  CINNABAR     朱砂 action
+#7A5C3E  BRONZE       青铜 secondary
+#4A6B4E  JADE         玉绿 success
+#2A3A5C  INDIGO       靛蓝 link
+#2A5C6B  TEAL         碧青 reading
+#C97A2A  AMBER        琥珀
+```
+
+**主色板（3 原色）**：
+
+```
+PAPER    ████  #F4EFE6  ← 主背景
+INK      ████  #1A1714  ← 主文字
+CINNABAR ████  #B33A3A  ← 主强调
+```
+
+**语义色（3 色）**：
+
+```
+BRONZE   ████  #7A5C3E  ← 次强调
+JADE     ████  #4A6B4E  ← 成功
+INDIGO   ████  #2A3A5C  ← 链接
+```
+
+**标签色板（10 色，按 hash 选）**：
+
+```
+#B33A3A  朱砂   #7A5C3E  青铜   #4A6B4E  玉绿
+#2A3A5C  靛蓝   #C97A2A  琥珀   #5C3A6B  紫罗兰
+#2A5C6B  碧青   #6B4A2A  赭石   #3A6B5C  松绿
+#6B2A4A  胭脂
+```
+
+---
+
+## 20. 设计师走查检查表
+
+```
+□ 主背景用简牍米黄 #F4EFE6，不用纯白
+□ 中文标题用 Noto Serif SC，不用 Inter
+□ 西文斜体强调用 Fraunces，不用 cursive
+□ 元数据 / 数字用 JetBrains Mono 0.18em letter-spacing
+□ 主强调色用朱砂 #B33A3A，不用 #0066CC
+□ 顶栏 icon button ≥ 44×44
+□ 文档卡用编号 + 标签色块，不用 48×48 类型徽标
+□ 进度条 2px 朱砂 + 章节节点，不用 3px 蓝
+□ 段落首字 drop cap 42px 衬线朱砂
+□ 引用 3px 朱砂左竖线 + Fraunces italic
+□ 章节标记 `§` 朱砂 italic
+□ 设置用 5 分组（外观/阅读/文档/存储/关于），不用 3 卡
+□ 删除"陪伴图标"笑脸
+□ 液态玻璃浅色加 顶光 + 内描边 + 投影 + 朱砂右下晕染
+□ 暗色 MetalFx 5 色 rim 收敛到 1 色 cyan
+□ 移除 forceClassic 硬编码
+□ 所有自绘 painter 加 Semantics label
+□ Reader 进度保存 500ms → 1500ms
+□ Header icon 40→44px
+```
+
+---
+
 *文档生成时间：2026-06-27*
 *对应版本：`2.7.7+177`*
+*视觉预览：[`uiux_preview/index.html`](file:///workspace/uiux_preview/index.html) · [MANIFEST](file:///workspace/uiux_preview/MANIFEST.md)*
