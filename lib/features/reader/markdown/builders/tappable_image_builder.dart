@@ -87,6 +87,7 @@ class CachedMarkdownImage extends StatefulWidget {
 
 class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
   static const _timeout = Duration(seconds: 15);
+  static const _maxImageBytes = 25 * 1024 * 1024;
   static const _maxCacheBytes = 100 * 1024 * 1024;
 
   Future<File>? _fileFuture;
@@ -160,22 +161,39 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
 
   Future<File> _downloadImage(File destination) async {
     final client = HttpClient();
+    IOSink? sink;
     try {
       final request = await client.getUrl(Uri.parse(widget.url)).timeout(_timeout);
       final response = await request.close().timeout(_timeout);
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('图片请求失败：${response.statusCode}', uri: Uri.parse(widget.url));
       }
-      final bytes = await response
-          .fold<List<int>>(<int>[], (buffer, chunk) => buffer..addAll(chunk))
-          .timeout(_timeout);
-      if (bytes.isEmpty) {
-        throw const FileSystemException('图片内容为空');
+      if (response.contentLength > _maxImageBytes) {
+        throw const FileSystemException('图片过大');
       }
       await destination.parent.create(recursive: true);
-      final file = await destination.writeAsBytes(bytes, flush: true);
+      sink = destination.openWrite();
+      var received = 0;
+      await for (final chunk in response.timeout(_timeout)) {
+        received += chunk.length;
+        if (received > _maxImageBytes) {
+          throw const FileSystemException('图片过大');
+        }
+        sink.add(chunk);
+      }
+      await sink.close();
+      sink = null;
+      if (received == 0) {
+        throw const FileSystemException('图片内容为空');
+      }
       await _pruneImageCache(destination.parent);
-      return file;
+      return destination;
+    } catch (_) {
+      await sink?.close();
+      if (destination.existsSync()) {
+        await destination.delete();
+      }
+      rethrow;
     } finally {
       client.close(force: true);
     }

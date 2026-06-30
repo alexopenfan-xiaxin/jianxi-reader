@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/app_settings_controller.dart';
 import '../../../core/design_tokens.dart';
 import '../../../core/emoji_service.dart';
+import '../../../core/file_rules.dart';
 import '../../../core/widgets/app_page_route.dart';
 import '../../../core/widgets/liquid_glass.dart';
 import '../document_search_controller.dart';
@@ -293,6 +294,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
       // Check file fingerprint before doing expensive work.
       final fileModified = await widget.file.lastModified();
       final fileSize = await widget.file.length();
+      if (fileSize > DocumentFileRules.maxReadableBytes) {
+        throw FileSystemException('文档过大', widget.file.path);
+      }
       if (_lastModified != null &&
           _lastKnownSize != null &&
           fileModified == _lastModified! &&
@@ -764,6 +768,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
     var index = lowerText.indexOf(lowerQuery);
     while (index != -1) {
       offsets.add(index);
+      if (offsets.length >= DocumentSearchController.maxMatches) {
+        break;
+      }
       index = lowerText.indexOf(lowerQuery, index + lowerQuery.length);
     }
     return offsets;
@@ -785,12 +792,39 @@ class MarkdownViewerState extends State<MarkdownViewer>
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              unawaited(_openMarkdownLink(url));
             },
             child: const Text('打开'),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openMarkdownLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      _showLinkMessage('无法识别的链接');
+      return;
+    }
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        _showLinkMessage('无法打开链接');
+      }
+    } catch (error) {
+      debugPrint('[MarkdownViewer] open link failed: $error');
+      _showLinkMessage('无法打开链接');
+    }
+  }
+
+  void _showLinkMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
