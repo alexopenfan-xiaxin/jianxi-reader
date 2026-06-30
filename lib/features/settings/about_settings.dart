@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '177';
+  static const _fallbackBuildNumber = '178';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
@@ -75,6 +75,7 @@ class _AboutPageState extends State<AboutPage> {
   static final _repositoryUrl = Uri.parse(
     'https://github.com/alexopenfan-xiaxin/jianxi-reader',
   );
+  static final _websiteUrl = Uri.parse('https://openfan.pages.dev/');
 
   bool _isChecking = false;
   bool _isClearingCache = false;
@@ -590,12 +591,31 @@ class _AboutPageState extends State<AboutPage> {
                                     letterSpacing: 0,
                                   ),
                             ),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(
+                              '由 openfan 开发',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: palette.muted,
+                                    letterSpacing: 0,
+                                  ),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  _AboutLink(
+                    text: '官网：https://openfan.pages.dev/',
+                    onTap: () => _openExternalLink(
+                      _websiteUrl,
+                      '无法打开官网链接',
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
                   _AboutLink(
                     text: '点击加入QQ交流群',
                     onTap: () => _openExternalLink(
