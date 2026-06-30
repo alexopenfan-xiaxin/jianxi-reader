@@ -83,6 +83,8 @@ class MindmapDiagram extends StatelessWidget {
   final String code;
   const MindmapDiagram({super.key, required this.code});
 
+  static const _maxDepth = 64;
+
   @override
   Widget build(BuildContext context) {
     final tree = _parseMindmap(code);
@@ -116,7 +118,7 @@ class MindmapDiagram extends StatelessWidget {
     if (!firstLine.startsWith('mindmap')) return null;
 
     final children = <_MindmapNodeData>[];
-    _parseChildren(lines, 1, 0, children);
+    _parseChildren(lines, 1, 0, children, 0);
     if (children.isEmpty) return null;
 
     return _MindmapNodeData(
@@ -126,7 +128,13 @@ class MindmapDiagram extends StatelessWidget {
     );
   }
 
-  int _parseChildren(List<String> lines, int start, int parentIndent, List<_MindmapNodeData> out) {
+  int _parseChildren(
+    List<String> lines,
+    int start,
+    int parentIndent,
+    List<_MindmapNodeData> out,
+    int depth,
+  ) {
     var i = start;
     while (i < lines.length) {
       final line = lines[i];
@@ -159,7 +167,9 @@ class MindmapDiagram extends StatelessWidget {
       }
 
       final children = <_MindmapNodeData>[];
-      i = _parseChildren(lines, i + 1, indent, children);
+      i = depth >= _maxDepth
+          ? i + 1
+          : _parseChildren(lines, i + 1, indent, children, depth + 1);
 
       out.add(_MindmapNodeData(text: text, children: children, shape: shape));
     }

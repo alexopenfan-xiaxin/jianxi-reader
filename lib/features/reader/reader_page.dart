@@ -488,6 +488,9 @@ class _ReaderPageState extends State<ReaderPage> {
   Future<void> _prepareDocument() async {
     try {
       final refreshed = await _libraryController.refreshDocument(_document);
+      if (refreshed.sizeBytes > DocumentFileRules.maxReadableBytes) {
+        throw FileSystemException('文档过大', refreshed.path);
+      }
       final opened = await _libraryController.markDocumentOpened(refreshed);
       // Record reading history with stable document ID.
       DocumentIdentityService.getOrCreateId(path: opened.path).then((docId) {

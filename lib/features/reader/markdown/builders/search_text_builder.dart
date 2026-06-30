@@ -50,6 +50,11 @@ class SearchTextBuilder extends MarkdownWidgetBuilder {
       final matchText = text.substring(matchStart, matchEnd);
       final matchIndex = controller?.claimBuildMatchIndex() ?? -1;
       if (controller != null &&
+          matchIndex >= DocumentSearchController.maxMatches) {
+        spans.add(TextSpan(text: text.substring(matchStart)));
+        break;
+      }
+      if (controller != null &&
           matchIndex == controller.currentIndex &&
           controller.pulseToken > 0) {
         spans.add(

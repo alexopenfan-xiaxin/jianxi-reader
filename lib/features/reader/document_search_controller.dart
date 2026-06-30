@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 class DocumentSearchController extends ChangeNotifier {
+  static const maxMatches = 2000;
+
   String _query = '';
   int _matchCount = 0;
   int _currentIndex = 0;

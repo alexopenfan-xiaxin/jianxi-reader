@@ -8,7 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/app_settings_controller.dart';
+import '../../core/design_tokens.dart';
+import '../../core/document_error_describer.dart';
 import '../../core/file_rules.dart';
+import '../../core/widgets/app_card.dart';
 import 'document_search_controller.dart';
 import 'html_styler.dart';
 import 'toc_service.dart';
@@ -231,6 +234,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   bool _isScrollBridgeReady = false;
   bool _isApplyingSearch = false;
   String _lastAppliedSearchQuery = '';
+  String? _loadError;
   Timer? _searchDebounce;
   int _loadGeneration = 0;
 
@@ -299,39 +303,56 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
     if (mounted) {
       setState(() => _isLoading = true);
     }
-    final rawHtml = await widget.file.readAsString();
-    const isolateThreshold = 50 * 1024; // 50 KB
-    var html = rawHtml.length > isolateThreshold
-        ? await compute(_buildHtmlInIsolate, {
-            'rawHtml': rawHtml,
-            'fontSize': widget.fontSize,
-            'lineHeight': widget.lineHeight,
-            'bg': widget.readingPalette.background.toARGB32(),
-            'fg': widget.readingPalette.foreground.toARGB32(),
-            'muted': widget.readingPalette.muted.toARGB32(),
-            'surface': widget.readingPalette.surface.toARGB32(),
-            'border': widget.readingPalette.border.toARGB32(),
-            'link': widget.readingPalette.link.toARGB32(),
-            'codeBg': widget.readingPalette.codeBackground.toARGB32(),
-            'hPadding': widget.horizontalPadding,
-            'topPadding': widget.topPadding,
-          })
-        : HtmlStyler.buildAssimilatedHtml(
-            rawHtml,
-            fontSize: widget.fontSize,
-            lineHeight: widget.lineHeight,
-            readingPalette: widget.readingPalette,
-            horizontalPadding: widget.horizontalPadding,
-            topPadding: widget.topPadding,
-          );
-    // Embed the scroll bridge script directly into the HTML content
-    // so it runs in the same JS context as the loaded page.
-    html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
-    final baseUrl = widget.file.parent.uri.toString();
-    if (generation != _loadGeneration || !mounted) {
-      return;
+    try {
+      final fileSize = await widget.file.length();
+      if (fileSize > DocumentFileRules.maxReadableBytes) {
+        throw FileSystemException('文档过大', widget.file.path);
+      }
+      final rawHtml = await widget.file.readAsString();
+      const isolateThreshold = 50 * 1024; // 50 KB
+      var html = rawHtml.length > isolateThreshold
+          ? await compute(_buildHtmlInIsolate, {
+              'rawHtml': rawHtml,
+              'fontSize': widget.fontSize,
+              'lineHeight': widget.lineHeight,
+              'bg': widget.readingPalette.background.toARGB32(),
+              'fg': widget.readingPalette.foreground.toARGB32(),
+              'muted': widget.readingPalette.muted.toARGB32(),
+              'surface': widget.readingPalette.surface.toARGB32(),
+              'border': widget.readingPalette.border.toARGB32(),
+              'link': widget.readingPalette.link.toARGB32(),
+              'codeBg': widget.readingPalette.codeBackground.toARGB32(),
+              'hPadding': widget.horizontalPadding,
+              'topPadding': widget.topPadding,
+            })
+          : HtmlStyler.buildAssimilatedHtml(
+              rawHtml,
+              fontSize: widget.fontSize,
+              lineHeight: widget.lineHeight,
+              readingPalette: widget.readingPalette,
+              horizontalPadding: widget.horizontalPadding,
+              topPadding: widget.topPadding,
+            );
+      // Embed the scroll bridge script directly into the HTML content
+      // so it runs in the same JS context as the loaded page.
+      html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
+      final baseUrl = widget.file.parent.uri.toString();
+      if (generation != _loadGeneration || !mounted) {
+        return;
+      }
+      await _controller.loadHtmlString(html, baseUrl: baseUrl);
+      if (mounted && generation == _loadGeneration) {
+        setState(() => _loadError = null);
+      }
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] load html failed: $error');
+      if (mounted && generation == _loadGeneration) {
+        setState(() {
+          _isLoading = false;
+          _loadError = '读取 HTML 失败：${describeDocumentError(error)}';
+        });
+      }
     }
-    await _controller.loadHtmlString(html, baseUrl: baseUrl);
   }
 
   NavigationDecision _handleNavigationRequest(NavigationRequest request) {
@@ -344,9 +365,21 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       return NavigationDecision.navigate;
     }
     if (uri.scheme == 'file') {
-      final path = uri.toFilePath();
+      if (uri.hasAuthority && uri.host.isNotEmpty) {
+        _showNavigationMessage('不支持的本地链接');
+        return NavigationDecision.prevent;
+      }
+      late final String path;
+      try {
+        path = uri.toFilePath();
+      } catch (error) {
+        debugPrint('[HtmlDocumentView] invalid file uri: $error');
+        _showNavigationMessage('不支持的本地链接');
+        return NavigationDecision.prevent;
+      }
       if (_isSameDirectoryHtml(path)) {
-        return NavigationDecision.navigate;
+        _showNavigationMessage('暂不支持从 HTML 内跳转到其他文档');
+        return NavigationDecision.prevent;
       }
       if (DocumentFileRules.isSupportedPath(path)) {
         _showNavigationMessage('暂不支持从 HTML 内跳转到其他文档');
@@ -573,6 +606,28 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: AppCard(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.error),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    _loadError!,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Stack(
       children: [
         WebViewWidget(controller: _controller),

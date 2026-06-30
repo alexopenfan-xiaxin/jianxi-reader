@@ -217,6 +217,7 @@ class _SyntaxHighlightCodeBlockWidgetState
     final lowerQuery = query.toLowerCase();
     final spans = <TextSpan>[];
     var start = 0;
+    var matches = 0;
     var matchStart = lowerCode.indexOf(lowerQuery);
     while (matchStart != -1) {
       if (matchStart > start) {
@@ -232,7 +233,12 @@ class _SyntaxHighlightCodeBlockWidgetState
           ),
         ),
       );
+      matches++;
       start = matchEnd;
+      if (matches >= DocumentSearchController.maxMatches) {
+        spans.add(TextSpan(text: widget.code.substring(start)));
+        break;
+      }
       matchStart = lowerCode.indexOf(lowerQuery, start);
     }
     if (start == 0) {

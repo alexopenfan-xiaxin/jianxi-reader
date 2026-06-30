@@ -22,5 +22,9 @@ String describeDocumentError(Object error) {
     return '系统没有返回可读取的文档，请重新选择';
   }
 
+  if (text.contains('文档过大')) {
+    return '文档超过 100 MB，请拆分后再打开';
+  }
+
   return '操作失败：$error';
 }

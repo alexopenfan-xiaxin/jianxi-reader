@@ -43,6 +43,7 @@ class IndentedOrderedListItem {
 class IndentedOrderedListPlugin extends BlockParserPlugin {
   const IndentedOrderedListPlugin();
 
+  static const _maxDepth = 64;
   static final _orderedLine = RegExp(r'^( *)(\d+)[.)]\s+(.+)$');
 
   @override
@@ -96,6 +97,9 @@ class IndentedOrderedListPlugin extends BlockParserPlugin {
 
       while (stack.isNotEmpty && indent <= stack.last.indent) {
         stack.removeLast();
+      }
+      if (stack.length >= _maxDepth && indent > stack.last.indent) {
+        break;
       }
       if (stack.isEmpty) {
         if (indent > 0) {

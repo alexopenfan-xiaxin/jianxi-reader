@@ -13,6 +13,8 @@ enum DocumentType {
 }
 
 class DocumentFileRules {
+  static const maxReadableBytes = 100 * 1024 * 1024;
+
   static const supportedExtensions = <String>{
     '.md',
     '.markdown',
