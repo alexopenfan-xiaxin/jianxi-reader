@@ -160,6 +160,31 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
+  Future<DocumentFolderImportResult> importExternalFolderDocuments() async {
+    _isImporting = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await documentService.pickAndImportFolderDocuments();
+      _allDocuments = await documentService.scanLibrary();
+      await _loadTags();
+      _invalidateCache();
+      return result;
+    } catch (error) {
+      debugPrint('[LibraryController] import folder documents failed: $error');
+      _errorMessage = '导入文件夹失败：${describeDocumentError(error)}';
+      return const DocumentFolderImportResult(
+        documents: [],
+        skipped: 0,
+        failed: 0,
+      );
+    } finally {
+      _isImporting = false;
+      notifyListeners();
+    }
+  }
+
   Future<DocumentEntry> importExternalUri(Uri uri) async {
     _isImporting = true;
     _errorMessage = null;

@@ -23,6 +23,15 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
+  Future<DocumentFolderImportResult> pickAndImportFolderDocuments() async {
+    return const DocumentFolderImportResult(
+      documents: [],
+      skipped: 0,
+      failed: 0,
+    );
+  }
+
+  @override
   Future<DocumentEntry> importExternalUri(Uri uri) async {
     final document = _document(uri.pathSegments.last);
     _documents.add(document);
@@ -239,6 +248,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('导入文件'));
     await tester.pumpAndSettle();
 
     expect(find.text('alpha.md'), findsOneWidget);
