@@ -24,6 +24,7 @@ part 'library_shelf_view.dart';
 part 'library_toolbar.dart';
 
 enum _DocumentMenuAction { pin, rename, tags, remove }
+enum _ImportAction { files, folder }
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -153,8 +154,19 @@ class _LibraryPageState extends State<LibraryPage>
   Future<void> _importDocuments(
     BuildContext context,
     LibraryController controller,
-  ) {
-    return _importAndMaybeOpen(context, controller);
+  ) async {
+    final action = await _showImportSheet(context);
+    if (!context.mounted || action == null) {
+      return;
+    }
+    switch (action) {
+      case _ImportAction.files:
+        await _importAndMaybeOpen(context, controller);
+        return;
+      case _ImportAction.folder:
+        await _importFolderAndShowResult(context, controller);
+        return;
+    }
   }
 
   void _startSelection(DocumentEntry document) {
@@ -293,6 +305,103 @@ void _showBatchResult(
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
+Future<_ImportAction?> _showImportSheet(BuildContext context) {
+  return showModalBottomSheet<_ImportAction>(
+    context: context,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.14),
+    builder: (context) {
+      final content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '添加到书库',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+              ),
+            ),
+          ),
+          _ImportOptionTile(
+            icon: Icons.description_outlined,
+            title: '导入文件',
+            subtitle: '选择一个或多个 Markdown / HTML 文件',
+            action: _ImportAction.files,
+          ),
+          _ImportOptionTile(
+            icon: Icons.folder_open_rounded,
+            title: '导入文件夹',
+            subtitle: '自动添加文件夹内支持的文档',
+            action: _ImportAction.folder,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      );
+
+      if (liquidGlassEnabled(context)) {
+        return LiquidGlassSheetPanel(padding: EdgeInsets.zero, child: content);
+      }
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: context.palette.card,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+          ),
+          child: SafeArea(top: false, child: content),
+        ),
+      );
+    },
+  );
+}
+
+class _ImportOptionTile extends StatelessWidget {
+  const _ImportOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final _ImportAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      subtitle: Text(
+        subtitle,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: palette.muted,
+              letterSpacing: 0,
+            ),
+      ),
+      onTap: () => Navigator.of(context).pop(action),
+    );
+  }
+}
+
 Future<void> _importAndMaybeOpen(
   BuildContext context,
   LibraryController controller,
@@ -312,6 +421,34 @@ Future<void> _importAndMaybeOpen(
   await _openReader(context, documents.single);
   if (context.mounted) {
     await controller.loadDocuments();
+  }
+}
+
+Future<void> _importFolderAndShowResult(
+  BuildContext context,
+  LibraryController controller,
+) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  final result = await controller.importExternalFolderDocuments();
+  if (!context.mounted || result.documents.isEmpty) {
+    return;
+  }
+  HapticService.lightImpact();
+  final suffix = [
+    if (result.skipped > 0) '跳过 ${result.skipped} 个',
+    if (result.failed > 0) '失败 ${result.failed} 个',
+  ].join('，');
+  final message = suffix.isEmpty
+      ? '已导入 ${result.documents.length} 个文档'
+      : '已导入 ${result.documents.length} 个文档，$suffix';
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+  if (result.documents.length == 1) {
+    await _openReader(context, result.documents.single);
+    if (context.mounted) {
+      await controller.loadDocuments();
+    }
   }
 }
 

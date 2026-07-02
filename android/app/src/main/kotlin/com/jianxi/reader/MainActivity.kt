@@ -3,6 +3,7 @@ package com.jianxi.reader
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.view.HapticFeedbackConstants
 import androidx.core.content.FileProvider
@@ -17,7 +18,10 @@ class MainActivity : FlutterActivity() {
     private val DOCUMENT_CHANNEL = "com.jianxi.reader/document_access"
     private val HAPTIC_CHANNEL = "com.jianxi.reader/haptics"
     private val DOCUMENT_PICK_REQUEST = 21013
+    private val FOLDER_PICK_REQUEST = 21014
+    private val MAX_READABLE_BYTES = 100L * 1024L * 1024L
     private var pendingDocumentPickResult: MethodChannel.Result? = null
+    private var pendingFolderPickResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -49,6 +53,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOCUMENT_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "pickDocument", "pickDocuments" -> pickDocument(result)
+                "pickFolderDocuments" -> pickFolder(result)
                 "refreshDocument" -> {
                     val uri = call.argument<String>("uri")
                     val path = call.argument<String>("path")
@@ -143,6 +148,30 @@ class MainActivity : FlutterActivity() {
             }
             return
         }
+        if (requestCode == FOLDER_PICK_REQUEST) {
+            val result = pendingFolderPickResult
+            pendingFolderPickResult = null
+            if (result == null) {
+                super.onActivityResult(requestCode, resultCode, data)
+                return
+            }
+            if (resultCode != Activity.RESULT_OK) {
+                result.success(null)
+                return
+            }
+            val treeUri = data?.data
+            if (treeUri == null) {
+                result.error("NO_URI", "Folder picker did not return a uri", null)
+                return
+            }
+            try {
+                persistReadPermission(treeUri, data)
+                result.success(importFolderDocuments(treeUri))
+            } catch (error: Exception) {
+                result.error("FOLDER_IMPORT_FAILED", error.message, null)
+            }
+            return
+        }
         super.onActivityResult(requestCode, resultCode, data)
     }
 
@@ -172,6 +201,24 @@ class MainActivity : FlutterActivity() {
             startActivityForResult(intent, DOCUMENT_PICK_REQUEST)
         } catch (error: Exception) {
             pendingDocumentPickResult = null
+            result.error("PICK_FAILED", error.message, null)
+        }
+    }
+
+    private fun pickFolder(result: MethodChannel.Result) {
+        if (pendingFolderPickResult != null) {
+            result.error("PICK_IN_PROGRESS", "A folder picker request is already active", null)
+            return
+        }
+        pendingFolderPickResult = result
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        try {
+            startActivityForResult(intent, FOLDER_PICK_REQUEST)
+        } catch (error: Exception) {
+            pendingFolderPickResult = null
             result.error("PICK_FAILED", error.message, null)
         }
     }
@@ -241,6 +288,76 @@ class MainActivity : FlutterActivity() {
         val metadata = copyUriToFile(uri, file).toMutableMap()
         metadata["uri"] = uri.toString()
         return metadata
+    }
+
+    private fun importFolderDocuments(treeUri: Uri): Map<String, Any?> {
+        val documents = mutableListOf<Map<String, Any?>>()
+        var skipped = 0
+        var failed = 0
+        for (uri in documentUrisInTree(treeUri)) {
+            try {
+                val displayName = queryDisplayName(uri) ?: uri.lastPathSegment.orEmpty()
+                val mimeType = contentResolver.getType(uri)
+                if (!isSupportedDocumentName(displayName.lowercase()) &&
+                    extensionForMimeType(mimeType) == null) {
+                    skipped += 1
+                    continue
+                }
+                val name = documentNameForUri(uri)
+                val size = querySize(uri)
+                if (size > MAX_READABLE_BYTES) {
+                    skipped += 1
+                    continue
+                }
+                val file = nextDocumentMirrorFile(name)
+                val metadata = copyUriToFile(uri, file).toMutableMap()
+                metadata["uri"] = uri.toString()
+                documents.add(metadata)
+            } catch (error: Exception) {
+                failed += 1
+            }
+        }
+        return mapOf(
+            "documents" to documents,
+            "skipped" to skipped,
+            "failed" to failed
+        )
+    }
+
+    private fun documentUrisInTree(treeUri: Uri): List<Uri> {
+        val uris = mutableListOf<Uri>()
+        fun walk(childrenUri: Uri) {
+            contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
+                ),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val mimeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                if (idIndex < 0) return@use
+                while (cursor.moveToNext()) {
+                    val documentId = cursor.getString(idIndex)
+                    val mimeType = if (mimeIndex >= 0 && !cursor.isNull(mimeIndex)) {
+                        cursor.getString(mimeIndex)
+                    } else {
+                        null
+                    }
+                    if (DocumentsContract.Document.MIME_TYPE_DIR == mimeType) {
+                        walk(DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId))
+                    } else {
+                        uris.add(DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId))
+                    }
+                }
+            }
+        }
+        val rootId = DocumentsContract.getTreeDocumentId(treeUri)
+        walk(DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, rootId))
+        return uris
     }
 
     private fun documentNameForUri(uri: Uri): String {
@@ -325,6 +442,18 @@ class MainActivity : FlutterActivity() {
             }
         }
         return 0L
+    }
+
+    private fun querySize(uri: Uri): Long {
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (index >= 0 && !cursor.isNull(index)) {
+                    return cursor.getLong(index)
+                }
+            }
+        }
+        return -1L
     }
 
     private fun performHaptic(constant: Int) {

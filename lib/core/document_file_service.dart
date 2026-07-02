@@ -21,6 +21,8 @@ abstract class DocumentLibraryService {
 
   Future<List<DocumentEntry>> pickAndImportDocuments();
 
+  Future<DocumentFolderImportResult> pickAndImportFolderDocuments();
+
   Future<DocumentEntry> importExternalUri(Uri uri);
 
   Future<DocumentEntry> refreshDocument(DocumentEntry document);
@@ -57,6 +59,18 @@ class DocumentTagUpdate {
 
   final List<String> documentTags;
   final List<String> allTags;
+}
+
+class DocumentFolderImportResult {
+  const DocumentFolderImportResult({
+    required this.documents,
+    required this.skipped,
+    required this.failed,
+  });
+
+  final List<DocumentEntry> documents;
+  final int skipped;
+  final int failed;
 }
 
 class DocumentFileService implements DocumentLibraryService {
@@ -220,6 +234,69 @@ class DocumentFileService implements DocumentLibraryService {
     await preferences.setStringList(_referencedPathsKey, paths);
 
     return imported;
+  }
+
+  @override
+  Future<DocumentFolderImportResult> pickAndImportFolderDocuments() async {
+    if (Platform.isAndroid) {
+      try {
+        return _pickAndroidReferencedFolderDocuments();
+      } on MissingPluginException {
+        debugPrint(
+          '[DocumentFileService] Android folder picker channel unavailable',
+        );
+      }
+    }
+
+    final folderPath = await FilePicker.platform.getDirectoryPath();
+    if (folderPath == null || folderPath.isEmpty) {
+      return const DocumentFolderImportResult(
+        documents: [],
+        skipped: 0,
+        failed: 0,
+      );
+    }
+
+    final preferences = await _preferences();
+    final documents = <DocumentEntry>[];
+    var skipped = 0;
+    var failed = 0;
+    await for (final entity in Directory(folderPath).list(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is! File || !DocumentFileRules.isSupportedPath(entity.path)) {
+        continue;
+      }
+      try {
+        final stat = await entity.stat();
+        if (stat.size > DocumentFileRules.maxReadableBytes) {
+          skipped++;
+          continue;
+        }
+        await _rememberReferencedDocument(
+          preferences: preferences,
+          path: entity.path,
+          sourceUri: entity.uri.toString(),
+        );
+        documents.add(
+          await DocumentEntry.fromFile(
+            entity,
+            isReferenced: true,
+            tags: _documentTags(preferences, entity.path),
+            pinned: _documentPinned(preferences, entity.path),
+          ),
+        );
+      } catch (error) {
+        failed++;
+        debugPrint('[DocumentFileService] import folder file failed: $error');
+      }
+    }
+    return DocumentFolderImportResult(
+      documents: documents,
+      skipped: skipped,
+      failed: failed,
+    );
   }
 
   @override
@@ -638,6 +715,60 @@ class DocumentFileService implements DocumentLibraryService {
       );
     }
     return documents;
+  }
+
+  Future<DocumentFolderImportResult> _pickAndroidReferencedFolderDocuments() async {
+    final result = await _documentAccessChannel.invokeMethod<Object?>(
+      'pickFolderDocuments',
+    );
+    if (result == null) {
+      return const DocumentFolderImportResult(
+        documents: [],
+        skipped: 0,
+        failed: 0,
+      );
+    }
+    final data = result is Map ? result : const <String, Object?>{};
+    final rawItems = data['documents'];
+    final items = rawItems is List ? rawItems : const <Object?>[];
+    final preferences = await _preferences();
+    final documents = <DocumentEntry>[];
+    var failed = (data['failed'] as int?) ?? 0;
+    for (final item in items) {
+      try {
+        final metadata = item is Map ? item : const <String, Object?>{};
+        final path = metadata['path'] as String?;
+        final sourceUri = metadata['uri'] as String?;
+        if (path == null ||
+            path.isEmpty ||
+            sourceUri == null ||
+            sourceUri.isEmpty) {
+          failed++;
+          continue;
+        }
+        await _rememberReferencedDocument(
+          preferences: preferences,
+          path: path,
+          sourceUri: sourceUri,
+        );
+        documents.add(
+          await DocumentEntry.fromFile(
+            File(path),
+            isReferenced: true,
+            tags: _documentTags(preferences, path),
+            pinned: _documentPinned(preferences, path),
+          ),
+        );
+      } catch (error) {
+        failed++;
+        debugPrint('[DocumentFileService] import folder metadata failed: $error');
+      }
+    }
+    return DocumentFolderImportResult(
+      documents: documents,
+      skipped: (data['skipped'] as int?) ?? 0,
+      failed: failed,
+    );
   }
 
   Future<DocumentEntry> _importAndroidExternalUri(Uri uri) async {
