@@ -111,7 +111,15 @@ class _SyntaxHighlightCodeBlockWidgetState
   static final Set<String> _supportedLanguages = {
     'dart', 'python', 'javascript', 'typescript', 'java', 'kotlin',
     'swift', 'rust', 'go', 'sql', 'yaml', 'json', 'html', 'css',
+    'serverpod_protocol',
     // Not available in 0.5.0: cpp, c, ruby, php, shell, xml
+  };
+  static const _languageAliases = {
+    'js': 'javascript',
+    'ts': 'typescript',
+    'py': 'python',
+    'kt': 'kotlin',
+    'yml': 'yaml',
   };
 
   @override
@@ -155,8 +163,14 @@ class _SyntaxHighlightCodeBlockWidgetState
   }
 
   bool get _canHighlight =>
-      widget.language != null &&
-      _supportedLanguages.contains(widget.language!.toLowerCase());
+      _highlightLanguage != null &&
+      _supportedLanguages.contains(_highlightLanguage);
+
+  String? get _highlightLanguage {
+    final language = widget.language?.toLowerCase();
+    if (language == null) return null;
+    return _languageAliases[language] ?? language;
+  }
 
   TextStyle _codeTextStyle() {
     final bgColor = widget.styleSheet.codeBlockDecoration?.color;
@@ -175,9 +189,14 @@ class _SyntaxHighlightCodeBlockWidgetState
     if (widget.searchController?.hasQuery ?? false) {
       return _buildPlainCode();
     }
+    if (_highlightLanguage == 'http') {
+      final highlighted = _highlightHttpCode(_codeTextStyle());
+      if (widget.selectable) return Text.rich(highlighted);
+      return RichText(text: highlighted);
+    }
     if (theme != null && _canHighlight) {
       try {
-        final lang = widget.language!.toLowerCase();
+        final lang = _highlightLanguage!;
         final highlighted = _highlightCode(
           language: lang,
           theme: theme,
@@ -250,6 +269,58 @@ class _SyntaxHighlightCodeBlockWidgetState
     return TextSpan(style: style, children: spans);
   }
 
+  TextSpan _highlightHttpCode(TextStyle style) {
+    final spans = <TextSpan>[];
+    final methodPattern = RegExp(
+      r'^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b',
+    );
+    final statusPattern = RegExp(r'^(HTTP/\d(?:\.\d)?\s+\d{3})\b');
+    final headerPattern = RegExp(r'^([A-Za-z0-9-]+)(:)(.*)$');
+    final lines = widget.code.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final methodMatch = methodPattern.firstMatch(line);
+      final statusMatch = statusPattern.firstMatch(line);
+      final headerMatch = headerPattern.firstMatch(line);
+      if (methodMatch != null) {
+        spans.add(TextSpan(
+          text: methodMatch.group(1),
+          style: const TextStyle(
+            color: Color(0xFF0B7A75),
+            fontWeight: FontWeight.w700,
+          ),
+        ));
+        spans.add(TextSpan(text: line.substring(methodMatch.end)));
+      } else if (statusMatch != null) {
+        spans.add(TextSpan(
+          text: statusMatch.group(1),
+          style: const TextStyle(
+            color: Color(0xFF7C3AED),
+            fontWeight: FontWeight.w700,
+          ),
+        ));
+        spans.add(TextSpan(text: line.substring(statusMatch.end)));
+      } else if (headerMatch != null) {
+        spans.add(TextSpan(
+          text: headerMatch.group(1),
+          style: const TextStyle(
+            color: Color(0xFF2563EB),
+            fontWeight: FontWeight.w600,
+          ),
+        ));
+        spans.add(
+          TextSpan(text: '${headerMatch.group(2)}${headerMatch.group(3)}'),
+        );
+      } else {
+        spans.add(TextSpan(text: line));
+      }
+      if (i != lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+    return TextSpan(style: style, children: spans);
+  }
+
   TextSpan _highlightCode({
     required String language,
     required HighlighterTheme theme,
@@ -299,117 +370,120 @@ class _SyntaxHighlightCodeBlockWidgetState
     final brightness = Theme.of(context).brightness;
     final theme = brightness == Brightness.dark ? _darkTheme : _lightTheme;
     final themeId = brightness == Brightness.dark ? 'dark' : 'light';
+    final hasToolbar = widget.showLanguageTag && widget.language != null ||
+        widget.showCopyButton;
 
     return RepaintBoundary(
       child: Container(
         decoration: widget.styleSheet.codeBlockDecoration?.copyWith(
           boxShadow: null,
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          Container(
-            padding: widget.styleSheet.codeBlockPadding,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: _highlightReady
-                  ? _buildCodeContent(context, theme, themeId)
-                  : _buildPlainCode(),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.showLanguageTag && widget.language != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          widget.language!.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      if (_initFailed && _canHighlight)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Tooltip(
-                            message: '代码高亮失败，请查看调试日志',
-                            child: Icon(
-                              Icons.error_outline,
-                              size: 14,
-                              color: Colors.orange.shade400,
+            if (hasToolbar)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (widget.showLanguageTag && widget.language != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              widget.language!.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                if (widget.showLanguageTag && widget.language != null)
-                  const SizedBox(width: 8),
-                if (widget.showCopyButton)
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(4),
-                      onTap: _copyToClipboard,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: _copied
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _copied ? Icons.check : Icons.content_copy,
-                              size: 16,
-                              color: _copied
-                                  ? Colors.green[700]
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.6),
-                            ),
-                            if (_copied) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '已复制',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.green[700],
-                                  fontWeight: FontWeight.w500,
+                          if (_initFailed && _canHighlight)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Tooltip(
+                                message: '代码高亮失败，请查看调试日志',
+                                child: Icon(
+                                  Icons.error_outline,
+                                  size: 14,
+                                  color: Colors.orange.shade400,
                                 ),
                               ),
-                            ],
-                          ],
+                            ),
+                        ],
+                      ),
+                    if (widget.showLanguageTag && widget.language != null)
+                      const SizedBox(width: 8),
+                    if (widget.showCopyButton)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(4),
+                          onTap: _copyToClipboard,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: _copied
+                                  ? Colors.green.withOpacity(0.2)
+                                  : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _copied ? Icons.check : Icons.content_copy,
+                                  size: 16,
+                                  color: _copied
+                                      ? Colors.green[700]
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                ),
+                                if (_copied) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '已复制',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
+            Container(
+              padding: widget.styleSheet.codeBlockPadding,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: _highlightReady
+                    ? _buildCodeContent(context, theme, themeId)
+                    : _buildPlainCode(),
+              ),
             ),
-          ),
           ],
         ),
       ),
