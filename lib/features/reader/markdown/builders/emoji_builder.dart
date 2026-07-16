@@ -18,5 +18,3 @@ class EmojiBuilder extends MarkdownWidgetBuilder {
     return Text(emojiNode.emoji, style: baseStyle);
   }
 }
-
-// ── Syntax Highlight Code Block Builder (via syntax_highlight) ─────────────

@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
-import 'package:syntax_highlight/syntax_highlight.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:highlight/highlight.dart' show Node, highlight;
 
 import '../../document_search_controller.dart';
 
@@ -65,106 +66,57 @@ class _SyntaxHighlightCodeBlockWidget extends StatefulWidget {
       _SyntaxHighlightCodeBlockWidgetState();
 }
 
-class _HighlightCacheKey {
-  const _HighlightCacheKey({
-    required this.language,
-    required this.themeId,
-    required this.codeLength,
-    required this.codeHash,
-  });
-
-  final String language;
-  final String themeId;
-  final int codeLength;
-  final int codeHash;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _HighlightCacheKey &&
-        other.language == language &&
-        other.themeId == themeId &&
-        other.codeLength == codeLength &&
-        other.codeHash == codeHash;
-  }
-
-  @override
-  int get hashCode => Object.hash(language, themeId, codeLength, codeHash);
-}
-
 class _SyntaxHighlightCodeBlockWidgetState
     extends State<_SyntaxHighlightCodeBlockWidget> {
-  static bool _initialized = false;
-  static bool _initFailed = false;
-  static Future<void>? _initFuture;
-  static HighlighterTheme? _lightTheme;
-  static HighlighterTheme? _darkTheme;
-  static final _highlightCache = <_HighlightCacheKey, TextSpan>{};
-  static const _highlightCacheLimit = 80;
-
-  bool _highlightReady = false;
   bool _copied = false;
   Timer? _copyResetTimer;
 
-  /// Only languages that have actual grammar files in syntax_highlight 0.5.0.
-  /// If a grammar is missing, Highlighter.initialize() throws and kills ALL
-  /// highlighting.  Keep this list in sync with the package's grammars/ dir.
-  static final Set<String> _supportedLanguages = {
-    'dart', 'python', 'javascript', 'typescript', 'java', 'kotlin',
-    'swift', 'rust', 'go', 'sql', 'yaml', 'json', 'html', 'css',
-    'serverpod_protocol',
-    // Not available in 0.5.0: cpp, c, ruby, php, shell, xml
-  };
   static const _languageAliases = {
+    'sh': 'shell',
+    'zsh': 'bash',
+    'console': 'bash',
+    'rest': 'http',
+    'http-request': 'http',
     'js': 'javascript',
+    'jsx': 'javascript',
+    'node': 'javascript',
+    'nodejs': 'javascript',
     'ts': 'typescript',
+    'tsx': 'typescript',
     'py': 'python',
     'kt': 'kotlin',
+    'rs': 'rust',
+    'golang': 'go',
     'yml': 'yaml',
+    'jsonc': 'json',
+    'json5': 'json',
+    'mysql': 'sql',
+    'postgres': 'pgsql',
+    'postgresql': 'pgsql',
+    'psql': 'pgsql',
+    'sqlite': 'sql',
+    'html': 'xml',
+    'htm': 'xml',
+    'c': 'cpp',
+    'c++': 'cpp',
+    'cc': 'cpp',
+    'cxx': 'cpp',
+    'csharp': 'cs',
+    'cs': 'cs',
+    'md': 'markdown',
+    'docker': 'dockerfile',
+    'ps1': 'powershell',
+    'proto': 'protobuf',
+    'rb': 'ruby',
+    'serverpod': 'yaml',
+    'serverpod_protocol': 'yaml',
   };
-
-  @override
-  void initState() {
-    super.initState();
-    if (_initialized) {
-      _highlightReady = true;
-      return;
-    }
-    _initFuture ??= _doInitialize().then((ok) {
-      if (!ok) {
-        debugPrint('[SyntaxHighlight] init failed — falling back to plain code');
-      }
-      if (mounted) setState(() => _highlightReady = true);
-    });
-  }
-
-  /// Returns true if initialization succeeded.
-  static Future<bool> _doInitialize() async {
-    try {
-      await Highlighter.initialize(_supportedLanguages.toList());
-      _lightTheme = await HighlighterTheme.loadLightTheme();
-      _darkTheme = await HighlighterTheme.loadDarkTheme();
-      debugPrint('[SyntaxHighlight] init OK (${_supportedLanguages.length} grammars)');
-      _initialized = true;
-      _initFailed = false;
-      return true;
-    } catch (e) {
-      debugPrint('[SyntaxHighlight] init error: $e');
-      // themes remain null → plain code fallback
-      _initialized = true;
-      _initFailed = true;
-      return false;
-    }
-  }
 
   @override
   void dispose() {
     _copyResetTimer?.cancel();
     super.dispose();
   }
-
-  bool get _canHighlight =>
-      _highlightLanguage != null &&
-      _supportedLanguages.contains(_highlightLanguage);
 
   String? get _highlightLanguage {
     final language = widget.language?.toLowerCase();
@@ -181,35 +133,49 @@ class _SyntaxHighlightCodeBlockWidgetState
     );
   }
 
-  Widget _buildCodeContent(
-    BuildContext context,
-    HighlighterTheme? theme,
-    String themeId,
-  ) {
+  Widget _buildCodeContent(BuildContext context) {
     if (widget.searchController?.hasQuery ?? false) {
       return _buildPlainCode();
     }
-    if (_highlightLanguage == 'http') {
-      final highlighted = _highlightHttpCode(_codeTextStyle());
-      if (widget.selectable) return Text.rich(highlighted);
-      return RichText(text: highlighted);
-    }
-    if (theme != null && _canHighlight) {
+    if (_highlightLanguage != null) {
       try {
-        final lang = _highlightLanguage!;
-        final highlighted = _highlightCode(
-          language: lang,
-          theme: theme,
-          themeId: themeId,
+        final theme = Theme.of(context).brightness == Brightness.dark
+            ? atomOneDarkTheme
+            : githubTheme;
+        final result = highlight.parse(
+          widget.code,
+          language: _highlightLanguage!,
+        );
+        final highlighted = TextSpan(
+          style: _codeTextStyle(),
+          children: _convertNodes(result.nodes ?? const [], theme),
         );
         if (widget.selectable) return Text.rich(highlighted);
         return RichText(text: highlighted);
       } catch (e) {
-        debugPrint('[SyntaxHighlight] highlight error (lang=${widget.language}, code=${widget.code.length} chars): $e');
-        // fall through to plain code
+        debugPrint(
+          '[SyntaxHighlight] highlight error '
+          '(lang=${widget.language}, code=${widget.code.length} chars): $e',
+        );
       }
     }
     return _buildPlainCode();
+  }
+
+  List<TextSpan> _convertNodes(
+    List<Node> nodes,
+    Map<String, TextStyle> theme,
+  ) {
+    return [
+      for (final node in nodes)
+        if (node.value != null)
+          TextSpan(text: node.value, style: theme[node.className])
+        else if (node.children != null)
+          TextSpan(
+            style: theme[node.className],
+            children: _convertNodes(node.children!, theme),
+          ),
+    ];
   }
 
   Widget _buildPlainCode() {
@@ -269,93 +235,6 @@ class _SyntaxHighlightCodeBlockWidgetState
     return TextSpan(style: style, children: spans);
   }
 
-  TextSpan _highlightHttpCode(TextStyle style) {
-    final spans = <TextSpan>[];
-    final methodPattern = RegExp(
-      r'^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b',
-    );
-    final statusPattern = RegExp(r'^(HTTP/\d(?:\.\d)?\s+\d{3})\b');
-    final headerPattern = RegExp(r'^([A-Za-z0-9-]+)(:)(.*)$');
-    final lines = widget.code.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      final methodMatch = methodPattern.firstMatch(line);
-      final statusMatch = statusPattern.firstMatch(line);
-      final headerMatch = headerPattern.firstMatch(line);
-      if (methodMatch != null) {
-        spans.add(TextSpan(
-          text: methodMatch.group(1),
-          style: const TextStyle(
-            color: Color(0xFF0B7A75),
-            fontWeight: FontWeight.w700,
-          ),
-        ));
-        spans.add(TextSpan(text: line.substring(methodMatch.end)));
-      } else if (statusMatch != null) {
-        spans.add(TextSpan(
-          text: statusMatch.group(1),
-          style: const TextStyle(
-            color: Color(0xFF7C3AED),
-            fontWeight: FontWeight.w700,
-          ),
-        ));
-        spans.add(TextSpan(text: line.substring(statusMatch.end)));
-      } else if (headerMatch != null) {
-        spans.add(TextSpan(
-          text: headerMatch.group(1),
-          style: const TextStyle(
-            color: Color(0xFF2563EB),
-            fontWeight: FontWeight.w600,
-          ),
-        ));
-        spans.add(
-          TextSpan(text: '${headerMatch.group(2)}${headerMatch.group(3)}'),
-        );
-      } else {
-        spans.add(TextSpan(text: line));
-      }
-      if (i != lines.length - 1) {
-        spans.add(const TextSpan(text: '\n'));
-      }
-    }
-    return TextSpan(style: style, children: spans);
-  }
-
-  TextSpan _highlightCode({
-    required String language,
-    required HighlighterTheme theme,
-    required String themeId,
-  }) {
-    final key = _HighlightCacheKey(
-      language: language,
-      themeId: themeId,
-      codeLength: widget.code.length,
-      codeHash: _stableCodeHash(widget.code),
-    );
-    final cached = _highlightCache.remove(key);
-    if (cached != null) {
-      _highlightCache[key] = cached;
-      return cached;
-    }
-
-    final highlighter = Highlighter(language: language, theme: theme);
-    final highlighted = highlighter.highlight(widget.code);
-    _highlightCache[key] = highlighted;
-    while (_highlightCache.length > _highlightCacheLimit) {
-      _highlightCache.remove(_highlightCache.keys.first);
-    }
-    return highlighted;
-  }
-
-  int _stableCodeHash(String value) {
-    var hash = 0x811c9dc5;
-    for (final unit in value.codeUnits) {
-      hash ^= unit;
-      hash = (hash * 0x01000193) & 0xffffffff;
-    }
-    return hash;
-  }
-
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.code));
     setState(() => _copied = true);
@@ -367,9 +246,6 @@ class _SyntaxHighlightCodeBlockWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final theme = brightness == Brightness.dark ? _darkTheme : _lightTheme;
-    final themeId = brightness == Brightness.dark ? 'dark' : 'light';
     final hasToolbar = widget.showLanguageTag && widget.language != null ||
         widget.showCopyButton;
 
@@ -413,18 +289,6 @@ class _SyntaxHighlightCodeBlockWidgetState
                               ),
                             ),
                           ),
-                          if (_initFailed && _canHighlight)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Tooltip(
-                                message: '代码高亮失败，请查看调试日志',
-                                child: Icon(
-                                  Icons.error_outline,
-                                  size: 14,
-                                  color: Colors.orange.shade400,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     if (widget.showLanguageTag && widget.language != null)
@@ -479,9 +343,7 @@ class _SyntaxHighlightCodeBlockWidgetState
               padding: widget.styleSheet.codeBlockPadding,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: _highlightReady
-                    ? _buildCodeContent(context, theme, themeId)
-                    : _buildPlainCode(),
+                child: _buildCodeContent(context),
               ),
             ),
           ],

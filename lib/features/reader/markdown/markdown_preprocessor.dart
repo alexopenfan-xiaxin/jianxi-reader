@@ -1,4 +1,6 @@
 ﻿String preprocessMarkdown(String raw) {
+  raw = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
   // 1. Collect reference link definitions [id]: url
   final refLinks = <String, String>{};
   final refRegex = RegExp(r'^\[([^\]]+)\]:\s*(\S+)\s*$', multiLine: true);
