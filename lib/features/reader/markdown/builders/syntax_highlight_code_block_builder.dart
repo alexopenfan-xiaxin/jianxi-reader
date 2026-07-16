@@ -108,8 +108,45 @@ class _SyntaxHighlightCodeBlockWidgetState
     'ps1': 'powershell',
     'proto': 'protobuf',
     'rb': 'ruby',
+    'kts': 'kotlin',
+    'c#': 'cs',
+    'objc': 'objectivec',
+    'objective-c': 'objectivec',
+    'latex': 'tex',
+    'asm': 'x86asm',
+    'assembly': 'x86asm',
+    'sol': 'solidity',
+    'toml': 'ini',
+    'dotenv': 'ini',
+    'shell-session': 'shell',
     'serverpod': 'yaml',
     'serverpod_protocol': 'yaml',
+  };
+  static const _themeAliases = {
+    'attr': 'attribute',
+    'builtin-name': 'built_in',
+    'character': 'string',
+    'class': 'title',
+    'code': 'meta',
+    'constructor': 'title',
+    'function': 'title',
+    'formula': 'number',
+    'identifier': 'variable',
+    'meta-keyword': 'meta',
+    'meta-string': 'meta',
+    'module': 'title',
+    'module-access': 'attribute',
+    'module-def': 'title',
+    'operator': 'keyword',
+    'params': 'variable',
+    'pattern-match': 'regexp',
+    'rest_arg': 'variable',
+    'selector-attr': 'selector-tag',
+    'selector-class': 'selector-tag',
+    'selector-pseudo': 'selector-tag',
+    'tag': 'name',
+    'template-tag': 'template-variable',
+    'typing': 'type',
   };
 
   @override
@@ -172,7 +209,7 @@ class _SyntaxHighlightCodeBlockWidgetState
 
   bool _hasStyledNode(List<Node> nodes, Map<String, TextStyle> theme) {
     for (final node in nodes) {
-      if (theme[node.className] != null ||
+      if (_nodeStyle(node.className, theme) != null ||
           node.children != null && _hasStyledNode(node.children!, theme)) {
         return true;
       }
@@ -260,13 +297,22 @@ class _SyntaxHighlightCodeBlockWidgetState
     return [
       for (final node in nodes)
         if (node.value != null)
-          TextSpan(text: node.value, style: theme[node.className])
+          TextSpan(text: node.value, style: _nodeStyle(node.className, theme))
         else if (node.children != null)
           TextSpan(
-            style: theme[node.className],
+            style: _nodeStyle(node.className, theme),
             children: _convertNodes(node.children!, theme),
           ),
     ];
+  }
+
+  TextStyle? _nodeStyle(
+    String? className,
+    Map<String, TextStyle> theme,
+  ) {
+    if (className == null) return null;
+    final alias = _themeAliases[className];
+    return theme[className] ?? (alias == null ? null : theme[alias]);
   }
 
   Widget _buildPlainCode() {

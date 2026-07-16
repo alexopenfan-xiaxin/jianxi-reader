@@ -40,6 +40,22 @@ const _languageSamples = {
   'shell': 'echo "\$HOME"',
   'postgresql': 'SELECT now();',
   'serverpod_protocol': 'class: User\nfields:\n  name: String',
+  'c': '#include <stdio.h>\nint main() { return 0; }',
+  'lua': 'local value = 1\nprint(value)',
+  'perl': 'my \$value = 1;\nprint \$value;',
+  'objective-c': '@interface Reader : NSObject\n@end',
+  'haskell': 'main = putStrLn "hello"',
+  'elixir': 'def greet(name), do: "Hello #{name}"',
+  'clojure': '(defn greet [name] (println name))',
+  'groovy': 'def greet(name) { println "Hello \$name" }',
+  'solidity': 'contract Reader { bool public enabled = true; }',
+  'matlab': 'function y = square(x)\n  y = x^2;\nend',
+  'julia': 'function square(x)\n  return x^2\nend',
+  'latex': r'\section{Reader} \textbf{Hello}',
+  'diff': '-old value\n+new value',
+  'asm': 'mov eax, 1\nret',
+  'verilog': 'module reader; reg enabled; endmodule',
+  'toml': '[reader]\nenabled = true',
 };
 
 void main() {
@@ -59,6 +75,7 @@ void main() {
         MaterialApp(
           home: SmoothMarkdown(
             data: '```${entry.key}\n${entry.value}\n```',
+            selectable: true,
             useEnhancedComponents: false,
             builderRegistry: registry,
           ),
@@ -68,11 +85,11 @@ void main() {
 
       final firstLine = entry.value.split('\n').first;
       final code = tester
-          .widgetList<RichText>(find.byType(RichText))
-          .map((widget) => widget.text)
+          .widgetList<Text>(find.byType(Text))
+          .map((widget) => widget.textSpan)
           .whereType<TextSpan>()
           .firstWhere((span) => span.toPlainText().contains(firstLine));
-      expect(_hasColoredToken(code), isTrue, reason: entry.key);
+      expect(_tokenColors(code), isNotEmpty, reason: entry.key);
     }
   });
 
@@ -129,19 +146,10 @@ Future<TextSpan> _renderCode(
   );
   await tester.pump();
   return tester
-      .widgetList<RichText>(find.byType(RichText))
-      .map((widget) => widget.text)
+      .widgetList<Text>(find.byType(Text))
+      .map((widget) => widget.textSpan)
       .whereType<TextSpan>()
       .firstWhere((span) => span.toPlainText().contains(code.split('\n').first));
-}
-
-bool _hasColoredToken(TextSpan span) {
-  return span.children
-          ?.whereType<TextSpan>()
-          .any(
-            (child) => child.style?.color != null || _hasColoredToken(child),
-          ) ??
-      false;
 }
 
 Set<Color> _tokenColors(TextSpan span) {
