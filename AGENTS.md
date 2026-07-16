@@ -81,6 +81,11 @@ Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 - Auth: Personal Access Token (via remote URL or GitHub API)
 - Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`), `v1.1.3` (asset `app-arm64-v8a-release.apk`), `v1.1.4` (asset `app-arm64-v8a-release.apk`)
 
+## Task Completion
+- After completing a task that changes repository files, commit the completed changes and push them to `origin/test` unless the user explicitly requests another destination or says not to commit/push.
+- Never force-push. If `origin/test` has advanced, integrate the task commit on top of the latest remote branch before pushing.
+- Keep unrelated working-tree changes out of the task commit unless the user explicitly asks to include all changes.
+
 ## Systematic Bug-Fixing Methodology
 
 When facing an opaque bug, follow this process:
@@ -150,14 +155,13 @@ import 'dart:io';
 - "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
 - `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
 - Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
-- Code highlighting uses `syntax_highlight` (serverpod) via custom `SyntaxHighlightCodeBlockBuilder`, replacing the built-in `EnhancedCodeBlockBuilder` (which used `flutter_highlight`/`highlight`); `useEnhancedComponents: false` since we register all builders manually
+- Code highlighting uses `highlight` via custom `SyntaxHighlightCodeBlockBuilder`; `useEnhancedComponents: false` since all builders are registered manually
 - `flutter_svg` used in `TappableImageBuilder` to render SVG images; network images are downloaded with a 15s timeout and cached under the app temp image cache before rendering
 - `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
 - `IndentedOrderedListPlugin` parses indented ordered lists before the package default list parser, because `flutter_smooth_markdown` 0.7.2 trims list lines and otherwise flattens nested ordered sublists
-- `syntax_highlight: ^0.5.0` added to `pubspec.yaml`
-- `_supportedLanguages` must only contain languages with grammar files in `syntax_highlight-<version>/grammars/`; verify by checking `%PUB_CACHE%` — including a missing language causes `Highlighter.initialize()` to throw and silently disable ALL highlighting
+- `flutter_highlight: ^0.7.0` and `highlight: ^0.7.0` are direct dependencies; the parser registers its bundled language grammars synchronously
+- Common Markdown fence aliases are normalized before highlighting (`sh`, `jsonc`, `postgresql`, `c++`, `csharp`, `ps1`, etc.)
 - `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
-- `_initFailed` static flag + orange ⚠ `Tooltip` icon on code blocks so developers can visually identify when initialization silently failed
 - Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
 - `file_paths.xml` now includes `<root-path>` to authorize FileProvider access to the entire app data directory (needed for APK install after download to `getApplicationDocumentsDirectory()`)
