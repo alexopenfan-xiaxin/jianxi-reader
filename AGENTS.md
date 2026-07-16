@@ -182,3 +182,66 @@ When the user says "只做这几件事" or explicitly scopes the task, do NOT pe
 
 - Prefer Dart script (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` for creating releases with Chinese content — `curl.exe` / PowerShell have persistent UTF-8 encoding issues.
 - Contributor defaults to `alexopenfan-xiaxin` unless otherwise specified.
+
+## Standard Workflow: Pull → Push → Build → Release → Upload
+
+When the user says "run" or "拉取远端test分支来更新本地项目（同时推送到远端main），然后打包为apk发布为发行版，并上传到更新服务器", execute:
+
+### 1. Fetch & Review
+```
+git fetch origin test
+git log --oneline HEAD..origin/test
+```
+Check version in `pubspec.yaml`.
+
+### 2. Pull & Merge
+```
+git pull origin test --no-edit
+```
+Resolve any merge conflicts (typically `pubspec.yaml` and `about_settings.dart` — take the incoming version).
+
+### 3. Bump Version (if not already bumped by remote)
+- `pubspec.yaml`: version line
+- `android/local.properties`: `flutter.versionName` + `flutter.versionCode`
+- `lib/features/settings/about_settings.dart`: `_fallbackBuildNumber`
+
+Convention: patch +1 per release (e.g. 2.7.7+177 → 2.7.8+178). If remote bumps minor, keep that.
+
+### 4. Commit & Push
+```
+git add -A
+git commit -m "feat/fix/chore: description (build NNN)"
+git push origin main
+git push origin HEAD:test
+```
+If push fails with `Invalid username or token`, ask user for a new PAT and update remote URL:
+```
+git remote set-url origin https://<token>@github.com/alexopenfan-xiaxin/jianxi-reader.git
+```
+
+### 5. Build APK
+```
+flutter build apk --release --target-platform android-arm64 --android-skip-build-dependency-validation
+```
+Output: `build/app/outputs/flutter-apk/app-release.apk` (~34.9MB).
+
+If build fails with Dart compilation error (`catch (Object error)` etc.), fix the syntax error and rebuild.
+
+### 6. Tag
+```
+git tag -a v<version> -m "v<version>+<build> <short summary>"
+git push origin v<version>
+```
+
+### 7. GitHub Release (Dart script)
+Create a temporary Dart script with:
+- Token from remote URL (or ask user)
+- Changelog in Chinese with emoji categories (🚀 ⚡ 🐛 🔧)
+- Tag name and APK asset upload (filename: `app-arm64-v8a-release.apk`)
+- Use `badCertificateCallback` for HTTPS
+
+### 8. Upload to Update Server
+```
+curl.exe -X POST -F "apk=@<apk_path>" -F "version=<build_number>" "https://alexxia.5imh.xyz/update/index.php?push&key=4NxP5oxQB4gBMSHAXOOzgjfWTr9QEDXF" --ssl-no-revoke --connect-timeout 30
+```
+Expected: `{"success":true}`
