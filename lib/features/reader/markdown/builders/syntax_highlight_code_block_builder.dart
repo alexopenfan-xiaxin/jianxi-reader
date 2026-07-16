@@ -142,13 +142,21 @@ class _SyntaxHighlightCodeBlockWidgetState
         final theme = Theme.of(context).brightness == Brightness.dark
             ? atomOneDarkTheme
             : githubTheme;
+        if (_highlightLanguage == 'http') {
+          final highlighted = _highlightHttpCode(theme);
+          if (widget.selectable) return Text.rich(highlighted);
+          return RichText(text: highlighted);
+        }
         final result = highlight.parse(
           widget.code,
           language: _highlightLanguage!,
         );
+        final nodes = result.nodes ?? const <Node>[];
         final highlighted = TextSpan(
           style: _codeTextStyle(),
-          children: _convertNodes(result.nodes ?? const [], theme),
+          children: _hasStyledNode(nodes, theme)
+              ? _convertNodes(nodes, theme)
+              : _highlightLines(_highlightLanguage!, theme),
         );
         if (widget.selectable) return Text.rich(highlighted);
         return RichText(text: highlighted);
@@ -160,6 +168,89 @@ class _SyntaxHighlightCodeBlockWidgetState
       }
     }
     return _buildPlainCode();
+  }
+
+  bool _hasStyledNode(List<Node> nodes, Map<String, TextStyle> theme) {
+    for (final node in nodes) {
+      if (theme[node.className] != null ||
+          node.children != null && _hasStyledNode(node.children!, theme)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<TextSpan> _highlightLines(
+    String language,
+    Map<String, TextStyle> theme,
+  ) {
+    final spans = <TextSpan>[];
+    final lines = widget.code.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      final result = highlight.parse(lines[i], language: language);
+      spans.addAll(_convertNodes(result.nodes ?? const <Node>[], theme));
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+    return spans;
+  }
+
+  TextSpan _highlightHttpCode(Map<String, TextStyle> theme) {
+    final spans = <TextSpan>[];
+    final request = RegExp(
+      r'^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)$',
+    );
+    final response = RegExp(r'^(HTTP/\d(?:\.\d)?\s+)(\d{3})(.*)$');
+    final query = RegExp(r'^(\s*[?&])([A-Za-z0-9_.-]+)(=)(.*)$');
+    final header = RegExp(r'^([A-Za-z0-9-]+)(:)(.*)$');
+    final lines = widget.code.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final requestMatch = request.firstMatch(line);
+      final responseMatch = response.firstMatch(line);
+      final queryMatch = query.firstMatch(line);
+      final headerMatch = header.firstMatch(line);
+      if (requestMatch != null) {
+        spans.add(
+          TextSpan(text: requestMatch.group(1), style: theme['keyword']),
+        );
+        spans.add(
+          TextSpan(
+            text: ' ${requestMatch.group(2)}',
+            style: theme['string'],
+          ),
+        );
+      } else if (responseMatch != null) {
+        spans.add(TextSpan(text: responseMatch.group(1)));
+        spans.add(
+          TextSpan(text: responseMatch.group(2), style: theme['number']),
+        );
+        spans.add(TextSpan(text: responseMatch.group(3)));
+      } else if (queryMatch != null) {
+        spans.add(TextSpan(text: queryMatch.group(1)));
+        spans.add(
+          TextSpan(text: queryMatch.group(2), style: theme['attribute']),
+        );
+        spans.add(TextSpan(text: queryMatch.group(3)));
+        spans.add(TextSpan(text: queryMatch.group(4), style: theme['string']));
+      } else if (headerMatch != null) {
+        spans.add(
+          TextSpan(text: headerMatch.group(1), style: theme['attribute']),
+        );
+        spans.add(
+          TextSpan(
+            text: '${headerMatch.group(2)}${headerMatch.group(3)}',
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: line));
+      }
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+    return TextSpan(style: _codeTextStyle(), children: spans);
   }
 
   List<TextSpan> _convertNodes(

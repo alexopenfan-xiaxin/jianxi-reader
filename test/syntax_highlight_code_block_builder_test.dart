@@ -75,6 +75,64 @@ void main() {
       expect(_hasColoredToken(code), isTrue, reason: entry.key);
     }
   });
+
+  testWidgets('keeps Python highlighting when a block contains illegal lines', (
+    tester,
+  ) async {
+    const code = '''def greet(name):
+    print(f"Hello, {name}!")
+greet("Markdown")
+const sum = (a, b) => a + b;
+console.log(sum(2, 4));''';
+    final span = await _renderCode(tester, 'python', code);
+    expect(_tokenColors(span).length, greaterThanOrEqualTo(2));
+  });
+
+  testWidgets('highlights HTTP requests without a protocol version', (
+    tester,
+  ) async {
+    const code = '''GET /oauth/authorize
+  ?response_type=code
+  &client_id=<client_id>
+  &redirect_uri=<url_encoded_callback>
+  &scope=<custom_marker>
+  &state=<csrf_random_value>
+  &code_challenge=<challenge>
+  &code_challenge_method=S256''';
+    final span = await _renderCode(tester, 'http', code);
+    expect(_tokenColors(span).length, greaterThanOrEqualTo(2));
+  });
+}
+
+Future<TextSpan> _renderCode(
+  WidgetTester tester,
+  String language,
+  String code,
+) async {
+  final registry = BuilderRegistry()
+    ..register(
+      'code_block',
+      const SyntaxHighlightCodeBlockBuilder(
+        showCopyButton: false,
+        showLanguageTag: false,
+      ),
+    );
+  await tester.pumpWidget(
+    MaterialApp(
+      home: SmoothMarkdown(
+        data: '```$language\n$code\n```',
+        selectable: true,
+        useEnhancedComponents: false,
+        builderRegistry: registry,
+      ),
+    ),
+  );
+  await tester.pump();
+  return tester
+      .widgetList<RichText>(find.byType(RichText))
+      .map((widget) => widget.text)
+      .whereType<TextSpan>()
+      .firstWhere((span) => span.toPlainText().contains(code.split('\n').first));
 }
 
 bool _hasColoredToken(TextSpan span) {
@@ -84,4 +142,15 @@ bool _hasColoredToken(TextSpan span) {
             (child) => child.style?.color != null || _hasColoredToken(child),
           ) ??
       false;
+}
+
+Set<Color> _tokenColors(TextSpan span) {
+  final colors = <Color>{};
+  for (final child
+      in span.children?.whereType<TextSpan>() ?? const <TextSpan>[]) {
+    final color = child.style?.color;
+    if (color != null) colors.add(color);
+    colors.addAll(_tokenColors(child));
+  }
+  return colors;
 }
