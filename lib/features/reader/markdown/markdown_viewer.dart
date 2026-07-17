@@ -61,12 +61,14 @@ List<_DocumentSection> _splitIntoSections(String data) {
 
     if (headingMatch != null && i > 0) {
       // Flush current section.
-      sections.add(_DocumentSection(
-        title: currentTitle,
-        headingLevel: currentLevel,
-        content: buffer.toString(),
-        startIndex: sectionStart,
-      ));
+      sections.add(
+        _DocumentSection(
+          title: currentTitle,
+          headingLevel: currentLevel,
+          content: buffer.toString(),
+          startIndex: sectionStart,
+        ),
+      );
       buffer.clear();
       currentTitle = headingMatch.group(2) ?? '';
       currentLevel = headingMatch.group(1)!.length;
@@ -79,12 +81,14 @@ List<_DocumentSection> _splitIntoSections(String data) {
 
   // Flush last section.
   if (buffer.isNotEmpty) {
-    sections.add(_DocumentSection(
-      title: currentTitle,
-      headingLevel: currentLevel,
-      content: buffer.toString(),
-      startIndex: sectionStart,
-    ));
+    sections.add(
+      _DocumentSection(
+        title: currentTitle,
+        headingLevel: currentLevel,
+        content: buffer.toString(),
+        startIndex: sectionStart,
+      ),
+    );
   }
 
   return sections;
@@ -389,12 +393,16 @@ class MarkdownViewerState extends State<MarkdownViewer>
 
   void _loadMoreSections() {
     if (_allSectionsVisible) return;
-    final newCount = (_visibleSectionCount + _sectionIncrement)
-        .clamp(0, _sections.length);
+    final newCount = (_visibleSectionCount + _sectionIncrement).clamp(
+      0,
+      _sections.length,
+    );
     if (newCount == _visibleSectionCount) return;
     final allVisible = newCount >= _sections.length;
     if (allVisible && _fullData == null) {
-      debugPrint('[MarkdownViewer] error: _fullData is null when allVisible is true');
+      debugPrint(
+        '[MarkdownViewer] error: _fullData is null when allVisible is true',
+      );
       return;
     }
     final displayData = allVisible
@@ -501,8 +509,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
                           '下滑加载更多…',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: widget.readingPalette.muted
-                                .withOpacity(0.6),
+                            color: widget.readingPalette.muted.withOpacity(0.6),
                             fontSize: 13,
                           ),
                         ),
@@ -522,7 +529,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
               child: LinearProgressIndicator(
                 minHeight: 2,
                 backgroundColor: widget.readingPalette.background,
-                valueColor: AlwaysStoppedAnimation(widget.readingPalette.link.withOpacity(0.6)),
+                valueColor: AlwaysStoppedAnimation(
+                  widget.readingPalette.link.withOpacity(0.6),
+                ),
               ),
             ),
           ),
@@ -533,10 +542,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
 
   BuilderRegistry _createBuilderRegistry() {
     return BuilderRegistry()
-      ..register(
-        'header',
-        TocHeaderBuilder(keyForHeading: _keyForHeading),
-      )
+      ..register('header', TocHeaderBuilder(keyForHeading: _keyForHeading))
       ..register(
         'text',
         SearchTextBuilder(searchController: widget.searchController),
@@ -865,8 +871,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
   void _startFileMonitoring() {
     _fileWatchTimer?.cancel();
     final lifecycleState = WidgetsBinding.instance.lifecycleState;
-    if (lifecycleState != null &&
-        lifecycleState != AppLifecycleState.resumed) {
+    if (lifecycleState != null && lifecycleState != AppLifecycleState.resumed) {
       _fileWatchTimer = null;
       _fileWatchSub?.cancel();
       _fileWatchSub = null;
@@ -888,13 +893,17 @@ class MarkdownViewerState extends State<MarkdownViewer>
 
   void _showLinkMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showImagePreview(
-      BuildContext context, String url, String? alt, String? title) {
+    BuildContext context,
+    String url,
+    String? alt,
+    String? title,
+  ) {
     final caption = [
       if (alt != null && alt.trim().isNotEmpty) alt.trim(),
       if (title != null && title.trim().isNotEmpty) title.trim(),
@@ -912,9 +921,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
                 tooltip: '复制图片路径',
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('已复制图片路径')),
-                  );
+                  ScaffoldMessenger.of(
+                    ctx,
+                  ).showSnackBar(const SnackBar(content: Text('已复制图片路径')));
                 },
                 icon: const Icon(Icons.copy_rounded),
               ),
@@ -964,9 +973,9 @@ class _ImagePreviewInfo extends StatelessWidget {
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white,
-                letterSpacing: 0,
-              ),
+            color: Colors.white,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );
@@ -990,7 +999,8 @@ class TocHeaderBuilder extends MarkdownWidgetBuilder {
     final headerNode = node as HeaderNode;
     final style = _styleForLevel(headerNode.level, styleSheet);
     final inlineRenderer = context.inlineRenderer;
-    final content = headerNode.children != null &&
+    final content =
+        headerNode.children != null &&
             headerNode.children!.isNotEmpty &&
             inlineRenderer != null
         ? inlineRenderer(headerNode.children!, style)

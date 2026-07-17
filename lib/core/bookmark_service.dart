@@ -21,13 +21,13 @@ class ReadingBookmark {
   final String? note;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'documentId': documentId,
-        'progressRatio': progressRatio,
-        'title': title,
-        'createdAtMillis': createdAtMillis,
-        if (note != null) 'note': note,
-      };
+    'id': id,
+    'documentId': documentId,
+    'progressRatio': progressRatio,
+    'title': title,
+    'createdAtMillis': createdAtMillis,
+    if (note != null) 'note': note,
+  };
 
   factory ReadingBookmark.fromJson(Map<String, dynamic> json) {
     return ReadingBookmark(
@@ -35,7 +35,8 @@ class ReadingBookmark {
       documentId: json['documentId'] as String,
       progressRatio: (json['progressRatio'] as num).toDouble(),
       title: json['title'] as String? ?? '',
-      createdAtMillis: json['createdAtMillis'] as int? ??
+      createdAtMillis:
+          json['createdAtMillis'] as int? ??
           DateTime.now().millisecondsSinceEpoch,
       note: json['note'] as String?,
     );

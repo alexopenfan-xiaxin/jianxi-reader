@@ -46,8 +46,7 @@ class ReadingProgressService {
     return _serializeMutation(() async {
       final preferences = await SharedPreferences.getInstance();
       final value = preferences.getDouble(_key(oldPath));
-      if (value != null &&
-          !await preferences.setDouble(_key(newPath), value)) {
+      if (value != null && !await preferences.setDouble(_key(newPath), value)) {
         throw const FileSystemException('无法迁移阅读进度');
       }
       if (!await preferences.remove(_key(oldPath))) {

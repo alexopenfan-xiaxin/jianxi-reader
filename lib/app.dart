@@ -27,33 +27,33 @@ class JianxiReaderApp extends StatelessWidget {
           )..loadDocuments(),
         ),
       ],
-      child: Selector<
-          AppSettingsController,
-          ({ThemeMode themeMode, String? appFontFamily})>(
-        selector: (_, s) => (
-          themeMode: s.themeMode,
-          appFontFamily: s.appFontFamilyValue,
-        ),
-        builder: (context, selection, _) {
-          return MaterialApp(
-            title: '简兮阅读器',
-            debugShowCheckedModeBanner: false,
-            locale: const Locale('zh', 'CN'),
-            supportedLocales: const [Locale('zh', 'CN')],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            theme: AppTheme.light(fontFamily: selection.appFontFamily),
-            darkTheme: AppTheme.dark(fontFamily: selection.appFontFamily),
-            themeMode: selection.themeMode,
-            themeAnimationDuration: AppMotion.normal,
-            themeAnimationCurve: AppMotion.standard,
-            home: const AppShell(),
-          );
-        },
-      ),
+      child:
+          Selector<
+            AppSettingsController,
+            ({ThemeMode themeMode, String? appFontFamily})
+          >(
+            selector: (_, s) =>
+                (themeMode: s.themeMode, appFontFamily: s.appFontFamilyValue),
+            builder: (context, selection, _) {
+              return MaterialApp(
+                title: '简兮阅读器',
+                debugShowCheckedModeBanner: false,
+                locale: const Locale('zh', 'CN'),
+                supportedLocales: const [Locale('zh', 'CN')],
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                theme: AppTheme.light(fontFamily: selection.appFontFamily),
+                darkTheme: AppTheme.dark(fontFamily: selection.appFontFamily),
+                themeMode: selection.themeMode,
+                themeAnimationDuration: AppMotion.normal,
+                themeAnimationCurve: AppMotion.standard,
+                home: const AppShell(),
+              );
+            },
+          ),
     );
   }
 }

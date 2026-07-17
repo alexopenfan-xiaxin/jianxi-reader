@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeDocumentService implements DocumentLibraryService {
   FakeDocumentService(this._documents, {List<DocumentEntry>? pickedDocuments})
-      : _pickedDocuments = pickedDocuments ?? const [];
+    : _pickedDocuments = pickedDocuments ?? const [];
 
   final List<DocumentEntry> _documents;
   final List<DocumentEntry> _pickedDocuments;
@@ -45,7 +45,8 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
-  Future<DocumentEntry> refreshDocument(DocumentEntry document) async => document;
+  Future<DocumentEntry> refreshDocument(DocumentEntry document) async =>
+      document;
 
   @override
   Future<DocumentEntry> renameDocument(

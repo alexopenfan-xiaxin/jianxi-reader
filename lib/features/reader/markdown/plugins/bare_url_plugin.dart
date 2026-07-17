@@ -1,4 +1,4 @@
-﻿import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
+import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
 class BareUrlPlugin extends InlineParserPlugin {
   const BareUrlPlugin();
@@ -39,10 +39,7 @@ class BareUrlPlugin extends InlineParserPlugin {
     }
     if (url.isEmpty) return null;
     return InlineParseResult(
-      node: LinkNode(
-        url: url,
-        children: [TextNode(url)],
-      ),
+      node: LinkNode(url: url, children: [TextNode(url)]),
       consumed: url.length,
     );
   }

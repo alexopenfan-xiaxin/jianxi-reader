@@ -9,10 +9,7 @@ void main() {
       '# API Relay Security Audit Report\r\nBody\rNext',
     );
 
-    expect(
-      markdown,
-      '# API Relay Security Audit Report\nBody\nNext',
-    );
+    expect(markdown, '# API Relay Security Audit Report\nBody\nNext');
     expect(MarkdownParser().parse(markdown).first, isA<HeaderNode>());
   });
 }

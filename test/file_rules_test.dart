@@ -169,10 +169,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'referenced.paths': [file.path],
       });
-      final document = await DocumentEntry.fromFile(
-        file,
-        isReferenced: true,
-      );
+      final document = await DocumentEntry.fromFile(file, isReferenced: true);
 
       await DocumentFileService().removeDocument(document);
 

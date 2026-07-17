@@ -15,15 +15,16 @@ class ReadingHistoryEvent {
   final double? progressRatio;
 
   Map<String, dynamic> toJson() => {
-        'documentId': documentId,
-        'openedAtMillis': openedAtMillis,
-        if (progressRatio != null) 'progressRatio': progressRatio,
-      };
+    'documentId': documentId,
+    'openedAtMillis': openedAtMillis,
+    if (progressRatio != null) 'progressRatio': progressRatio,
+  };
 
   factory ReadingHistoryEvent.fromJson(Map<String, dynamic> json) {
     return ReadingHistoryEvent(
       documentId: json['documentId'] as String,
-      openedAtMillis: json['openedAtMillis'] as int? ??
+      openedAtMillis:
+          json['openedAtMillis'] as int? ??
           DateTime.now().millisecondsSinceEpoch,
       progressRatio: (json['progressRatio'] as num?)?.toDouble(),
     );
@@ -77,7 +78,9 @@ class ReadingHistoryService {
     });
   }
 
-  static Future<List<ReadingHistoryEvent>> recentEvents({int limit = 50}) async {
+  static Future<List<ReadingHistoryEvent>> recentEvents({
+    int limit = 50,
+  }) async {
     final events = await loadAll();
     final sorted = List<ReadingHistoryEvent>.from(events)
       ..sort((a, b) => b.openedAtMillis.compareTo(a.openedAtMillis));

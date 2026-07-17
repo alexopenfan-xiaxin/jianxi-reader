@@ -50,9 +50,10 @@ class _TocDrawerState extends State<TocDrawer> {
 
   int get _activeIndex {
     if (widget.entries.isEmpty) return 0;
-    return (widget.progressRatio * widget.entries.length)
-        .floor()
-        .clamp(0, widget.entries.length - 1);
+    return (widget.progressRatio * widget.entries.length).floor().clamp(
+      0,
+      widget.entries.length - 1,
+    );
   }
 
   void _scrollToActiveEntry({bool animated = false}) {
@@ -102,17 +103,17 @@ class _TocDrawerState extends State<TocDrawer> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     '阅读进度 ${(widget.progressRatio * 100).round()}%',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.muted,
-                          letterSpacing: 0,
-                        ),
+                      color: palette.muted,
+                      letterSpacing: 0,
+                    ),
                   ),
                 ],
               ),
@@ -132,9 +133,9 @@ class _TocDrawerState extends State<TocDrawer> {
                       child: Text(
                         '当前文档没有目录',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: palette.muted,
-                              letterSpacing: 0,
-                            ),
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
                       ),
                     )
                   : ListView.builder(
@@ -188,12 +189,12 @@ class _TocTile extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: entry.level == 1 ? palette.ink : palette.muted,
-              fontWeight: active || entry.level == 1
-                  ? FontWeight.w700
-                  : FontWeight.w500,
-              letterSpacing: 0,
-            ),
+          color: entry.level == 1 ? palette.ink : palette.muted,
+          fontWeight: active || entry.level == 1
+              ? FontWeight.w700
+              : FontWeight.w500,
+          letterSpacing: 0,
+        ),
       ),
       onTap: onTap,
     );

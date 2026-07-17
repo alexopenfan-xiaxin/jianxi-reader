@@ -24,6 +24,7 @@ part 'library_shelf_view.dart';
 part 'library_toolbar.dart';
 
 enum _DocumentMenuAction { pin, rename, tags, remove }
+
 enum _ImportAction { files, folder }
 
 class LibraryPage extends StatefulWidget {
@@ -63,9 +64,10 @@ class _LibraryPageState extends State<LibraryPage>
     return SafeArea(
       child: Consumer<LibraryController>(
         builder: (context, controller, _) {
-          final settings = context.select<AppSettingsController, LibraryViewMode>(
-            (s) => s.libraryViewMode,
-          );
+          final settings = context
+              .select<AppSettingsController, LibraryViewMode>(
+                (s) => s.libraryViewMode,
+              );
           if (!_hasPlayedInitialListAnimation &&
               controller.documents.isNotEmpty) {
             _hasPlayedInitialListAnimation = true;
@@ -130,7 +132,8 @@ class _LibraryPageState extends State<LibraryPage>
                         onRefresh: () => _runBatchRefresh(context, controller),
                         onClearProgress: () =>
                             _confirmClearProgress(context, controller),
-                        onRemove: () => _confirmBatchRemove(context, controller),
+                        onRemove: () =>
+                            _confirmBatchRemove(context, controller),
                       )
                     : _FixedLibraryHeader(controller: controller),
               ),
@@ -256,7 +259,9 @@ class _LibraryPageState extends State<LibraryPage>
     if (confirmed != true || !context.mounted) {
       return;
     }
-    final result = await controller.removeDocuments(_selectedDocuments(controller));
+    final result = await controller.removeDocuments(
+      _selectedDocuments(controller),
+    );
     if (!context.mounted) {
       return;
     }
@@ -327,9 +332,9 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
               child: Text(
                 '添加到书库',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
@@ -393,9 +398,9 @@ class _ImportOptionTile extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: palette.muted,
-              letterSpacing: 0,
-            ),
+          color: palette.muted,
+          letterSpacing: 0,
+        ),
       ),
       onTap: () => Navigator.of(context).pop(action),
     );
@@ -413,9 +418,9 @@ Future<void> _importAndMaybeOpen(
   }
   HapticService.lightImpact();
   if (documents.length > 1) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已导入 ${documents.length} 个文档')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('已导入 ${documents.length} 个文档')));
     return;
   }
   await _openReader(context, documents.single);
@@ -441,9 +446,7 @@ Future<void> _importFolderAndShowResult(
   final message = suffix.isEmpty
       ? '已导入 ${result.documents.length} 个文档'
       : '已导入 ${result.documents.length} 个文档，$suffix';
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   if (result.documents.length == 1) {
     await _openReader(context, result.documents.single);
     if (context.mounted) {

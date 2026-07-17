@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
 import '../../../../core/design_tokens.dart';
@@ -13,15 +13,16 @@ class IndentedOrderedListNode extends MarkdownNode {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'items': items.map((item) => item.toJson()).toList(),
-      };
+    'type': type,
+    'items': items.map((item) => item.toJson()).toList(),
+  };
 
   @override
   IndentedOrderedListNode copyWith({List<IndentedOrderedListItem>? items}) {
     return IndentedOrderedListNode(items: items ?? this.items);
   }
 }
+
 class IndentedOrderedListItem {
   const IndentedOrderedListItem({
     required this.number,
@@ -34,10 +35,10 @@ class IndentedOrderedListItem {
   final List<IndentedOrderedListItem> children;
 
   Map<String, dynamic> toJson() => {
-        'number': number,
-        'text': text,
-        'children': children.map((child) => child.toJson()).toList(),
-      };
+    'number': number,
+    'text': text,
+    'children': children.map((child) => child.toJson()).toList(),
+  };
 }
 
 class IndentedOrderedListPlugin extends BlockParserPlugin {
@@ -161,7 +162,8 @@ class IndentedOrderedListBuilder extends MarkdownWidgetBuilder {
     MarkdownRenderContext context,
   ) {
     final listNode = node as IndentedOrderedListNode;
-    final textStyle = styleSheet.paragraphStyle ??
+    final textStyle =
+        styleSheet.paragraphStyle ??
         styleSheet.textStyle ??
         const TextStyle(fontSize: 16);
     final markerStyle = styleSheet.listBulletStyle ?? textStyle;

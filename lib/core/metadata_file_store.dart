@@ -17,10 +17,7 @@ class MetadataFileStore {
     return File('${metadataDir.path}/$fileName');
   }
 
-  static Future<T> serialize<T>(
-    String fileName,
-    Future<T> Function() action,
-  ) {
+  static Future<T> serialize<T>(String fileName, Future<T> Function() action) {
     final previous = _queues[fileName] ?? Future<void>.value();
     final result = previous.then((_) => action());
     final tail = result.then<void>(
@@ -28,11 +25,13 @@ class MetadataFileStore {
       onError: (Object _, StackTrace __) {},
     );
     _queues[fileName] = tail;
-    unawaited(tail.then((_) {
-      if (identical(_queues[fileName], tail)) {
-        _queues.remove(fileName);
-      }
-    }));
+    unawaited(
+      tail.then((_) {
+        if (identical(_queues[fileName], tail)) {
+          _queues.remove(fileName);
+        }
+      }),
+    );
     return result;
   }
 

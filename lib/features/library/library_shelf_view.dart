@@ -34,39 +34,35 @@ class _ShelfGrid extends StatelessWidget {
         return SliverGrid(
           key: const ValueKey('library_shelf_grid'),
           gridDelegate: columns == 2 ? _grid2Col : _grid3Col,
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final document = documents[index];
-              return AnimatedSwitcher(
-                duration: AppMotion.normal,
-                reverseDuration: AppMotion.fast,
-                transitionBuilder: (child, animation) {
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: AppMotion.enter,
-                    reverseCurve: AppMotion.exit,
-                  );
-                  return FadeTransition(
-                    opacity: curved,
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.96, end: 1.0)
-                          .animate(curved),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _ShelfDocumentCard(
-                  key: ValueKey('shelf_doc_${document.path}'),
-                  document: document,
-                  selected: selectedPaths.contains(document.path),
-                  selectionActive: selectedPaths.isNotEmpty,
-                  onToggleSelection: onToggleSelection,
-                  onStartSelection: onStartSelection,
-                ),
-              );
-            },
-            childCount: documents.length,
-          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final document = documents[index];
+            return AnimatedSwitcher(
+              duration: AppMotion.normal,
+              reverseDuration: AppMotion.fast,
+              transitionBuilder: (child, animation) {
+                final curved = CurvedAnimation(
+                  parent: animation,
+                  curve: AppMotion.enter,
+                  reverseCurve: AppMotion.exit,
+                );
+                return FadeTransition(
+                  opacity: curved,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
+                    child: child,
+                  ),
+                );
+              },
+              child: _ShelfDocumentCard(
+                key: ValueKey('shelf_doc_${document.path}'),
+                document: document,
+                selected: selectedPaths.contains(document.path),
+                selectionActive: selectedPaths.isNotEmpty,
+                onToggleSelection: onToggleSelection,
+                onStartSelection: onStartSelection,
+              ),
+            );
+          }, childCount: documents.length),
         );
       },
     );
@@ -137,103 +133,104 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
       selected: widget.selected,
       child: RepaintBoundary(
         child: AnimatedBuilder(
-      animation: _pressAnimation,
-      builder: (context, child) {
-        return Transform.scale(scale: _pressAnimation.value, child: child);
-      },
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: widget.selectionActive
-              ? () => widget.onToggleSelection(widget.document)
-              : () => _openDocument(context),
-          onLongPress: () => _handleLongPress(context),
-          onTapDown: (_) => _pressController.forward(),
-          onTapUp: (_) => _springBack(),
-          onTapCancel: _springBack,
-          splashFactory: NoSplash.splashFactory,
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [cover.start, cover.end],
-              ),
-              borderRadius: BorderRadius.circular(AppRadii.lg),
-              border: Border.all(color: cover.border.withOpacity(0.55)),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 18,
-                    color: cover.spine.withOpacity(0.72),
+          animation: _pressAnimation,
+          builder: (context, child) {
+            return Transform.scale(scale: _pressAnimation.value, child: child);
+          },
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: widget.selectionActive
+                  ? () => widget.onToggleSelection(widget.document)
+                  : () => _openDocument(context),
+              onLongPress: () => _handleLongPress(context),
+              onTapDown: (_) => _pressController.forward(),
+              onTapUp: (_) => _springBack(),
+              onTapCancel: _springBack,
+              splashFactory: NoSplash.splashFactory,
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [cover.start, cover.end],
                   ),
+                  borderRadius: BorderRadius.circular(AppRadii.lg),
+                  border: Border.all(color: cover.border.withOpacity(0.55)),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 18,
+                        color: cover.spine.withOpacity(0.72),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _ShelfTypeMark(document: widget.document),
-                          if (widget.document.pinned) ...[
-                            const SizedBox(width: AppSpacing.xs),
-                            const Icon(
-                              Icons.push_pin_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
+                          Row(
+                            children: [
+                              _ShelfTypeMark(document: widget.document),
+                              if (widget.document.pinned) ...[
+                                const SizedBox(width: AppSpacing.xs),
+                                const Icon(
+                                  Icons.push_pin_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ],
+                            ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            widget.document.name,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: cover.foreground,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0,
+                                ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          _DocumentMetaRow(
+                            tags: widget.document.tags,
+                            summary: _documentSummary(widget.document),
+                          ),
                         ],
                       ),
-                      const Spacer(),
-                      Text(
-                        widget.document.name,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: cover.foreground,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _DocumentMetaRow(
-                        tags: widget.document.tags,
-                        summary: _documentSummary(widget.document),
-                      ),
-                    ],
-                  ),
-                ),
-                if (widget.selectionActive)
-                  Positioned(
-                    right: AppSpacing.sm,
-                    top: AppSpacing.sm,
-                    child: Icon(
-                      widget.selected
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      color: Colors.white,
                     ),
-                  ),
-              ],
+                    if (widget.selectionActive)
+                      Positioned(
+                        right: AppSpacing.sm,
+                        top: AppSpacing.sm,
+                        child: Icon(
+                          widget.selected
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
-      ),
       ),
     );
   }
@@ -302,11 +299,11 @@ class _ShelfTypeMark extends StatelessWidget {
           Text(
             document.type.label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
-                ),
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0,
+            ),
           ),
         ],
       ),

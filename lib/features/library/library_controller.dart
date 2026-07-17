@@ -99,12 +99,13 @@ class LibraryController extends ChangeNotifier {
   List<String> get pinnedTags => _pinnedTags;
 
   List<DocumentEntry> get recentDocuments {
-    final recent = _allDocuments
-        .where((document) => document.recentOpenedAt != null)
-        .toList()
-      ..sort((left, right) {
-        return right.recentOpenedAt!.compareTo(left.recentOpenedAt!);
-      });
+    final recent =
+        _allDocuments
+            .where((document) => document.recentOpenedAt != null)
+            .toList()
+          ..sort((left, right) {
+            return right.recentOpenedAt!.compareTo(left.recentOpenedAt!);
+          });
     return recent.take(5).toList();
   }
 
@@ -151,7 +152,9 @@ class LibraryController extends ChangeNotifier {
       _invalidateCache();
       return imported;
     } catch (error) {
-      debugPrint('[LibraryController] import external documents failed: $error');
+      debugPrint(
+        '[LibraryController] import external documents failed: $error',
+      );
       _errorMessage = '导入外部文档失败：${describeDocumentError(error)}';
       return const [];
     } finally {
@@ -432,15 +435,15 @@ class LibraryController extends ChangeNotifier {
   int _compareDocuments(DocumentEntry left, DocumentEntry right) {
     final result = switch (_sortMode) {
       LibrarySortMode.modifiedNewest => right.modifiedAt.compareTo(
-          left.modifiedAt,
-        ),
+        left.modifiedAt,
+      ),
       LibrarySortMode.recentlyOpened => _compareNullableDateDesc(
-          left.recentOpenedAt,
-          right.recentOpenedAt,
-        ),
+        left.recentOpenedAt,
+        right.recentOpenedAt,
+      ),
       LibrarySortMode.name => left.name.toLowerCase().compareTo(
-            right.name.toLowerCase(),
-          ),
+        right.name.toLowerCase(),
+      ),
       LibrarySortMode.sizeLargest => right.sizeBytes.compareTo(left.sizeBytes),
       LibrarySortMode.type => left.type.label.compareTo(right.type.label),
       LibrarySortMode.tagCount => right.tags.length.compareTo(left.tags.length),

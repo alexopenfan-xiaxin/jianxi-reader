@@ -22,8 +22,9 @@ class HtmlStyler {
     final hairline = _cssColor(readingPalette.border);
     final primary = _cssColor(readingPalette.link);
     final codeBackground = _cssColor(readingPalette.codeBackground);
-    final colorScheme =
-        readingPalette.background.computeLuminance() < 0.5 ? 'dark' : 'light';
+    final colorScheme = readingPalette.background.computeLuminance() < 0.5
+        ? 'dark'
+        : 'light';
 
     return '''
 <!doctype html>
@@ -212,17 +213,11 @@ class HtmlStyler {
       '',
     );
     sanitized = sanitized.replaceAllMapped(
-      RegExp(
-        r'\s+(href|src)\s*=\s*"javascript:[^"]*"',
-        caseSensitive: false,
-      ),
+      RegExp(r'\s+(href|src)\s*=\s*"javascript:[^"]*"', caseSensitive: false),
       (match) => ' ${match.group(1)}="#"',
     );
     sanitized = sanitized.replaceAllMapped(
-      RegExp(
-        r"\s+(href|src)\s*=\s*'javascript:[^']*'",
-        caseSensitive: false,
-      ),
+      RegExp(r"\s+(href|src)\s*=\s*'javascript:[^']*'", caseSensitive: false),
       (match) => " ${match.group(1)}='#'",
     );
     return sanitized;

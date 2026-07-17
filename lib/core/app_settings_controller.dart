@@ -105,14 +105,14 @@ class ReadingPalette {
 
   @override
   int get hashCode => Object.hash(
-        background,
-        foreground,
-        muted,
-        surface,
-        border,
-        link,
-        codeBackground,
-      );
+    background,
+    foreground,
+    muted,
+    surface,
+    border,
+    link,
+    codeBackground,
+  );
 }
 
 class AppSettingsController extends ChangeNotifier {
@@ -268,9 +268,7 @@ class AppSettingsController extends ChangeNotifier {
     _libraryViewMode = _libraryViewModeFromName(
       preferences.getString(_libraryViewModeKey),
     );
-    _visualMode = _visualModeFromName(
-      preferences.getString(_visualModeKey),
-    );
+    _visualMode = _visualModeFromName(preferences.getString(_visualModeKey));
     _readingFontFamily = _readingFontFamilyFromName(
       preferences.getString(_readingFontFamilyKey),
     );
@@ -410,25 +408,21 @@ class AppSettingsController extends ChangeNotifier {
   }
 
   static double _readingFontSizeFromStored(Object? value) {
-    return _normalizeFontSize(
-      switch (value) {
-        double stored => stored,
-        int stored => stored.toDouble(),
-        String stored => double.tryParse(stored) ?? _legacyFontSize(stored),
-        _ => readingFontSizeDefault,
-      },
-    );
+    return _normalizeFontSize(switch (value) {
+      double stored => stored,
+      int stored => stored.toDouble(),
+      String stored => double.tryParse(stored) ?? _legacyFontSize(stored),
+      _ => readingFontSizeDefault,
+    });
   }
 
   static double _readingLineHeightFromStored(Object? value) {
-    return _normalizeLineHeight(
-      switch (value) {
-        double stored => stored,
-        int stored => stored.toDouble(),
-        String stored => double.tryParse(stored) ?? _legacyLineHeight(stored),
-        _ => readingLineHeightDefault,
-      },
-    );
+    return _normalizeLineHeight(switch (value) {
+      double stored => stored,
+      int stored => stored.toDouble(),
+      String stored => double.tryParse(stored) ?? _legacyLineHeight(stored),
+      _ => readingLineHeightDefault,
+    });
   }
 
   static double _legacyFontSize(String name) {

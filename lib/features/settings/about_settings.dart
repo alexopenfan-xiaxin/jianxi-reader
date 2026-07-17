@@ -20,9 +20,9 @@ class _AboutEntry extends StatelessWidget {
   }
 
   void _openAboutPage(BuildContext context) {
-    Navigator.of(context).push(
-      appPageRoute<void>(builder: (context) => const AboutPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(appPageRoute<void>(builder: (context) => const AboutPage()));
   }
 }
 
@@ -67,12 +67,10 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '189';
+  static const _fallbackBuildNumber = '190';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
-  static final _communityUrl = Uri.parse(
-    'https://qm.qq.com/q/IcQIMYOaQg',
-  );
+  static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
   static final _repositoryUrl = Uri.parse(
     'https://github.com/alexopenfan-xiaxin/jianxi-reader',
   );
@@ -87,14 +85,16 @@ class _AboutPageState extends State<AboutPage> {
   @override
   void initState() {
     super.initState();
-    PackageInfo.fromPlatform().then((info) {
-      if (mounted) {
-        setState(() => _packageInfo = info);
-      }
-    }).catchError((Object error) {
-      // Keep the about card usable if package metadata is unavailable.
-      debugPrint('[AboutPage] failed to load package info: $error');
-    });
+    PackageInfo.fromPlatform()
+        .then((info) {
+          if (mounted) {
+            setState(() => _packageInfo = info);
+          }
+        })
+        .catchError((Object error) {
+          // Keep the about card usable if package metadata is unavailable.
+          debugPrint('[AboutPage] failed to load package info: $error');
+        });
     _estimateCacheSize();
   }
 
@@ -131,9 +131,9 @@ class _AboutPageState extends State<AboutPage> {
         if (!_isNewerBuildResponse(response)) {
           await response.drain<void>();
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已是最新版本')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('已是最新版本')));
           return;
         }
         final newVersion = response.headers.value('x-apk-version');
@@ -170,27 +170,25 @@ class _AboutPageState extends State<AboutPage> {
       final message = await _readUpdateMessage(response);
       if (!mounted) return;
       if (response.statusCode == HttpStatus.ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message ?? '已是最新版本')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message ?? '已是最新版本')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message ?? '检查更新失败：${response.statusCode}'),
-          ),
+          SnackBar(content: Text(message ?? '检查更新失败：${response.statusCode}')),
         );
       }
     } on HandshakeException {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('更新服务连接失败，请稍后重试')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('更新服务连接失败，请稍后重试')));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('检查更新失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('检查更新失败：$error')));
       }
     } finally {
       client.close(force: true);
@@ -226,7 +224,9 @@ class _AboutPageState extends State<AboutPage> {
                 LinearProgressIndicator(value: value),
                 const SizedBox(height: 16),
                 Text(
-                  value >= 1.0 ? '下载完成' : '${(value * 100).toStringAsFixed(0)}%',
+                  value >= 1.0
+                      ? '下载完成'
+                      : '${(value * 100).toStringAsFixed(0)}%',
                   style: Theme.of(ctx).textTheme.bodyMedium,
                 ),
               ],
@@ -243,9 +243,9 @@ class _AboutPageState extends State<AboutPage> {
         final message = await _readUpdateMessage(response);
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message ?? '没有可下载的新版本')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message ?? '没有可下载的新版本')));
         }
         return;
       }
@@ -253,9 +253,9 @@ class _AboutPageState extends State<AboutPage> {
         await response.drain<void>();
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已是最新版本')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('已是最新版本')));
         }
         return;
       }
@@ -282,9 +282,9 @@ class _AboutPageState extends State<AboutPage> {
       if (received == 0 || (total > 0 && received != total)) {
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('下载失败：更新包不完整')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('下载失败：更新包不完整')));
         }
         return;
       }
@@ -295,17 +295,17 @@ class _AboutPageState extends State<AboutPage> {
     } on HandshakeException {
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('更新服务连接失败，请稍后重试')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('更新服务连接失败，请稍后重试')));
       }
       return;
     } catch (error) {
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('下载失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('下载失败：$error')));
       }
       return;
     } finally {
@@ -327,9 +327,7 @@ class _AboutPageState extends State<AboutPage> {
     } on PlatformException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('无法打开安装程序，请检查未知应用安装权限后重试'),
-          ),
+          const SnackBar(content: Text('无法打开安装程序，请检查未知应用安装权限后重试')),
         );
       }
     }
@@ -392,9 +390,9 @@ class _AboutPageState extends State<AboutPage> {
       _estimateCacheSize();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('清理缓存失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('清理缓存失败：$error')));
       }
     } finally {
       if (mounted) {
@@ -498,7 +496,8 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   int _currentBuildNumberValue() {
-    return int.tryParse(_currentBuildNumber()) ?? int.parse(_fallbackBuildNumber);
+    return int.tryParse(_currentBuildNumber()) ??
+        int.parse(_fallbackBuildNumber);
   }
 
   Future<String?> _readUpdateMessage(HttpClientResponse response) async {
@@ -521,9 +520,9 @@ class _AboutPageState extends State<AboutPage> {
   Future<void> _openExternalLink(Uri uri, String failureMessage) async {
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failureMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failureMessage)));
     }
   }
 
@@ -550,146 +549,141 @@ class _AboutPageState extends State<AboutPage> {
               _SettingsResponsiveCards(
                 wide: _isWideSettingsLayout(context, constraints),
                 children: [
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(AppRadii.sm),
-                          border: Border.all(
-                            color: AppColors.primary.withOpacity(0.12),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.auto_stories_rounded,
-                          color: AppColors.primary,
-                          size: 29,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              '简兮阅读器',
-                              style: Theme.of(context).textTheme.titleLarge,
+                            Container(
+                              width: 54,
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.sm,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.12),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.auto_stories_rounded,
+                                color: AppColors.primary,
+                                size: 29,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              versionLabel,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: palette.muted,
-                                    letterSpacing: 0,
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '简兮阅读器',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
                                   ),
-                            ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              '由 openfan 开发',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: palette.muted,
-                                    letterSpacing: 0,
+                                  const SizedBox(height: AppSpacing.xxs),
+                                  Text(
+                                    versionLabel,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: palette.muted,
+                                          letterSpacing: 0,
+                                        ),
                                   ),
+                                  const SizedBox(height: AppSpacing.xxs),
+                                  Text(
+                                    '由 openfan 开发',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: palette.muted,
+                                          letterSpacing: 0,
+                                        ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _AboutLink(
-                    text: '官网：https://openfan.pages.dev/',
-                    onTap: () => _openExternalLink(
-                      _websiteUrl,
-                      '无法打开官网链接',
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  _AboutLink(
-                    text: '点击加入QQ交流群',
-                    onTap: () => _openExternalLink(
-                      _communityUrl,
-                      '无法打开 QQ 交流群链接',
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  _AboutLink(
-                    text:
-                        '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
-                    onTap: () => _openExternalLink(
-                      _repositoryUrl,
-                      '无法打开开源地址',
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Text(
-                    '联系作者：alex.openfan@gmail.com',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.muted,
-                          letterSpacing: 0,
+                        const SizedBox(height: AppSpacing.lg),
+                        _AboutLink(
+                          text: '官网：https://openfan.pages.dev/',
+                          onTap: () =>
+                              _openExternalLink(_websiteUrl, '无法打开官网链接'),
                         ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        _AboutLink(
+                          text: '点击加入QQ交流群',
+                          onTap: () =>
+                              _openExternalLink(_communityUrl, '无法打开 QQ 交流群链接'),
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        _AboutLink(
+                          text:
+                              '开源地址：https://github.com/alexopenfan-xiaxin/jianxi-reader',
+                          onTap: () =>
+                              _openExternalLink(_repositoryUrl, '无法打开开源地址'),
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          '联系作者：alex.openfan@gmail.com',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: palette.muted,
+                                letterSpacing: 0,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _CardTitle(
-                    icon: Icons.system_update_outlined,
-                    title: '应用更新',
-                    subtitle: _isChecking
-                        ? '正在连接更新服务。'
-                        : '检查是否有可下载的新版本。',
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _CardTitle(
+                          icon: Icons.system_update_outlined,
+                          title: '应用更新',
+                          subtitle: _isChecking ? '正在连接更新服务。' : '检查是否有可下载的新版本。',
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        _AboutActionButton(
+                          busy: _isChecking,
+                          icon: Icons.refresh_rounded,
+                          label: '检查更新',
+                          busyLabel: '检查中',
+                          onPressed: _checkForUpdate,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _AboutActionButton(
-                    busy: _isChecking,
-                    icon: Icons.refresh_rounded,
-                    label: '检查更新',
-                    busyLabel: '检查中',
-                    onPressed: _checkForUpdate,
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _CardTitle(
+                          icon: Icons.cleaning_services_outlined,
+                          title: '缓存清理',
+                          subtitle: _isClearingCache
+                              ? '正在清理临时缓存。'
+                              : _isEstimatingCache
+                              ? '正在估算缓存大小…'
+                              : '当前缓存 ${_formatBytes(_estimatedCacheSize)}，清理临时文件和更新包。',
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        _AboutActionButton(
+                          busy: _isClearingCache,
+                          icon: Icons.delete_sweep_outlined,
+                          label: '清理缓存',
+                          busyLabel: '清理中',
+                          onPressed: _clearCache,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _CardTitle(
-                    icon: Icons.cleaning_services_outlined,
-                    title: '缓存清理',
-                    subtitle: _isClearingCache
-                        ? '正在清理临时缓存。'
-                        : _isEstimatingCache
-                            ? '正在估算缓存大小…'
-                            : '当前缓存 ${_formatBytes(_estimatedCacheSize)}，清理临时文件和更新包。',
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _AboutActionButton(
-                    busy: _isClearingCache,
-                    icon: Icons.delete_sweep_outlined,
-                    label: '清理缓存',
-                    busyLabel: '清理中',
-                    onPressed: _clearCache,
-                  ),
-                ],
-              ),
-            ),
                 ],
               ),
             ],
@@ -722,7 +716,9 @@ class _AboutActionButton extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: busy ? null : onPressed,
-          icon: busy ? _ButtonProgressIcon(color: AppColors.primary) : Icon(icon),
+          icon: busy
+              ? _ButtonProgressIcon(color: AppColors.primary)
+              : Icon(icon),
           label: Text(busy ? busyLabel : label),
         ),
       );
@@ -772,10 +768,10 @@ class _AboutActionButton extends StatelessWidget {
                     Text(
                       busy ? busyLabel : label,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: foreground,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
-                          ),
+                        color: foreground,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
                     ),
                   ],
                 ),
@@ -798,10 +794,7 @@ class _ButtonProgressIcon extends StatelessWidget {
     return SizedBox(
       width: 18,
       height: 18,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        color: color,
-      ),
+      child: CircularProgressIndicator(strokeWidth: 2, color: color),
     );
   }
 }
@@ -822,11 +815,11 @@ class _AboutLink extends StatelessWidget {
         child: Text(
           text,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.primary,
-                letterSpacing: 0,
-                decoration: TextDecoration.underline,
-                decorationColor: AppColors.primary,
-              ),
+            color: AppColors.primary,
+            letterSpacing: 0,
+            decoration: TextDecoration.underline,
+            decorationColor: AppColors.primary,
+          ),
         ),
       ),
     );

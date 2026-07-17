@@ -25,7 +25,6 @@ class _AnimatedStateShell extends StatelessWidget {
   }
 }
 
-
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message});
 
@@ -69,10 +68,7 @@ class _LoadingState extends StatelessWidget {
 enum _LibraryStateArtKind { emptyPage, searchPage, warningPage }
 
 class _LibraryStateIllustration extends StatelessWidget {
-  const _LibraryStateIllustration({
-    required this.kind,
-    this.size = 80,
-  });
+  const _LibraryStateIllustration({required this.kind, this.size = 80});
 
   final _LibraryStateArtKind kind;
   final double size;
@@ -222,10 +218,10 @@ class _EmptyState extends StatelessWidget {
                 '选择一个 Markdown 或 HTML 文档开始阅读',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: palette.muted,
-                      height: 1.55,
-                      letterSpacing: 0,
-                    ),
+                  color: palette.muted,
+                  height: 1.55,
+                  letterSpacing: 0,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -270,9 +266,9 @@ class _NoResultsState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               '未寻得匹配文档',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: palette.muted,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: palette.muted),
             ),
           ],
         ),

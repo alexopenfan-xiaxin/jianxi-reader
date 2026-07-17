@@ -1,4 +1,4 @@
-﻿String preprocessMarkdown(String raw) {
+String preprocessMarkdown(String raw) {
   raw = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
   // 1. Collect reference link definitions [id]: url
@@ -10,17 +10,16 @@
   });
 
   // 2. Replace [text][id] references
-  processed = processed.replaceAllMapped(
-    RegExp(r'\[([^\]]+)\]\[([^\]]+)\]'),
-    (match) {
-      final id = match.group(2)!;
-      final url = refLinks[id];
-      if (url != null) {
-        return '[${match.group(1)}]($url)';
-      }
-      return match.group(0)!;
-    },
-  );
+  processed = processed.replaceAllMapped(RegExp(r'\[([^\]]+)\]\[([^\]]+)\]'), (
+    match,
+  ) {
+    final id = match.group(2)!;
+    final url = refLinks[id];
+    if (url != null) {
+      return '[${match.group(1)}]($url)';
+    }
+    return match.group(0)!;
+  });
 
   // 3. Autolinks <url> and <email>
   processed = processed.replaceAllMapped(

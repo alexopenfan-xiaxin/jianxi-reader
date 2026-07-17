@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -22,7 +22,8 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
   ) {
     final imageNode = node as ImageNode;
     final isSvg = imageNode.url.toLowerCase().endsWith('.svg');
-    final isNetwork = imageNode.url.startsWith('http://') ||
+    final isNetwork =
+        imageNode.url.startsWith('http://') ||
         imageNode.url.startsWith('https://');
 
     Widget imageWidget;
@@ -33,7 +34,8 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
     } else {
       imageWidget = Image.asset(
         imageNode.url,
-        errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.broken_image),
+        errorBuilder: (ctx, error, stackTrace) =>
+            const Icon(Icons.broken_image),
       );
     }
 
@@ -62,10 +64,8 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   caption,
-                  style: (styleSheet.paragraphStyle ?? const TextStyle()).copyWith(
-                    fontSize: 12,
-                    color: AppColors.bodyMuted,
-                  ),
+                  style: (styleSheet.paragraphStyle ?? const TextStyle())
+                      .copyWith(fontSize: 12, color: AppColors.bodyMuted),
                 ),
               ),
           ],
@@ -76,7 +76,11 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
 }
 
 class CachedMarkdownImage extends StatefulWidget {
-  const CachedMarkdownImage({required this.url, required this.isSvg, super.key});
+  const CachedMarkdownImage({
+    required this.url,
+    required this.isSvg,
+    super.key,
+  });
 
   final String url;
   final bool isSvg;
@@ -163,10 +167,15 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
     final client = HttpClient();
     IOSink? sink;
     try {
-      final request = await client.getUrl(Uri.parse(widget.url)).timeout(_timeout);
+      final request = await client
+          .getUrl(Uri.parse(widget.url))
+          .timeout(_timeout);
       final response = await request.close().timeout(_timeout);
       if (response.statusCode != HttpStatus.ok) {
-        throw HttpException('图片请求失败：${response.statusCode}', uri: Uri.parse(widget.url));
+        throw HttpException(
+          '图片请求失败：${response.statusCode}',
+          uri: Uri.parse(widget.url),
+        );
       }
       if (response.contentLength > _maxImageBytes) {
         throw const FileSystemException('图片过大');
@@ -216,9 +225,9 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
     if (totalBytes <= _maxCacheBytes) {
       return;
     }
-    files.sort((left, right) => left.stat.modified.compareTo(
-          right.stat.modified,
-        ));
+    files.sort(
+      (left, right) => left.stat.modified.compareTo(right.stat.modified),
+    );
     for (final entry in files) {
       if (totalBytes <= _maxCacheBytes) {
         break;
@@ -284,9 +293,9 @@ class _ImageLoadingState extends StatelessWidget {
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: palette.muted,
-                  letterSpacing: 0,
-                ),
+              color: palette.muted,
+              letterSpacing: 0,
+            ),
           ),
           if (showRetry) ...[
             const SizedBox(height: AppSpacing.sm),

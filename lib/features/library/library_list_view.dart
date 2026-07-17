@@ -85,7 +85,8 @@ class _LibraryAnimatedContent extends StatelessWidget {
     if (viewMode == LibraryViewMode.shelf) {
       return SliverMainAxisGroup(
         slivers: [
-          if (controller.recentDocuments.isNotEmpty && controller.searchQuery.isEmpty)
+          if (controller.recentDocuments.isNotEmpty &&
+              controller.searchQuery.isEmpty)
             _RecentReadingSliver(documents: controller.recentDocuments),
           _ShelfGrid(
             documents: controller.documents,
@@ -98,7 +99,8 @@ class _LibraryAnimatedContent extends StatelessWidget {
     }
     return SliverMainAxisGroup(
       slivers: [
-        if (controller.recentDocuments.isNotEmpty && controller.searchQuery.isEmpty)
+        if (controller.recentDocuments.isNotEmpty &&
+            controller.searchQuery.isEmpty)
           _RecentReadingSliver(documents: controller.recentDocuments),
         _AnimatedDocumentSliverList(
           documents: controller.documents,
@@ -144,17 +146,17 @@ class _RecentReadingSliver extends StatelessWidget {
                 Text(
                   '最近阅读',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   '${documents.length} 个',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.palette.muted,
-                        letterSpacing: 0,
-                      ),
+                    color: context.palette.muted,
+                    letterSpacing: 0,
+                  ),
                 ),
               ],
             ),
@@ -164,7 +166,8 @@ class _RecentReadingSliver extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: documents.length,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   return _RecentDocumentCard(document: documents[index]);
                 },
@@ -174,9 +177,9 @@ class _RecentReadingSliver extends StatelessWidget {
             Text(
               '全部文档',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
             ),
           ],
         ),
@@ -233,14 +236,16 @@ class _RecentDocumentCard extends StatelessWidget {
                 final ratio = snapshot.data;
                 final progress = ratio == null ? null : (ratio * 100).round();
                 return Text(
-                  progress == null ? _documentSummary(document) : '读到 $progress%',
+                  progress == null
+                      ? _documentSummary(document)
+                      : '读到 $progress%',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.palette.muted,
-                        fontSize: 12,
-                        letterSpacing: 0,
-                      ),
+                    color: context.palette.muted,
+                    fontSize: 12,
+                    letterSpacing: 0,
+                  ),
                 );
               },
             ),
@@ -338,12 +343,8 @@ class _AnimatedDocumentSliverListState
       _items.removeAt(index);
       _listKey.currentState?.removeItem(
         index,
-        (context, animation) => _buildAnimatedItem(
-          document,
-          index,
-          animation,
-          removing: true,
-        ),
+        (context, animation) =>
+            _buildAnimatedItem(document, index, animation, removing: true),
         duration: const Duration(milliseconds: 200),
       );
     }
@@ -363,19 +364,23 @@ class _AnimatedDocumentSliverListState
 
     setState(() {
       _items = nextDocuments
-          .map((next) => _items.firstWhere(
-                (item) => item.path == next.path,
-                orElse: () => next,
-              ).copyWith(
-                name: next.name,
-                type: next.type,
-                sizeBytes: next.sizeBytes,
-                modifiedAt: next.modifiedAt,
-                recentOpenedAt: next.recentOpenedAt,
-                isReferenced: next.isReferenced,
-                tags: next.tags,
-                pinned: next.pinned,
-              ))
+          .map(
+            (next) => _items
+                .firstWhere(
+                  (item) => item.path == next.path,
+                  orElse: () => next,
+                )
+                .copyWith(
+                  name: next.name,
+                  type: next.type,
+                  sizeBytes: next.sizeBytes,
+                  modifiedAt: next.modifiedAt,
+                  recentOpenedAt: next.recentOpenedAt,
+                  isReferenced: next.isReferenced,
+                  tags: next.tags,
+                  pinned: next.pinned,
+                ),
+          )
           .toList();
     });
   }
@@ -434,7 +439,6 @@ class _AnimatedDocumentSliverListState
   }
 }
 
-
 class _DocumentTile extends StatefulWidget {
   const _DocumentTile({
     required this.document,
@@ -483,8 +487,8 @@ class _DocumentTileState extends State<_DocumentTile>
     final liquidGlass = context.select<AppSettingsController, bool>(
       (s) => s.liquidGlassEnabled,
     );
-    final forceClassicCard = liquidGlass &&
-        Theme.of(context).brightness == Brightness.dark;
+    final forceClassicCard =
+        liquidGlass && Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: widget.document.name,
       hint: widget.selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
@@ -492,10 +496,8 @@ class _DocumentTileState extends State<_DocumentTile>
       selected: widget.selected,
       child: AnimatedBuilder(
         animation: _hoverAnim,
-        builder: (context, child) => Transform.scale(
-          scale: _hoverAnim.value,
-          child: child,
-        ),
+        builder: (context, child) =>
+            Transform.scale(scale: _hoverAnim.value, child: child),
         child: AppCard(
           onTap: widget.selectionActive
               ? () => widget.onToggleSelection(widget.document)
@@ -556,9 +558,9 @@ class _DocumentTileState extends State<_DocumentTile>
                                       widget.document.name,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
                                     ),
                                   ),
                                 ],
@@ -715,10 +717,9 @@ class _GlassMenuTile extends StatelessWidget {
       leading: Icon(icon, color: color),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              letterSpacing: 0,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(color: color, letterSpacing: 0),
       ),
       onTap: () => Navigator.of(context).pop(action),
     );
@@ -735,10 +736,8 @@ Future<void> _showTagEditor(
     useSafeArea: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => _TagEditorSheet(
-      document: document,
-      documents: documents ?? [document],
-    ),
+    builder: (context) =>
+        _TagEditorSheet(document: document, documents: documents ?? [document]),
   );
 }
 
@@ -807,9 +806,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.palette.muted,
-                    letterSpacing: 0,
-                  ),
+                color: context.palette.muted,
+                letterSpacing: 0,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             Wrap(
@@ -839,9 +838,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
                   Text(
                     '默认无标签。先创建标签，再为文档勾选。',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: context.palette.muted,
-                          letterSpacing: 0,
-                        ),
+                      color: context.palette.muted,
+                      letterSpacing: 0,
+                    ),
                   ),
               ],
             ),
@@ -865,8 +864,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed:
-                        _isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: const Text('取消'),
                   ),
                 ),
@@ -933,9 +933,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建标签失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('创建标签失败：$error')));
       }
     }
   }
@@ -967,9 +967,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       setState(() => _selectedTags.remove(tag));
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除标签失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('删除标签失败：$error')));
       }
     }
   }
@@ -994,13 +994,12 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
     } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存标签失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存标签失败：$error')));
       }
     }
   }
-
 }
 
 class _EditableTagChip extends StatelessWidget {
@@ -1077,10 +1076,10 @@ class _DocumentMetaRow extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: context.palette.muted,
-                fontSize: 12,
-                letterSpacing: 0,
-              ),
+            color: context.palette.muted,
+            fontSize: 12,
+            letterSpacing: 0,
+          ),
         ),
       );
     }
@@ -1108,10 +1107,10 @@ class _DocumentMetaRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.palette.muted,
-                    fontSize: 12,
-                    letterSpacing: 0,
-                  ),
+                color: context.palette.muted,
+                fontSize: 12,
+                letterSpacing: 0,
+              ),
             ),
           ),
         ],
@@ -1140,11 +1139,11 @@ class _SmallTagChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
@@ -1182,9 +1181,7 @@ class _TypeBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: badgeColor.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(
-          color: badgeColor.withOpacity(0.18),
-        ),
+        border: Border.all(color: badgeColor.withOpacity(0.18)),
       ),
       child: Icon(
         isMd ? Icons.description_rounded : Icons.code_rounded,

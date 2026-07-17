@@ -52,10 +52,7 @@ abstract class DocumentLibraryService {
 }
 
 class DocumentTagUpdate {
-  const DocumentTagUpdate({
-    required this.documentTags,
-    required this.allTags,
-  });
+  const DocumentTagUpdate({required this.documentTags, required this.allTags});
 
   final List<String> documentTags;
   final List<String> allTags;
@@ -77,8 +74,9 @@ class DocumentFileService implements DocumentLibraryService {
   DocumentFileService();
 
   static const libraryFolderName = 'documents';
-  static const _documentAccessChannel =
-      MethodChannel('com.jianxi.reader/document_access');
+  static const _documentAccessChannel = MethodChannel(
+    'com.jianxi.reader/document_access',
+  );
   static const _recentOpenedPrefix = 'document.recentOpened.';
   static const _documentPinnedPrefix = 'document.pinned.';
   static const _referencedPathsKey = 'referenced.paths';
@@ -272,10 +270,9 @@ class DocumentFileService implements DocumentLibraryService {
     final documents = <DocumentEntry>[];
     var skipped = 0;
     var failed = 0;
-    await for (final entity in Directory(folderPath).list(
-      recursive: true,
-      followLinks: false,
-    )) {
+    await for (final entity in Directory(
+      folderPath,
+    ).list(recursive: true, followLinks: false)) {
       if (entity is! File || !DocumentFileRules.isSupportedPath(entity.path)) {
         continue;
       }
@@ -503,9 +500,7 @@ class DocumentFileService implements DocumentLibraryService {
       final stagedName =
           '${p.basenameWithoutExtension(file.path)}.deleting-'
           '${DateTime.now().microsecondsSinceEpoch}${p.extension(file.path)}';
-      stagedFile = await file.rename(
-        p.join(file.parent.path, stagedName),
-      );
+      stagedFile = await file.rename(p.join(file.parent.path, stagedName));
     }
 
     try {
@@ -533,10 +528,7 @@ class DocumentFileService implements DocumentLibraryService {
         }
         if (referencedPaths != null) {
           await _persistPreference(
-            preferences.setStringList(
-              _referencedPathsKey,
-              referencedPaths,
-            ),
+            preferences.setStringList(_referencedPathsKey, referencedPaths),
           );
           if (sourceUri != null) {
             await _persistPreference(
@@ -647,9 +639,7 @@ class DocumentFileService implements DocumentLibraryService {
       }
       final documentTags = preferences.getStringList(key) ?? [];
       if (documentTags.remove(tag)) {
-        await _persistPreference(
-          preferences.setStringList(key, documentTags),
-        );
+        await _persistPreference(preferences.setStringList(key, documentTags));
       }
     }
     invalidateLibraryCache();
@@ -725,7 +715,10 @@ class DocumentFileService implements DocumentLibraryService {
     return _cleanTags(tags);
   }
 
-  static List<String> _documentTags(SharedPreferences preferences, String path) {
+  static List<String> _documentTags(
+    SharedPreferences preferences,
+    String path,
+  ) {
     final tags = preferences.getStringList(_documentTagsKey(path)) ?? [];
     return _cleanTags(tags);
   }
@@ -892,7 +885,8 @@ class DocumentFileService implements DocumentLibraryService {
     return documents;
   }
 
-  Future<DocumentFolderImportResult> _pickAndroidReferencedFolderDocuments() async {
+  Future<DocumentFolderImportResult>
+  _pickAndroidReferencedFolderDocuments() async {
     final result = await _documentAccessChannel.invokeMethod<Object?>(
       'pickFolderDocuments',
     );
@@ -936,7 +930,9 @@ class DocumentFileService implements DocumentLibraryService {
         );
       } catch (error) {
         failed++;
-        debugPrint('[DocumentFileService] import folder metadata failed: $error');
+        debugPrint(
+          '[DocumentFileService] import folder metadata failed: $error',
+        );
       }
     }
     return DocumentFolderImportResult(
@@ -948,17 +944,19 @@ class DocumentFileService implements DocumentLibraryService {
 
   Future<DocumentEntry> _importAndroidExternalUri(Uri uri) async {
     final imported = await _documentAccessChannel
-        .invokeMapMethod<String, Object?>(
-      'importExternalUri',
-      {'uri': uri.toString()},
-    );
+        .invokeMapMethod<String, Object?>('importExternalUri', {
+          'uri': uri.toString(),
+        });
     if (imported == null) {
       throw FileSystemException('系统没有传入可读取的文件路径', uri.toString());
     }
 
     final path = imported['path'] as String?;
     final sourceUri = imported['uri'] as String?;
-    if (path == null || path.isEmpty || sourceUri == null || sourceUri.isEmpty) {
+    if (path == null ||
+        path.isEmpty ||
+        sourceUri == null ||
+        sourceUri.isEmpty) {
       throw FileSystemException('系统没有传入可读取的文件路径', uri.toString());
     }
     if (!DocumentFileRules.isSupportedPath(path)) {
@@ -990,13 +988,13 @@ class DocumentFileService implements DocumentLibraryService {
   }) async {
     final paths = preferences.getStringList(_referencedPathsKey) ?? [];
     final previousPath = paths.cast<String?>().firstWhere(
-          (candidate) =>
-              candidate != null &&
-              candidate != path &&
-              preferences.getString(_referencedSourceUriKey(candidate)) ==
-                  sourceUri,
-          orElse: () => null,
-        );
+      (candidate) =>
+          candidate != null &&
+          candidate != path &&
+          preferences.getString(_referencedSourceUriKey(candidate)) ==
+              sourceUri,
+      orElse: () => null,
+    );
     await _persistPreference(
       preferences.setString(_referencedSourceUriKey(path), sourceUri),
     );
@@ -1008,7 +1006,9 @@ class DocumentFileService implements DocumentLibraryService {
       paths.add(path);
     }
     if (previousPath != null ||
-        !(preferences.getStringList(_referencedPathsKey) ?? []).contains(path)) {
+        !(preferences.getStringList(_referencedPathsKey) ?? []).contains(
+          path,
+        )) {
       await _persistPreference(
         preferences.setStringList(_referencedPathsKey, paths),
       );
@@ -1053,10 +1053,10 @@ class DocumentFileService implements DocumentLibraryService {
     }
     try {
       final refreshed = await _documentAccessChannel
-          .invokeMapMethod<String, Object?>(
-        'refreshDocument',
-        {'uri': sourceUri, 'path': path},
-      );
+          .invokeMapMethod<String, Object?>('refreshDocument', {
+            'uri': sourceUri,
+            'path': path,
+          });
       _lastRefreshTimes[path] = DateTime.now();
       return refreshed?['path'] as String? ?? path;
     } on MissingPluginException {

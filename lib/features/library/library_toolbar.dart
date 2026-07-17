@@ -30,18 +30,18 @@ class _FixedLibraryHeader extends StatelessWidget {
                 Text(
                   '首页',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${controller.allDocuments.length} 个文档',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: palette.muted,
-                        letterSpacing: 0,
-                      ),
+                    color: palette.muted,
+                    letterSpacing: 0,
+                  ),
                 ),
               ],
             ),
@@ -158,9 +158,9 @@ class _SelectionHeader extends StatelessWidget {
             child: Text(
               '已选择 $selectedCount 个',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
             ),
           ),
           IconButton(
@@ -373,11 +373,7 @@ class _FloatingImportButton extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(
-                    Icons.add_rounded,
-                    size: 32,
-                    color: Colors.white,
-                  ),
+                : const Icon(Icons.add_rounded, size: 32, color: Colors.white),
           ),
         ),
       ),
@@ -434,9 +430,9 @@ class _SortSheet extends StatelessWidget {
             Text(
               '文档排序',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             for (final mode in LibrarySortMode.values)
@@ -526,9 +522,9 @@ class _SortOptionTile extends StatelessWidget {
           child: Text(
             mode.label,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
           ),
         ),
         Container(
@@ -577,9 +573,7 @@ class _SortOptionTile extends StatelessWidget {
       child: Container(
         height: 72,
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: context.palette.hairline),
-          ),
+          border: Border(bottom: BorderSide(color: context.palette.hairline)),
         ),
         child: row,
       ),

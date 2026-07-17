@@ -26,21 +26,18 @@ class AppCard extends StatefulWidget {
   State<AppCard> createState() => _AppCardState();
 }
 
-class _AppCardState extends State<AppCard>
-    with SingleTickerProviderStateMixin {
+class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: AppMotion.fast,
-      vsync: this,
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.975).animate(
-      CurvedAnimation(parent: _controller, curve: AppMotion.press),
-    );
+    _controller = AnimationController(duration: AppMotion.fast, vsync: this);
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.975,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.press));
   }
 
   void _springBack() {
@@ -63,25 +60,26 @@ class _AppCardState extends State<AppCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final liquidGlass = !widget.forceClassic &&
+    final liquidGlass =
+        !widget.forceClassic &&
         context.select<AppSettingsController, bool>(
-            (s) => s.liquidGlassEnabled);
+          (s) => s.liquidGlassEnabled,
+        );
     final dark = Theme.of(context).brightness == Brightness.dark;
     final radius = liquidGlass ? 14.0 : AppRadii.lg;
     final borderRadius = BorderRadius.circular(radius);
 
     return AnimatedBuilder(
       animation: _scaleAnim,
-      builder: (context, child) => Transform.scale(
-        scale: _scaleAnim.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: _scaleAnim.value, child: child),
       child: liquidGlass
           ? LiquidGlassSurface(
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
-              borderColor:
-                  dark ? Colors.white.withOpacity(0.18) : Colors.transparent,
+              borderColor: dark
+                  ? Colors.white.withOpacity(0.18)
+                  : Colors.transparent,
               blurSigma: LiquidGlassTokens.effectBlurSigma,
               chromaticEdge: dark,
               edgeHighlight: dark,
@@ -100,14 +98,9 @@ class _AppCardState extends State<AppCard>
                 child: InkWell(
                   onTap: widget.onTap,
                   onLongPress: widget.onLongPress,
-                  onTapDown:
-                      _hasAction ? (_) => _controller.forward() : null,
-                  onTapUp: _hasAction
-                      ? (_) => _springBack()
-                      : null,
-                  onTapCancel: _hasAction
-                      ? _springBack
-                      : null,
+                  onTapDown: _hasAction ? (_) => _controller.forward() : null,
+                  onTapUp: _hasAction ? (_) => _springBack() : null,
+                  onTapCancel: _hasAction ? _springBack : null,
                   borderRadius: borderRadius,
                   splashFactory: NoSplash.splashFactory,
                   highlightColor: Colors.transparent,
@@ -129,12 +122,9 @@ class _AppCardState extends State<AppCard>
               child: InkWell(
                 onTap: widget.onTap,
                 onLongPress: widget.onLongPress,
-                onTapDown:
-                    _hasAction ? (_) => _controller.forward() : null,
-                onTapUp:
-                    _hasAction ? (_) => _springBack() : null,
-                onTapCancel:
-                    _hasAction ? _springBack : null,
+                onTapDown: _hasAction ? (_) => _controller.forward() : null,
+                onTapUp: _hasAction ? (_) => _springBack() : null,
+                onTapCancel: _hasAction ? _springBack : null,
                 borderRadius: borderRadius,
                 splashFactory: NoSplash.splashFactory,
                 highlightColor: AppColors.primary.withOpacity(0.05),

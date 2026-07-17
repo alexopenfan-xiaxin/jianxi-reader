@@ -24,10 +24,7 @@ class _MermaidScrollBlocker extends StatefulWidget {
   final MermaidDiagramNode node;
   final MarkdownStyleSheet styleSheet;
 
-  const _MermaidScrollBlocker({
-    required this.node,
-    required this.styleSheet,
-  });
+  const _MermaidScrollBlocker({required this.node, required this.styleSheet});
 
   @override
   State<_MermaidScrollBlocker> createState() => _MermaidScrollBlockerState();
@@ -51,7 +48,8 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
 
   void _measureDiagram() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final renderBox = _diagramKey.currentContext?.findRenderObject() as RenderBox?;
+      final renderBox =
+          _diagramKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null && mounted) {
         final newHeight = renderBox.size.height;
         if (_diagramHeight != newHeight) {
@@ -64,7 +62,11 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
   void _setScale(double value) {
     final nextScale = value.clamp(_minScale, _maxScale).toDouble();
     setState(() => _scale = nextScale);
-    _transformCtrl.value = Matrix4.diagonal3Values(nextScale, nextScale, nextScale);
+    _transformCtrl.value = Matrix4.diagonal3Values(
+      nextScale,
+      nextScale,
+      nextScale,
+    );
   }
 
   void _syncScaleFromGesture() {
@@ -187,7 +189,7 @@ class _MermaidZoomControls extends StatelessWidget {
             icon: Icons.add_rounded,
             tooltip: '放大',
             onPressed: canZoomIn ? onZoomIn : null,
-          )
+          ),
         ],
       ),
     );

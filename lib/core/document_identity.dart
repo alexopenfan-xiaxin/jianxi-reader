@@ -46,7 +46,7 @@ class DocumentIdentityService {
       final id = sourceUri != null && sourceUri.isNotEmpty
           ? sourceIdFor(sourceUri)
           : 'doc_${DateTime.now().microsecondsSinceEpoch}_'
-              '${_random.nextInt(1 << 32).toRadixString(16)}';
+                '${_random.nextInt(1 << 32).toRadixString(16)}';
       final next = Map<String, String>.from(map)..[path] = id;
       await MetadataFileStore.writeJson(_idMapFileName, next);
       _replaceMap(map, next);

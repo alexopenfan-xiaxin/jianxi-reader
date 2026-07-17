@@ -62,7 +62,9 @@ class SearchTextBuilder extends MarkdownWidgetBuilder {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: _PulseSearchMatch(
-              key: ValueKey('search-pulse-${controller.pulseToken}-$matchIndex'),
+              key: ValueKey(
+                'search-pulse-${controller.pulseToken}-$matchIndex',
+              ),
               text: matchText,
               style: styleSheet.textStyle,
             ),
@@ -94,11 +96,7 @@ class SearchTextBuilder extends MarkdownWidgetBuilder {
 }
 
 class _PulseSearchMatch extends StatelessWidget {
-  const _PulseSearchMatch({
-    required this.text,
-    required this.style,
-    super.key,
-  });
+  const _PulseSearchMatch({required this.text, required this.style, super.key});
 
   final String text;
   final TextStyle? style;
@@ -124,7 +122,8 @@ class _PulseSearchMatch extends StatelessWidget {
       },
       child: Text(
         text,
-        style: style?.copyWith(color: Colors.black) ??
+        style:
+            style?.copyWith(color: Colors.black) ??
             const TextStyle(color: Colors.black),
       ),
     );

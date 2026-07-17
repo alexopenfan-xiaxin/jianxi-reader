@@ -17,8 +17,7 @@ String describeDocumentError(Object error) {
   if (text.contains('同名文档已存在')) {
     return '同名文档已存在，请换一个名称';
   }
-  if (text.contains('系统文件选择器没有返回') ||
-      text.contains('系统没有传入可读取')) {
+  if (text.contains('系统文件选择器没有返回') || text.contains('系统没有传入可读取')) {
     return '系统没有返回可读取的文档，请重新选择';
   }
 

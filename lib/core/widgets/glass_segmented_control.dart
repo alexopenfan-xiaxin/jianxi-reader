@@ -111,9 +111,11 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                         Positioned.fill(
                           child: Row(
                             children: [
-                              for (var index = 0;
-                                  index < segments.length;
-                                  index++)
+                              for (
+                                var index = 0;
+                                index < segments.length;
+                                index++
+                              )
                                 Expanded(
                                   child: _GlassSegmentButton<T>(
                                     segment: segments[index],
@@ -152,8 +154,7 @@ class _GlassTrack extends StatelessWidget {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
-        borderColor:
-            dark ? Colors.white.withOpacity(0.34) : Colors.transparent,
+        borderColor: dark ? Colors.white.withOpacity(0.34) : Colors.transparent,
         chromaticEdge: dark,
         edgeHighlight: dark,
         innerHighlight: dark,
@@ -201,8 +202,9 @@ class _GlassThumb extends StatelessWidget {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: AppColors.primary.withOpacity(0.10),
-        borderColor:
-            dark ? AppColors.primary.withOpacity(0.22) : Colors.transparent,
+        borderColor: dark
+            ? AppColors.primary.withOpacity(0.22)
+            : Colors.transparent,
         tintPrimary: dark,
         chromaticEdge: dark,
         edgeHighlight: dark,
@@ -292,11 +294,10 @@ class _GlassSegmentButton<T> extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: color,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
-                          letterSpacing: 0,
-                        ),
+                      color: color,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
                   ),
                 ),
               ],

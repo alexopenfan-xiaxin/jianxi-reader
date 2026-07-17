@@ -43,7 +43,11 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
     final delay = index / totalItems;
     final animation = CurvedAnimation(
       parent: _staggerController,
-      curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0), curve: AppMotion.enter),
+      curve: Interval(
+        delay,
+        (delay + 0.5).clamp(0.0, 1.0),
+        curve: AppMotion.enter,
+      ),
     );
     return FadeTransition(
       opacity: animation,
@@ -59,27 +63,31 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
 
   @override
   Widget build(BuildContext context) {
-    final values = context.select<
-        AppSettingsController,
-        ({
-          ReadingTheme readingTheme,
-          ReadingMargin readingMargin,
-          double readingFontSize,
-          double readingLineHeight,
-          ReadingFontFamily readingFontFamily,
-          String? readingFontFamilyValue,
-          bool liquidGlassEnabled,
-          double readingHorizontalPadding,
-        })>((settings) => (
-          readingTheme: settings.readingTheme,
-          readingMargin: settings.readingMargin,
-          readingFontSize: settings.readingFontSize,
-          readingLineHeight: settings.readingLineHeight,
-          readingFontFamily: settings.readingFontFamily,
-          readingFontFamilyValue: settings.readingFontFamilyValue,
-          liquidGlassEnabled: settings.liquidGlassEnabled,
-          readingHorizontalPadding: settings.readingHorizontalPaddingValue,
-        ));
+    final values = context
+        .select<
+          AppSettingsController,
+          ({
+            ReadingTheme readingTheme,
+            ReadingMargin readingMargin,
+            double readingFontSize,
+            double readingLineHeight,
+            ReadingFontFamily readingFontFamily,
+            String? readingFontFamilyValue,
+            bool liquidGlassEnabled,
+            double readingHorizontalPadding,
+          })
+        >(
+          (settings) => (
+            readingTheme: settings.readingTheme,
+            readingMargin: settings.readingMargin,
+            readingFontSize: settings.readingFontSize,
+            readingLineHeight: settings.readingLineHeight,
+            readingFontFamily: settings.readingFontFamily,
+            readingFontFamilyValue: settings.readingFontFamilyValue,
+            liquidGlassEnabled: settings.liquidGlassEnabled,
+            readingHorizontalPadding: settings.readingHorizontalPaddingValue,
+          ),
+        );
     final settings = context.read<AppSettingsController>();
     final palette = context.palette;
     final readingPalette = settings.readingPalette(
@@ -95,116 +103,138 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.showPreview) ...[
-          _staggerItem(0, _ReadingPreviewPanel(
-            readingPalette: readingPalette,
-            fontSize: values.readingFontSize,
-            lineHeight: values.readingLineHeight,
-            fontFamily: values.readingFontFamilyValue,
-            horizontalPadding: values.readingHorizontalPadding,
-            liquidGlassEnabled: values.liquidGlassEnabled,
-          )),
+          _staggerItem(
+            0,
+            _ReadingPreviewPanel(
+              readingPalette: readingPalette,
+              fontSize: values.readingFontSize,
+              lineHeight: values.readingLineHeight,
+              fontFamily: values.readingFontFamilyValue,
+              horizontalPadding: values.readingHorizontalPadding,
+              liquidGlassEnabled: values.liquidGlassEnabled,
+            ),
+          ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        _staggerItem(widget.showPreview ? 1 : 0, Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingLabel(text: '阅读主题'),
-            const SizedBox(height: AppSpacing.sm),
-            GlassSegmentedControl<ReadingTheme>(
-              segments: ReadingTheme.values.map((theme) {
-                return GlassSegment(
-                  value: theme,
-                  label: theme.label,
-                  selectedIcon: Icons.check_rounded,
-                );
-              }).toList(),
-              value: values.readingTheme,
-              onChanged: settings.setReadingTheme,
-            ),
-          ],
-        )),
+        _staggerItem(
+          widget.showPreview ? 1 : 0,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingLabel(text: '阅读主题'),
+              const SizedBox(height: AppSpacing.sm),
+              GlassSegmentedControl<ReadingTheme>(
+                segments: ReadingTheme.values.map((theme) {
+                  return GlassSegment(
+                    value: theme,
+                    label: theme.label,
+                    selectedIcon: Icons.check_rounded,
+                  );
+                }).toList(),
+                value: values.readingTheme,
+                onChanged: settings.setReadingTheme,
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        _staggerItem(widget.showPreview ? 2 : 1, Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingLabel(text: '页边距'),
-            const SizedBox(height: AppSpacing.sm),
-            GlassSegmentedControl<ReadingMargin>(
-              segments: ReadingMargin.values.map((margin) {
-                return GlassSegment(
-                  value: margin,
-                  label: margin.label,
-                  selectedIcon: Icons.check_rounded,
-                );
-              }).toList(),
-              value: values.readingMargin,
-              onChanged: settings.setReadingMargin,
-            ),
-          ],
-        )),
+        _staggerItem(
+          widget.showPreview ? 2 : 1,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingLabel(text: '页边距'),
+              const SizedBox(height: AppSpacing.sm),
+              GlassSegmentedControl<ReadingMargin>(
+                segments: ReadingMargin.values.map((margin) {
+                  return GlassSegment(
+                    value: margin,
+                    label: margin.label,
+                    selectedIcon: Icons.check_rounded,
+                  );
+                }).toList(),
+                value: values.readingMargin,
+                onChanged: settings.setReadingMargin,
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        _staggerItem(widget.showPreview ? 3 : 2, Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingLabel(text: '字号'),
-            const SizedBox(height: AppSpacing.sm),
-            _ReadingValueSlider(
-              value: values.readingFontSize,
-              min: AppSettingsController.readingFontSizeMin,
-              max: AppSettingsController.readingFontSizeMax,
-              divisions: 28,
-              valueLabel: '${values.readingFontSize.toStringAsFixed(1)} px',
-              presets: AppSettingsController.readingScalePresets
-                  .map((preset) => _ReadingSliderPreset(
+        _staggerItem(
+          widget.showPreview ? 3 : 2,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingLabel(text: '字号'),
+              const SizedBox(height: AppSpacing.sm),
+              _ReadingValueSlider(
+                value: values.readingFontSize,
+                min: AppSettingsController.readingFontSizeMin,
+                max: AppSettingsController.readingFontSizeMax,
+                divisions: 28,
+                valueLabel: '${values.readingFontSize.toStringAsFixed(1)} px',
+                presets: AppSettingsController.readingScalePresets
+                    .map(
+                      (preset) => _ReadingSliderPreset(
                         label: preset.label,
                         value: preset.fontSize,
-                      ))
-                  .toList(),
-              onChanged: settings.setReadingFontSize,
-            ),
-          ],
-        )),
+                      ),
+                    )
+                    .toList(),
+                onChanged: settings.setReadingFontSize,
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        _staggerItem(widget.showPreview ? 4 : 3, Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingLabel(text: '行距'),
-            const SizedBox(height: AppSpacing.sm),
-            _ReadingValueSlider(
-              value: values.readingLineHeight,
-              min: AppSettingsController.readingLineHeightMin,
-              max: AppSettingsController.readingLineHeightMax,
-              divisions: 40,
-              valueLabel: values.readingLineHeight.toStringAsFixed(2),
-              presets: AppSettingsController.readingScalePresets
-                  .map((preset) => _ReadingSliderPreset(
+        _staggerItem(
+          widget.showPreview ? 4 : 3,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingLabel(text: '行距'),
+              const SizedBox(height: AppSpacing.sm),
+              _ReadingValueSlider(
+                value: values.readingLineHeight,
+                min: AppSettingsController.readingLineHeightMin,
+                max: AppSettingsController.readingLineHeightMax,
+                divisions: 40,
+                valueLabel: values.readingLineHeight.toStringAsFixed(2),
+                presets: AppSettingsController.readingScalePresets
+                    .map(
+                      (preset) => _ReadingSliderPreset(
                         label: preset.label,
                         value: preset.lineHeight,
-                      ))
-                  .toList(),
-              onChanged: settings.setReadingLineHeight,
-            ),
-          ],
-        )),
+                      ),
+                    )
+                    .toList(),
+                onChanged: settings.setReadingLineHeight,
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        _staggerItem(widget.showPreview ? 5 : 4, Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingLabel(text: '字体'),
-            const SizedBox(height: AppSpacing.sm),
-            GlassSegmentedControl<ReadingFontFamily>(
-              segments: ReadingFontFamily.values.map((family) {
-                return GlassSegment(
-                  value: family,
-                  label: family.label,
-                  selectedIcon: Icons.check_rounded,
-                );
-              }).toList(),
-              value: values.readingFontFamily,
-              onChanged: settings.setReadingFontFamily,
-            ),
-          ],
-        )),
+        _staggerItem(
+          widget.showPreview ? 5 : 4,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingLabel(text: '字体'),
+              const SizedBox(height: AppSpacing.sm),
+              GlassSegmentedControl<ReadingFontFamily>(
+                segments: ReadingFontFamily.values.map((family) {
+                  return GlassSegment(
+                    value: family,
+                    label: family.label,
+                    selectedIcon: Icons.check_rounded,
+                  );
+                }).toList(),
+                value: values.readingFontFamily,
+                onChanged: settings.setReadingFontFamily,
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
         _staggerItem(
           widget.showPreview ? 6 : 5,
@@ -247,20 +277,20 @@ class _ReadingPreviewPanel extends StatelessWidget {
         Text(
           '简兮简兮，方将万舞。\n\n这是一段 Markdown 正文预览。\n可观察当前主题、字号、行距与页边距。',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontSize: fontSize,
-                height: lineHeight,
-                fontFamily: fontFamily,
-                color: readingPalette.foreground,
-                letterSpacing: 0,
-              ),
+            fontSize: fontSize,
+            height: lineHeight,
+            fontFamily: fontFamily,
+            color: readingPalette.foreground,
+            letterSpacing: 0,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           '预览仅影响阅读页，不改变原文件',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: readingPalette.muted,
-                letterSpacing: 0,
-              ),
+            color: readingPalette.muted,
+            letterSpacing: 0,
+          ),
         ),
       ],
     );
@@ -274,8 +304,9 @@ class _ReadingPreviewPanel extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         color: readingPalette.background.withOpacity(0.42),
-        borderColor:
-            dark ? readingPalette.border.withOpacity(0.55) : Colors.transparent,
+        borderColor: dark
+            ? readingPalette.border.withOpacity(0.55)
+            : Colors.transparent,
         chromaticEdge: dark,
         edgeHighlight: dark,
         innerHighlight: dark,
@@ -308,10 +339,7 @@ class _ReadingPreviewPanel extends StatelessWidget {
 }
 
 class _ReadingSliderPreset {
-  const _ReadingSliderPreset({
-    required this.label,
-    required this.value,
-  });
+  const _ReadingSliderPreset({required this.label, required this.value});
 
   final String label;
   final double value;
@@ -361,10 +389,10 @@ class _ReadingValueSlider extends StatelessWidget {
                 valueLabel,
                 textAlign: TextAlign.right,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: palette.ink,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                    ),
+                  color: palette.ink,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ],

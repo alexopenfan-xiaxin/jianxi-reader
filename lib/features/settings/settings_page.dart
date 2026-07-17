@@ -69,7 +69,8 @@ class _FixedSettingsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final liquidGlass = context.select<AppSettingsController, bool>(
-        (s) => s.liquidGlassEnabled);
+      (s) => s.liquidGlassEnabled,
+    );
     final headerContent = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -85,10 +86,10 @@ class _FixedSettingsHeader extends StatelessWidget {
             child: Text(
               '设置',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
             ),
           ),
           const _SettingsCompanionIcon(),
@@ -242,10 +243,7 @@ class _SettingsHomeIcon extends StatelessWidget {
 }
 
 class _SettingsHomeIconPainter extends CustomPainter {
-  const _SettingsHomeIconPainter({
-    required this.primary,
-    required this.line,
-  });
+  const _SettingsHomeIconPainter({required this.primary, required this.line});
 
   final Color primary;
   final Color line;
@@ -407,9 +405,7 @@ class _ReadingSettingsIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.10),
-        ),
+        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
       ),
       child: const Icon(
         Icons.menu_book_rounded,
@@ -462,9 +458,9 @@ class ReadingSettingsPage extends StatelessWidget {
                       Text(
                         '调整阅读主题、页边距、字号和行距，只影响文档阅读内容。',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: palette.muted,
-                              letterSpacing: 0,
-                            ),
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       const AppCard(
@@ -518,9 +514,9 @@ class _CardTitle extends StatelessWidget {
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: palette.muted,
-                      letterSpacing: 0,
-                    ),
+                  color: palette.muted,
+                  letterSpacing: 0,
+                ),
               ),
             ],
           ),
@@ -536,10 +532,7 @@ bool _isWideSettingsLayout(BuildContext context, BoxConstraints constraints) {
 }
 
 class _SettingsResponsiveCards extends StatelessWidget {
-  const _SettingsResponsiveCards({
-    required this.wide,
-    required this.children,
-  });
+  const _SettingsResponsiveCards({required this.wide, required this.children});
 
   final bool wide;
   final List<Widget> children;

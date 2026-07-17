@@ -88,9 +88,9 @@ class _AppShellState extends State<AppShell> {
     } catch (error) {
       debugPrint('[AppShell] open external document failed: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('打开外部文档失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('打开外部文档失败：$error')));
     }
   }
 
@@ -146,7 +146,8 @@ class _AppShellState extends State<AppShell> {
                     bottom: 0,
                     child: _FloatingBottomNav(
                       currentIndex: _currentIndex,
-                      onChanged: (index) => setState(() => _currentIndex = index),
+                      onChanged: (index) =>
+                          setState(() => _currentIndex = index),
                     ),
                   ),
               ],
@@ -233,7 +234,8 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
       );
     }
 
-    final selectedLeft = _outerPadding +
+    final selectedLeft =
+        _outerPadding +
         widget.currentIndex * _itemWidth +
         _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
     return SafeArea(
@@ -259,14 +261,14 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
           onHorizontalDragEnd: (details) {
             final shouldMoveRight =
                 widget.currentIndex == 0 &&
-                    (_dragOffset > _dragThreshold ||
-                        details.primaryVelocity != null &&
-                            details.primaryVelocity! > 280);
+                (_dragOffset > _dragThreshold ||
+                    details.primaryVelocity != null &&
+                        details.primaryVelocity! > 280);
             final shouldMoveLeft =
                 widget.currentIndex == 1 &&
-                    (_dragOffset < -_dragThreshold ||
-                        details.primaryVelocity != null &&
-                            details.primaryVelocity! < -280);
+                (_dragOffset < -_dragThreshold ||
+                    details.primaryVelocity != null &&
+                        details.primaryVelocity! < -280);
             if (shouldMoveRight) {
               _selectIndex(1);
             } else if (shouldMoveLeft) {
@@ -290,9 +292,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
               children: [
                 const Positioned.fill(child: _NavGlassBase()),
                 AnimatedPositioned(
-                  duration: _isDragging
-                      ? Duration.zero
-                      : AppMotion.normal,
+                  duration: _isDragging ? Duration.zero : AppMotion.normal,
                   curve: AppMotion.release,
                   left: selectedLeft,
                   top: _outerPadding,
@@ -353,10 +353,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
 }
 
 class _LiquidBottomNav extends StatefulWidget {
-  const _LiquidBottomNav({
-    required this.currentIndex,
-    required this.onChanged,
-  });
+  const _LiquidBottomNav({required this.currentIndex, required this.onChanged});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
@@ -378,16 +375,18 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
   @override
   Widget build(BuildContext context) {
     final clampedDrag = _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
-    final selectedLeft = _outerPadding + widget.currentIndex * _itemWidth +
-        clampedDrag;
+    final selectedLeft =
+        _outerPadding + widget.currentIndex * _itemWidth + clampedDrag;
     final dragProgress = (clampedDrag.abs() / _itemWidth).clamp(0.0, 1.0);
     final dragDirection = clampedDrag == 0 ? 0.0 : clampedDrag.sign;
-    final panelOffset = dragDirection *
+    final panelOffset =
+        dragDirection *
         LiquidGlassTokens.floatingBottomBarPanelOffsetMax *
         Curves.easeOutCubic.transform(dragProgress);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final indicatorColor =
-        (dark ? Colors.white : Colors.black).withOpacity(0.10);
+    final indicatorColor = (dark ? Colors.white : Colors.black).withOpacity(
+      0.10,
+    );
     final indicatorBorder = Colors.white.withOpacity(dark ? 0.18 : 0.38);
 
     return SafeArea(
@@ -413,14 +412,14 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
           onHorizontalDragEnd: (details) {
             final shouldMoveRight =
                 widget.currentIndex == 0 &&
-                    (_dragOffset > _dragThreshold ||
-                        details.primaryVelocity != null &&
-                            details.primaryVelocity! > 280);
+                (_dragOffset > _dragThreshold ||
+                    details.primaryVelocity != null &&
+                        details.primaryVelocity! > 280);
             final shouldMoveLeft =
                 widget.currentIndex == 1 &&
-                    (_dragOffset < -_dragThreshold ||
-                        details.primaryVelocity != null &&
-                            details.primaryVelocity! < -280);
+                (_dragOffset < -_dragThreshold ||
+                    details.primaryVelocity != null &&
+                        details.primaryVelocity! < -280);
             if (shouldMoveRight) {
               _selectIndex(1);
             } else if (shouldMoveLeft) {
@@ -567,7 +566,8 @@ class _LiquidBottomNavItem extends StatelessWidget {
           highlightColor: Colors.transparent,
           child: SizedBox(
             width: _LiquidBottomNavState._itemWidth,
-            height: _LiquidBottomNavState._itemHeight -
+            height:
+                _LiquidBottomNavState._itemHeight -
                 _LiquidBottomNavState._outerPadding * 2,
             child: AnimatedScale(
               scale: selected ? 1.08 : 1,
@@ -610,13 +610,12 @@ class _LiquidBottomNavItem extends StatelessWidget {
                     duration: AppMotion.fast,
                     curve: AppMotion.emphasized,
                     style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                          color: foreground,
-                          fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                          height: 1.12,
-                          letterSpacing: 0,
-                        ),
+                      color: foreground,
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      height: 1.12,
+                      letterSpacing: 0,
+                    ),
                     child: Text(
                       label,
                       maxLines: 1,
@@ -664,9 +663,7 @@ class _NavGlassBase extends StatelessWidget {
             decoration: BoxDecoration(
               color: palette.card.withOpacity(0.72),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(
-                color: palette.hairline.withOpacity(0.38),
-              ),
+              border: Border.all(color: palette.hairline.withOpacity(0.38)),
             ),
           ),
         ),
@@ -699,9 +696,7 @@ class _SelectedNavCapsule extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.22),
-              ),
+              border: Border.all(color: AppColors.primary.withOpacity(0.22)),
             ),
           ),
         ),
@@ -741,7 +736,8 @@ class _FloatingNavItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.pill),
           splashFactory: NoSplash.splashFactory,
           child: SizedBox(
-            height: _FloatingBottomNavState._itemHeight -
+            height:
+                _FloatingBottomNavState._itemHeight -
                 _FloatingBottomNavState._outerPadding * 2,
             width: _FloatingBottomNavState._itemWidth,
             child: AnimatedScale(
@@ -760,11 +756,10 @@ class _FloatingNavItem extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: foreground,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                          letterSpacing: 0,
-                        ),
+                      color: foreground,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
                   ),
                 ],
               ),

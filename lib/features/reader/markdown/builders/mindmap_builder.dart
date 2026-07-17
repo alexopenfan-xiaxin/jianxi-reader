@@ -17,7 +17,8 @@ class MindmapNode extends MarkdownNode {
   MindmapNode copyWith({String? code}) => MindmapNode(code ?? this.code);
 
   @override
-  String toString() => 'MindmapNode(code: ${code.length > 40 ? code.substring(0, 40) : code})';
+  String toString() =>
+      'MindmapNode(code: ${code.length > 40 ? code.substring(0, 40) : code})';
 }
 
 class MindmapPlugin extends BlockParserPlugin {
@@ -96,7 +97,10 @@ class MindmapDiagram extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.md),
           border: Border.all(color: context.palette.hairline),
         ),
-        child: Text('无法解析 mindmap', style: Theme.of(context).textTheme.bodyMedium),
+        child: Text(
+          '无法解析 mindmap',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       );
     }
     return LayoutBuilder(
@@ -121,11 +125,7 @@ class MindmapDiagram extends StatelessWidget {
     _parseChildren(lines, 1, 0, children, 0);
     if (children.isEmpty) return null;
 
-    return _MindmapNodeData(
-      text: '',
-      children: children,
-      isRoot: true,
-    );
+    return _MindmapNodeData(text: '', children: children, isRoot: true);
   }
 
   int _parseChildren(
@@ -149,7 +149,10 @@ class MindmapDiagram extends StatelessWidget {
       final content = line.trim();
       var text = content;
 
-      if (text.startsWith('mindmap')) { i++; continue; }
+      if (text.startsWith('mindmap')) {
+        i++;
+        continue;
+      }
 
       var shape = _MindmapShape.none;
       if (text.startsWith('[') && text.endsWith(']')) {
@@ -211,18 +214,27 @@ class _MindmapTree extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: tree.children.map((child) => _buildNode(context, child, isDark, 0)).toList(),
+        children: tree.children
+            .map((child) => _buildNode(context, child, isDark, 0))
+            .toList(),
       );
     }
 
     return _buildNode(context, tree, isDark, 0);
   }
 
-  Widget _buildNode(BuildContext context, _MindmapNodeData node, bool isDark, int depth) {
+  Widget _buildNode(
+    BuildContext context,
+    _MindmapNodeData node,
+    bool isDark,
+    int depth,
+  ) {
     final hasChildren = node.children.isNotEmpty;
 
     return Padding(
-      padding: EdgeInsets.only(left: depth == 0 ? 0 : AppSpacing.lg + depth * 4),
+      padding: EdgeInsets.only(
+        left: depth == 0 ? 0 : AppSpacing.lg + depth * 4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -254,7 +266,12 @@ class _MindmapTree extends StatelessWidget {
                           _MindmapConnector(isDark: isDark),
                           const SizedBox(width: AppSpacing.sm),
                           Flexible(
-                            child: _buildNode(context, child, isDark, depth + 1),
+                            child: _buildNode(
+                              context,
+                              child,
+                              isDark,
+                              depth + 1,
+                            ),
                           ),
                         ],
                       ),

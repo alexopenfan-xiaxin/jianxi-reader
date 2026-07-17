@@ -4,9 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 
-PageRouteBuilder<T> appPageRoute<T>({
-  required WidgetBuilder builder,
-}) {
+PageRouteBuilder<T> appPageRoute<T>({required WidgetBuilder builder}) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) {
       return _EdgeSwipeBackPage(child: builder(context));
@@ -26,10 +24,7 @@ PageRouteBuilder<T> appPageRoute<T>({
 
       return FadeTransition(
         opacity: primary,
-        child: SlideTransition(
-          position: incomingOffset,
-          child: child,
-        ),
+        child: SlideTransition(position: incomingOffset, child: child),
       );
     },
   );
@@ -71,8 +66,8 @@ class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
     if (!_tracking) {
       return;
     }
-    final shouldPop = _dragOffset >= _dismissDistance ||
-        (details.primaryVelocity ?? 0) > 420;
+    final shouldPop =
+        _dragOffset >= _dismissDistance || (details.primaryVelocity ?? 0) > 420;
     _tracking = false;
     if (shouldPop) {
       Navigator.of(context).maybePop();

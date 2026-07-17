@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
 class PerformanceTableBuilder extends MarkdownWidgetBuilder {
@@ -44,11 +44,13 @@ class PerformanceTableBuilder extends MarkdownWidgetBuilder {
     return RepaintBoundary(
       child: LayoutBuilder(
         builder: (buildContext, constraints) {
-          final availableWidth =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 0.0;
+          final availableWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 0.0;
           final tableWidth = columnCount * _minColumnWidth;
-          final minWidth =
-              tableWidth > availableWidth ? tableWidth : availableWidth;
+          final minWidth = tableWidth > availableWidth
+              ? tableWidth
+              : availableWidth;
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: ConstrainedBox(
@@ -121,14 +123,12 @@ class PerformanceTableBuilder extends MarkdownWidgetBuilder {
 
     return Container(
       constraints: const BoxConstraints(minWidth: _minColumnWidth),
-      padding: styleSheet.tableCellPadding ??
+      padding:
+          styleSheet.tableCellPadding ??
           const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       alignment: _alignmentFor(alignment),
       color: isHeader ? styleSheet.tableHeaderDecoration?.color : null,
-      child: DefaultTextStyle.merge(
-        style: textStyle,
-        child: child,
-      ),
+      child: DefaultTextStyle.merge(style: textStyle, child: child),
     );
   }
 

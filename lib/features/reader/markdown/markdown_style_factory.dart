@@ -88,18 +88,13 @@ class MarkdownStyleFactory {
       ),
       codeBlockPadding: const EdgeInsets.all(AppSpacing.md),
       tableBorder: TableBorder.all(color: readingPalette.border),
-      tableHeaderDecoration: BoxDecoration(
-        color: readingPalette.surface,
-      ),
+      tableHeaderDecoration: BoxDecoration(color: readingPalette.surface),
       tableHeaderStyle: (textTheme.titleMedium ?? const TextStyle()).copyWith(
         color: readingPalette.foreground,
         fontWeight: FontWeight.w700,
       ),
       tableCellStyle: bodyStyle.copyWith(fontSize: 15),
-      tableCellPadding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      tableCellPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       horizontalRuleColor: readingPalette.border,
       horizontalRuleThickness: 1,
       linkStyle: bodyStyle.copyWith(color: readingPalette.link),

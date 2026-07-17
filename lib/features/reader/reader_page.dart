@@ -201,9 +201,12 @@ class _ReaderPageState extends State<ReaderPage> {
         setState(() => _progressHintVisible = false);
         // Remove widget after fade-out animation completes.
         _hideProgressDelayedTimer?.cancel();
-        _hideProgressDelayedTimer = Timer(const Duration(milliseconds: 300), () {
-          if (mounted) setState(() => _showProgressHint = false);
-        });
+        _hideProgressDelayedTimer = Timer(
+          const Duration(milliseconds: 300),
+          () {
+            if (mounted) setState(() => _showProgressHint = false);
+          },
+        );
       }
     });
   }
@@ -248,16 +251,17 @@ class _ReaderPageState extends State<ReaderPage> {
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final appBarHeight = landscape ? 48.0 : kToolbarHeight;
     final topPadding = MediaQuery.of(context).padding.top + appBarHeight;
-    final settings = context.select<AppSettingsController, _ReaderDisplaySettings>(
-      (settings) => (
-        readingTheme: settings.readingTheme,
-        liquidGlassEnabled: settings.liquidGlassEnabled,
-        fontSize: settings.readingFontSizeValue,
-        lineHeight: settings.readingLineHeightValue,
-        horizontalPadding: settings.readingHorizontalPaddingValue,
-        fontFamily: settings.readingFontFamilyValue,
-      ),
-    );
+    final settings = context
+        .select<AppSettingsController, _ReaderDisplaySettings>(
+          (settings) => (
+            readingTheme: settings.readingTheme,
+            liquidGlassEnabled: settings.liquidGlassEnabled,
+            fontSize: settings.readingFontSizeValue,
+            lineHeight: settings.readingLineHeightValue,
+            horizontalPadding: settings.readingHorizontalPaddingValue,
+            fontFamily: settings.readingFontFamilyValue,
+          ),
+        );
     final readingPalette = context.read<AppSettingsController>().readingPalette(
       defaultBackground: palette.parchment,
       defaultForeground: palette.ink,
@@ -283,8 +287,9 @@ class _ReaderPageState extends State<ReaderPage> {
         toolbarHeight: appBarHeight,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor:
-            showGlassAppBar ? Colors.transparent : readingPalette.background,
+        backgroundColor: showGlassAppBar
+            ? Colors.transparent
+            : readingPalette.background,
         foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
         flexibleSpace: showGlassAppBar
@@ -330,7 +335,8 @@ class _ReaderPageState extends State<ReaderPage> {
                         _document.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               color: readingPalette.foreground,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0,
@@ -352,8 +358,9 @@ class _ReaderPageState extends State<ReaderPage> {
                 ),
                 IconButton(
                   tooltip: '下一个',
-                  onPressed:
-                      _searchController.hasMatches ? _searchController.next : null,
+                  onPressed: _searchController.hasMatches
+                      ? _searchController.next
+                      : null,
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 ),
                 IconButton(
@@ -497,13 +504,15 @@ class _ReaderPageState extends State<ReaderPage> {
       }
       final opened = await _libraryController.markDocumentOpened(refreshed);
       // Record reading history with stable document ID.
-      DocumentIdentityService.getOrCreateId(path: opened.path).then((docId) {
-        ReadingHistoryService.record(documentId: docId).catchError((e) {
-          debugPrint('[ReaderPage] record history failed: $e');
-        });
-      }).catchError((e) {
-        debugPrint('[ReaderPage] get document id failed: $e');
-      });
+      DocumentIdentityService.getOrCreateId(path: opened.path)
+          .then((docId) {
+            ReadingHistoryService.record(documentId: docId).catchError((e) {
+              debugPrint('[ReaderPage] record history failed: $e');
+            });
+          })
+          .catchError((e) {
+            debugPrint('[ReaderPage] get document id failed: $e');
+          });
       if (mounted) {
         _isHtmlDocument = opened.type == DocumentType.html;
         setState(() {
@@ -616,9 +625,10 @@ class _ReaderPageState extends State<ReaderPage> {
       // Find current heading as bookmark title.
       String title = _document.name;
       if (_tocEntries.isNotEmpty) {
-        final activeIndex = (ratio * _tocEntries.length)
-            .floor()
-            .clamp(0, _tocEntries.length - 1);
+        final activeIndex = (ratio * _tocEntries.length).floor().clamp(
+          0,
+          _tocEntries.length - 1,
+        );
         title = _tocEntries[activeIndex].title;
       }
       await BookmarkService.add(
@@ -627,15 +637,15 @@ class _ReaderPageState extends State<ReaderPage> {
         title: title,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已添加书签')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已添加书签')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加书签失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('添加书签失败：$e')));
       }
     }
   }
@@ -696,10 +706,9 @@ class _ReaderMenuTile extends StatelessWidget {
       leading: Icon(icon, color: color),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              letterSpacing: 0,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(color: color, letterSpacing: 0),
       ),
       onTap: () => Navigator.of(context).pop(action),
     );
@@ -735,9 +744,7 @@ class _ReaderProgressBar extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: progress,
                 heightFactor: 1,
-                child: ColoredBox(
-                  color: AppColors.primary.withOpacity(0.70),
-                ),
+                child: ColoredBox(color: AppColors.primary.withOpacity(0.70)),
               ),
             ),
           ),
@@ -769,10 +776,9 @@ class _ReaderSearchField extends StatelessWidget {
       focusNode: focusNode,
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: foreground,
-            letterSpacing: 0,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(color: foreground, letterSpacing: 0),
       decoration: const InputDecoration(
         hintText: '搜索当前文档',
         border: InputBorder.none,
@@ -804,18 +810,18 @@ class _ReaderSearchCount extends StatelessWidget {
     final label = controller.hasQuery && !controller.hasMatches
         ? '无结果'
         : controller.hasQuery
-            ? '${controller.currentIndex + 1}/${controller.matchCount}'
-            : '0/0';
+        ? '${controller.currentIndex + 1}/${controller.matchCount}'
+        : '0/0';
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         child: Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).appBarTheme.foregroundColor,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+            color: Theme.of(context).appBarTheme.foregroundColor,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );
@@ -858,31 +864,31 @@ class _ReaderContent extends StatelessWidget {
 
     return switch (document.type) {
       DocumentType.markdown => MarkdownViewer(
-          key: markdownViewKey,
-          file: file,
-          fontSize: settings.fontSize,
-          lineHeight: settings.lineHeight,
-          readingPalette: readingPalette,
-          horizontalPadding: settings.horizontalPadding,
-          scrollController: scrollController,
-          topPadding: topPadding,
-          searchController: searchController,
-          fontFamily: settings.fontFamily,
-          onTocChanged: onTocChanged,
-        ),
+        key: markdownViewKey,
+        file: file,
+        fontSize: settings.fontSize,
+        lineHeight: settings.lineHeight,
+        readingPalette: readingPalette,
+        horizontalPadding: settings.horizontalPadding,
+        scrollController: scrollController,
+        topPadding: topPadding,
+        searchController: searchController,
+        fontFamily: settings.fontFamily,
+        onTocChanged: onTocChanged,
+      ),
       DocumentType.html => HtmlDocumentView(
-          key: htmlViewKey,
-          file: file,
-          fontSize: settings.fontSize,
-          lineHeight: settings.lineHeight,
-          readingPalette: readingPalette,
-          horizontalPadding: settings.horizontalPadding,
-          topPadding: topPadding,
-          searchController: searchController,
-          onScroll: onHtmlScroll,
-          onPageReady: onHtmlPageReady,
-          onTocChanged: onTocChanged,
-        ),
+        key: htmlViewKey,
+        file: file,
+        fontSize: settings.fontSize,
+        lineHeight: settings.lineHeight,
+        readingPalette: readingPalette,
+        horizontalPadding: settings.horizontalPadding,
+        topPadding: topPadding,
+        searchController: searchController,
+        onScroll: onHtmlScroll,
+        onPageReady: onHtmlPageReady,
+        onTocChanged: onTocChanged,
+      ),
     };
   }
 }
@@ -911,9 +917,7 @@ class _ReadingProgressHint extends StatelessWidget {
           decoration: BoxDecoration(
             color: readingPalette.surface.withOpacity(0.92),
             borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(
-              color: readingPalette.border.withOpacity(0.40),
-            ),
+            border: Border.all(color: readingPalette.border.withOpacity(0.40)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -986,8 +990,9 @@ void showReadingDisplaySheet(BuildContext context) {
     showDragHandle: !isLiquidGlass,
     isScrollControlled: true,
     backgroundColor: isLiquidGlass ? Colors.transparent : context.palette.card,
-    barrierColor:
-        isLiquidGlass ? Colors.black.withOpacity(0.14) : Colors.black54,
+    barrierColor: isLiquidGlass
+        ? Colors.black.withOpacity(0.14)
+        : Colors.black54,
     sheetAnimationStyle: const AnimationStyle(
       duration: AppMotion.normal,
       reverseDuration: AppMotion.fast,
@@ -1053,17 +1058,14 @@ class _ReadingDisplaySheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '阅读显示',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text('阅读显示', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       '这些设置只影响阅读内容，不改变应用整体主题。',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.palette.muted,
-                            letterSpacing: 0,
-                          ),
+                        color: context.palette.muted,
+                        letterSpacing: 0,
+                      ),
                     ),
                   ],
                 ),

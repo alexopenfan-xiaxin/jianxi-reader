@@ -165,7 +165,8 @@ class _SyntaxHighlightCodeBlockWidgetState
     final bgColor = widget.styleSheet.codeBlockDecoration?.color;
     final isDarkBg = bgColor != null && bgColor.computeLuminance() < 0.5;
     return (widget.styleSheet.codeBlockStyle ?? const TextStyle()).copyWith(
-      color: widget.styleSheet.codeBlockStyle?.color ??
+      color:
+          widget.styleSheet.codeBlockStyle?.color ??
           (isDarkBg ? const Color(0xFFE0E0E0) : const Color(0xFF1E1E1E)),
     );
   }
@@ -253,10 +254,7 @@ class _SyntaxHighlightCodeBlockWidgetState
           TextSpan(text: requestMatch.group(1), style: theme['keyword']),
         );
         spans.add(
-          TextSpan(
-            text: ' ${requestMatch.group(2)}',
-            style: theme['string'],
-          ),
+          TextSpan(text: ' ${requestMatch.group(2)}', style: theme['string']),
         );
       } else if (responseMatch != null) {
         spans.add(TextSpan(text: responseMatch.group(1)));
@@ -276,9 +274,7 @@ class _SyntaxHighlightCodeBlockWidgetState
           TextSpan(text: headerMatch.group(1), style: theme['attribute']),
         );
         spans.add(
-          TextSpan(
-            text: '${headerMatch.group(2)}${headerMatch.group(3)}',
-          ),
+          TextSpan(text: '${headerMatch.group(2)}${headerMatch.group(3)}'),
         );
       } else {
         spans.add(TextSpan(text: line));
@@ -290,10 +286,7 @@ class _SyntaxHighlightCodeBlockWidgetState
     return TextSpan(style: _codeTextStyle(), children: spans);
   }
 
-  List<TextSpan> _convertNodes(
-    List<Node> nodes,
-    Map<String, TextStyle> theme,
-  ) {
+  List<TextSpan> _convertNodes(List<Node> nodes, Map<String, TextStyle> theme) {
     return [
       for (final node in nodes)
         if (node.value != null)
@@ -306,10 +299,7 @@ class _SyntaxHighlightCodeBlockWidgetState
     ];
   }
 
-  TextStyle? _nodeStyle(
-    String? className,
-    Map<String, TextStyle> theme,
-  ) {
+  TextStyle? _nodeStyle(String? className, Map<String, TextStyle> theme) {
     if (className == null) return null;
     final alias = _themeAliases[className];
     return theme[className] ?? (alias == null ? null : theme[alias]);
@@ -383,7 +373,8 @@ class _SyntaxHighlightCodeBlockWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final hasToolbar = widget.showLanguageTag && widget.language != null ||
+    final hasToolbar =
+        widget.showLanguageTag && widget.language != null ||
         widget.showCopyButton;
 
     return RepaintBoundary(
@@ -410,10 +401,9 @@ class _SyntaxHighlightCodeBlockWidgetState
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.3),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -452,10 +442,8 @@ class _SyntaxHighlightCodeBlockWidgetState
                                   size: 16,
                                   color: _copied
                                       ? Colors.green[700]
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.6),
+                                      : Theme.of(context).colorScheme.onSurface
+                                            .withOpacity(0.6),
                                 ),
                                 if (_copied) ...[
                                   const SizedBox(width: 4),

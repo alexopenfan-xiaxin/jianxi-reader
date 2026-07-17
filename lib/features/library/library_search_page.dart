@@ -58,8 +58,9 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                               height: 52,
                               decoration: BoxDecoration(
                                 color: palette.dividerSoft,
-                                borderRadius:
-                                    BorderRadius.circular(AppRadii.pill),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.pill,
+                                ),
                               ),
                               child: _LibrarySearchTextField(
                                 controller: _controller,
@@ -86,9 +87,9 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                 Text(
                   '搜索指定标签',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: palette.muted,
-                        letterSpacing: 0,
-                      ),
+                    color: palette.muted,
+                    letterSpacing: 0,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _SearchTagWrap(controller: controller),
@@ -96,9 +97,9 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                 Text(
                   '找到 ${controller.documents.length} 个文档',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: palette.muted,
-                        letterSpacing: 0,
-                      ),
+                    color: palette.muted,
+                    letterSpacing: 0,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 if (controller.documents.isEmpty)
@@ -138,9 +139,9 @@ class _SearchEmptyState extends StatelessWidget {
             child: Text(
               hasQuery ? '没有找到匹配的文档' : '输入文件名、标签、类型或路径进行搜索',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.palette.muted,
-                    letterSpacing: 0,
-                  ),
+                color: context.palette.muted,
+                letterSpacing: 0,
+              ),
             ),
           ),
         ],
@@ -299,9 +300,9 @@ class _SearchResultTile extends StatelessWidget {
           Text(
             _documentSummary(document),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.palette.muted,
-                  letterSpacing: 0,
-                ),
+              color: context.palette.muted,
+              letterSpacing: 0,
+            ),
           ),
         ],
       ),

@@ -149,7 +149,9 @@ Future<TextSpan> _renderCode(
       .widgetList<Text>(find.byType(Text))
       .map((widget) => widget.textSpan)
       .whereType<TextSpan>()
-      .firstWhere((span) => span.toPlainText().contains(code.split('\n').first));
+      .firstWhere(
+        (span) => span.toPlainText().contains(code.split('\n').first),
+      );
 }
 
 Set<Color> _tokenColors(TextSpan span) {

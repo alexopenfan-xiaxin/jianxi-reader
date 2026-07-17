@@ -200,9 +200,7 @@ class SmartScrollbarState extends State<SmartScrollbar> {
       data: ScrollbarThemeData(
         thumbVisibility: WidgetStatePropertyAll<bool>(_isFastScrolling),
         trackVisibility: WidgetStatePropertyAll<bool>(_isFastScrolling),
-        thickness: WidgetStatePropertyAll<double>(
-          _isFastScrolling ? 8.0 : 4.0,
-        ),
+        thickness: WidgetStatePropertyAll<double>(_isFastScrolling ? 8.0 : 4.0),
         thumbColor: WidgetStatePropertyAll<Color?>(thumbColor),
         trackColor: WidgetStatePropertyAll<Color?>(trackColor),
         trackBorderColor: WidgetStatePropertyAll<Color?>(Colors.transparent),
