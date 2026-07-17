@@ -7,7 +7,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/alexopenfan-xiaxin/jianxi-reader?style=flat-square&labelColor=ffffff&color=007AFF" alt="最新版本" />
-  <img src="https://img.shields.io/badge/Android-10.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 10.0+" />
+  <img src="https://img.shields.io/badge/Android-7.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 7.0+" />
   <img src="https://img.shields.io/badge/Flutter-3.44-40D0FD?style=flat-square&logo=flutter&logoColor=white" alt="Flutter" />
   <img src="https://img.shields.io/badge/License-MIT-FF3B30?style=flat-square" alt="MIT" />
   <img src="https://img.shields.io/github/stars/alexopenfan-xiaxin/jianxi-reader?style=flat-square&color=FF9500&labelColor=ffffff" alt="Stars" />
@@ -48,7 +48,7 @@
 | 项目 | 说明 |
 | --- | --- |
 | 最新版本 | [GitHub Releases](https://github.com/alexopenfan-xiaxin/jianxi-reader/releases/latest) |
-| 系统要求 | Android 5.0+ / API 21+ |
+| 系统要求 | Android 7.0+ / API 24+ |
 | 推荐系统 | Android 12+，可获得更完整的体验 |
 | CPU 架构 | ARM64（v8a），64 位设备 |
 
@@ -74,7 +74,10 @@
 
 ```bash
 flutter clean
-flutter pub get
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze --fatal-infos
+flutter test
 flutter build apk --release --target-platform android-arm64 --split-per-abi
 ```
 

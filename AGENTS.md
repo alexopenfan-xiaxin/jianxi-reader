@@ -59,17 +59,23 @@ lib/
 ## Build & Run
 ```bash
 flutter clean
-flutter pub get
-flutter analyze
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze --fatal-infos
+flutter test
 flutter build apk --release --target-platform android-arm64 --split-per-abi
 # Output: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk (~10MB)
 ```
 
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
+CI uses Flutter 3.44 on pushes to `main` / `test` and on pull requests. It
+enforces the lockfile, formatting, analysis, and the full Flutter test suite.
+Third-party actions are pinned to immutable commit SHAs.
+
 ## Version
-- `pubspec.yaml`: `2.8.6+186` (versionName = 2.8.6, versionCode = 186)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=186`
+- `pubspec.yaml`: `2.8.7+187` (versionName = 2.8.7, versionCode = 187)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=187`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
