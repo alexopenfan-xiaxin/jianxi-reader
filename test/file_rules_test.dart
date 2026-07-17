@@ -96,6 +96,15 @@ void main() {
 
       expect(await ReadingProgressService.loadProgress('/tmp/a.md'), isNull);
     });
+
+    test('serializes rapid progress writes in invocation order', () async {
+      final first = ReadingProgressService.saveProgress('/tmp/a.md', 0.2);
+      final second = ReadingProgressService.saveProgress('/tmp/a.md', 0.8);
+
+      await Future.wait([first, second]);
+
+      expect(await ReadingProgressService.loadProgress('/tmp/a.md'), 0.8);
+    });
   });
 
   group('DocumentFileService', () {

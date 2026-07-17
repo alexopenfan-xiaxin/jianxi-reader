@@ -18,6 +18,12 @@ import 'toc_service.dart';
 
 /// Top-level function for [compute] to run HTML styling in an isolate.
 String _buildHtmlInIsolate(Map<String, dynamic> args) {
+  final file = File(args['path'] as String);
+  final fileSize = file.lengthSync();
+  if (fileSize > DocumentFileRules.maxReadableBytes) {
+    throw FileSystemException('文档过大', file.path);
+  }
+  final rawHtml = file.readAsStringSync();
   final palette = ReadingPalette(
     background: Color(args['bg'] as int),
     foreground: Color(args['fg'] as int),
@@ -28,7 +34,7 @@ String _buildHtmlInIsolate(Map<String, dynamic> args) {
     codeBackground: Color(args['codeBg'] as int),
   );
   return HtmlStyler.buildAssimilatedHtml(
-    args['rawHtml'] as String,
+    rawHtml,
     fontSize: args['fontSize'] as double,
     lineHeight: args['lineHeight'] as double,
     readingPalette: palette,
@@ -191,6 +197,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   if (window.__jianxiScrollBridge) return;
   window.__jianxiScrollBridge = true;
   var lastRatio = -1;
+  var framePending = false;
   function sendRatio() {
     var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
     var ratio = maxScroll > 0 ? (window.scrollY / maxScroll) : 0;
@@ -202,10 +209,21 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       }
     }
   }
-  window.addEventListener('scroll', sendRatio, {passive: true});
-  // Polling fallback: ensures scroll events fire even if the native
-  // scroll listener is not triggered by certain WebView implementations.
-  setInterval(sendRatio, 300);
+  function scheduleRatio() {
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(function() {
+      framePending = false;
+      sendRatio();
+    });
+  }
+  window.addEventListener('scroll', scheduleRatio, {passive: true});
+  window.addEventListener('resize', scheduleRatio, {passive: true});
+  if (typeof ResizeObserver !== 'undefined') {
+    var resizeObserver = new ResizeObserver(scheduleRatio);
+    resizeObserver.observe(document.documentElement);
+    if (document.body) resizeObserver.observe(document.body);
+  }
   // Send initial position.
   sendRatio();
 })();
@@ -307,11 +325,10 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       if (fileSize > DocumentFileRules.maxReadableBytes) {
         throw FileSystemException('文档过大', widget.file.path);
       }
-      final rawHtml = await widget.file.readAsString();
       const isolateThreshold = 50 * 1024; // 50 KB
-      final html = rawHtml.length > isolateThreshold
+      final html = fileSize > isolateThreshold
           ? await compute(_buildHtmlInIsolate, {
-              'rawHtml': rawHtml,
+              'path': widget.file.path,
               'fontSize': widget.fontSize,
               'lineHeight': widget.lineHeight,
               'bg': widget.readingPalette.background.toARGB32(),
@@ -325,7 +342,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
               'topPadding': widget.topPadding,
             })
           : HtmlStyler.buildAssimilatedHtml(
-              rawHtml,
+              await widget.file.readAsString(),
               fontSize: widget.fontSize,
               lineHeight: widget.lineHeight,
               readingPalette: widget.readingPalette,

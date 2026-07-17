@@ -167,7 +167,7 @@ class _ReaderPageState extends State<ReaderPage> {
     );
   }
 
-  void _saveProgressNow() {
+  Future<void> _saveProgressNow() async {
     double? ratio;
     if (_isHtmlDocument) {
       ratio = _htmlScrollRatio;
@@ -178,7 +178,11 @@ class _ReaderPageState extends State<ReaderPage> {
       ratio = position.pixels / position.maxScrollExtent;
     }
     if (ratio == null) return;
-    ReadingProgressService.saveProgress(_document.path, ratio);
+    try {
+      await ReadingProgressService.saveProgress(_document.path, ratio);
+    } catch (error) {
+      debugPrint('[ReaderPage] save reading progress failed: $error');
+    }
   }
 
   Future<void> _loadSavedProgress() async {

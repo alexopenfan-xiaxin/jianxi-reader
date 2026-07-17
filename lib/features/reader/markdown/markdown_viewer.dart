@@ -122,11 +122,16 @@ class MarkdownViewer extends StatefulWidget {
 
 Future<Map<String, Object>> _readMarkdownSnapshot(String path) async {
   final file = File(path);
+  final initialSize = await file.length();
+  if (initialSize > DocumentFileRules.maxReadableBytes) {
+    throw FileSystemException('文档过大', path);
+  }
   final raw = await file.readAsString();
-  final modified = await file.lastModified();
+  final stat = await file.stat();
   return {
     'data': preprocessMarkdown(raw),
-    'modified': modified.millisecondsSinceEpoch,
+    'modified': stat.modified.millisecondsSinceEpoch,
+    'size': stat.size,
   };
 }
 
@@ -151,6 +156,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
   final Map<int, GlobalKey> _headingKeys = {};
   bool _isReloading = false;
   bool _pendingReload = false;
+  bool _forceReload = false;
   int? _lastKnownSize;
 
   List<_DocumentSection> _sections = const [];
@@ -169,7 +175,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
     _builderRegistry = _createBuilderRegistry();
     widget.searchController?.addListener(_handleSearchChanged);
     widget.scrollController?.addListener(_onScroll);
-    _loadFile();
+    _guardedLoadFile();
     EmojiService.load().then((map) {
       if (mounted) {
         setState(() {
@@ -178,17 +184,12 @@ class MarkdownViewerState extends State<MarkdownViewer>
         });
       }
     });
-    _fileWatchTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _checkFileChanged(),
-    );
-    _startFileWatch();
+    _startFileMonitoring();
   }
 
   @override
   void dispose() {
-    _fileWatchTimer?.cancel();
-    _fileWatchSub?.cancel();
+    _stopFileMonitoring();
     _searchDebounce?.cancel();
     _debounceReloadTimer?.cancel();
     widget.scrollController?.removeListener(_onScroll);
@@ -198,30 +199,42 @@ class MarkdownViewerState extends State<MarkdownViewer>
   }
 
   void _startFileWatch() {
-    _fileWatchSub?.cancel();
+    final previousSubscription = _fileWatchSub;
+    _fileWatchSub = null;
+    previousSubscription?.cancel();
     try {
-      _fileWatchSub = widget.file.watch().listen(
+      late final StreamSubscription<FileSystemEvent> subscription;
+      subscription = widget.file.watch().listen(
         (event) {
-          if (event.type == FileSystemEvent.modify) {
-            debugPrint('[MarkdownViewer] file watch event, scheduling reload');
-            try {
-              _scheduleReload();
-            } catch (e) {
-              debugPrint('[MarkdownViewer] error in _scheduleReload: $e');
-            }
+          debugPrint('[MarkdownViewer] file watch event, scheduling reload');
+          try {
+            _scheduleReload(force: true);
+          } catch (e) {
+            debugPrint('[MarkdownViewer] error in _scheduleReload: $e');
           }
         },
         onError: (e) {
           debugPrint('[MarkdownViewer] file watch error: $e');
-          _fileWatchSub = null;
+          if (identical(_fileWatchSub, subscription)) {
+            _fileWatchSub = null;
+          }
+        },
+        onDone: () {
+          if (identical(_fileWatchSub, subscription)) {
+            _fileWatchSub = null;
+          }
         },
       );
+      _fileWatchSub = subscription;
     } catch (e) {
       debugPrint('[MarkdownViewer] file watch not supported: $e');
     }
   }
 
-  void _scheduleReload() {
+  void _scheduleReload({bool force = false}) {
+    if (force) {
+      _forceReload = true;
+    }
     _debounceReloadTimer?.cancel();
     _debounceReloadTimer = Timer(
       const Duration(milliseconds: 500),
@@ -250,6 +263,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkFileChanged();
+      _startFileMonitoring();
+    } else {
+      _stopFileMonitoring();
     }
   }
 
@@ -269,19 +285,30 @@ class MarkdownViewerState extends State<MarkdownViewer>
     if (oldWidget.onTocChanged != widget.onTocChanged && _data != null) {
       _notifyTocChanged(_fullData ?? _data!);
     }
-    if (oldWidget.file.path != widget.file.path ||
-        oldWidget.fontSize != widget.fontSize ||
-        oldWidget.lineHeight != widget.lineHeight) {
-      _loadFile();
+    if (oldWidget.file.path != widget.file.path) {
+      _lastModified = null;
+      _lastKnownSize = null;
+      _forceReload = true;
+      _startFileMonitoring();
+      _guardedLoadFile();
     }
   }
 
   Future<void> _checkFileChanged() async {
     try {
-      if (!await widget.file.exists()) return;
-      final modified = await widget.file.lastModified();
-      if (_lastModified != null && modified.isAfter(_lastModified!)) {
-        debugPrint('[MarkdownViewer] file changed, scheduling reload (${widget.file.path})');
+      final stat = await widget.file.stat();
+      if (stat.type == FileSystemEntityType.notFound) {
+        if (_error == null) {
+          _scheduleReload();
+        }
+        return;
+      }
+      if (_lastModified != null &&
+          (stat.modified != _lastModified || stat.size != _lastKnownSize)) {
+        debugPrint(
+          '[MarkdownViewer] file changed, scheduling reload '
+          '(${widget.file.path})',
+        );
         _scheduleReload();
       }
     } catch (e) {
@@ -290,29 +317,45 @@ class MarkdownViewerState extends State<MarkdownViewer>
   }
 
   Future<void> _loadFile() async {
+    final file = widget.file;
+    final filePath = file.path;
+    final forceReload = _forceReload;
+    _forceReload = false;
     try {
       // Check file fingerprint before doing expensive work.
-      final fileModified = await widget.file.lastModified();
-      final fileSize = await widget.file.length();
-      if (fileSize > DocumentFileRules.maxReadableBytes) {
-        throw FileSystemException('文档过大', widget.file.path);
+      final stat = await file.stat();
+      if (stat.type == FileSystemEntityType.notFound) {
+        throw FileSystemException('文档不存在', filePath);
       }
-      if (_lastModified != null &&
+      final fileModified = stat.modified;
+      final fileSize = stat.size;
+      if (fileSize > DocumentFileRules.maxReadableBytes) {
+        throw FileSystemException('文档过大', filePath);
+      }
+      if (!forceReload &&
+          _lastModified != null &&
           _lastKnownSize != null &&
           fileModified == _lastModified! &&
           fileSize == _lastKnownSize!) {
         debugPrint('[MarkdownViewer] file unchanged, skipping reload');
         return;
       }
-      final snapshot = await compute(_readMarkdownSnapshot, widget.file.path);
+      final snapshot = await compute(_readMarkdownSnapshot, filePath);
       final data = snapshot['data']! as String;
       final modified = DateTime.fromMillisecondsSinceEpoch(
         snapshot['modified']! as int,
       );
+      final snapshotSize = snapshot['size']! as int;
+
+      if (!mounted || widget.file.path != filePath) {
+        return;
+      }
 
       // Split into sections for progressive rendering (only for large files > 1MB).
-      final useSectionRendering = fileSize > 1048576; // 1 MB
-      final sections = useSectionRendering ? _splitIntoSections(data) : <_DocumentSection>[];
+      final useSectionRendering = snapshotSize > 1048576; // 1 MB
+      final sections = useSectionRendering
+          ? _splitIntoSections(data)
+          : <_DocumentSection>[];
       final initialCount = sections.length <= _initialSectionCount
           ? sections.length
           : _initialSectionCount;
@@ -321,26 +364,24 @@ class MarkdownViewerState extends State<MarkdownViewer>
           ? data
           : sections.sublist(0, initialCount).map((s) => s.content).join();
 
-      if (mounted) {
-        setState(() {
-          _fullData = data;
-          _sections = sections;
-          _visibleSectionCount = initialCount;
-          _allSectionsVisible = allVisible;
-          _data = displayData;
-          _error = null;
-          _contentVersion++;
-          _cachedSearchText = null;
-        });
-      }
+      setState(() {
+        _fullData = data;
+        _sections = sections;
+        _visibleSectionCount = initialCount;
+        _allSectionsVisible = allVisible;
+        _data = displayData;
+        _error = null;
+        _contentVersion++;
+        _cachedSearchText = null;
+      });
       _lastModified = modified;
-      _lastKnownSize = fileSize;
+      _lastKnownSize = snapshotSize;
       // Always generate TOC from full text for complete navigation.
       _notifyTocChanged(data);
       _rebuildSearchTextCache();
       _updateSearchMatches();
     } catch (e) {
-      if (mounted) {
+      if (mounted && widget.file.path == filePath) {
         setState(() => _error = '读取 Markdown 失败：$e');
       }
     }
@@ -819,6 +860,30 @@ class MarkdownViewerState extends State<MarkdownViewer>
       debugPrint('[MarkdownViewer] open link failed: $error');
       _showLinkMessage('无法打开链接');
     }
+  }
+
+  void _startFileMonitoring() {
+    _fileWatchTimer?.cancel();
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    if (lifecycleState != null &&
+        lifecycleState != AppLifecycleState.resumed) {
+      _fileWatchTimer = null;
+      _fileWatchSub?.cancel();
+      _fileWatchSub = null;
+      return;
+    }
+    _fileWatchTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _checkFileChanged(),
+    );
+    _startFileWatch();
+  }
+
+  void _stopFileMonitoring() {
+    _fileWatchTimer?.cancel();
+    _fileWatchTimer = null;
+    _fileWatchSub?.cancel();
+    _fileWatchSub = null;
   }
 
   void _showLinkMessage(String message) {
