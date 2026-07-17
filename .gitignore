@@ -36,10 +36,14 @@ google-services.json
 
 # Flutter build cache
 .dart_tool/
-!.dart_tool/package_config.json
 
-# Flutter generated.flutter-plugins.flutter-plugins-dependencies.packages.pub-cache/
-.flutter-plugins*.metadata
+# Flutter generated plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.flutter-plugins*
+.metadata
+
 # Windows ephemeral
 windows/flutter/
 
