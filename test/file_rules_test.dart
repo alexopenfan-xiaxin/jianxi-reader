@@ -1,17 +1,36 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jianxi_reader/core/bookmark_service.dart';
 import 'package:jianxi_reader/core/document_error_describer.dart';
 import 'package:jianxi_reader/core/document_file_service.dart';
+import 'package:jianxi_reader/core/document_identity.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
+import 'package:jianxi_reader/core/metadata_file_store.dart';
+import 'package:jianxi_reader/core/reading_history_service.dart';
 import 'package:jianxi_reader/core/reading_progress_service.dart';
 import 'package:jianxi_reader/features/library/document_entry.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  late Directory metadataDirectory;
+
   setUp(() {
+    metadataDirectory = Directory.systemTemp.createTempSync('jianxi_metadata_');
+    MetadataFileStore.setBaseDirectoryForTesting(metadataDirectory);
+    BookmarkService.clearCache();
+    DocumentIdentityService.clearCache();
+    ReadingHistoryService.clearCache();
     SharedPreferences.setMockInitialValues({});
+  });
+
+  tearDown(() {
+    MetadataFileStore.setBaseDirectoryForTesting(null);
+    BookmarkService.clearCache();
+    DocumentIdentityService.clearCache();
+    ReadingHistoryService.clearCache();
+    metadataDirectory.deleteSync(recursive: true);
   });
 
   group('DocumentFileRules', () {

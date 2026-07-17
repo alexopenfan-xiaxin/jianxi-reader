@@ -364,11 +364,10 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
           AppSpacing.lg,
           AppSpacing.lg,
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.palette.card,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-          ),
+        child: Material(
+          color: context.palette.card,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          clipBehavior: Clip.antiAlias,
           child: SafeArea(top: false, child: content),
         ),
       );

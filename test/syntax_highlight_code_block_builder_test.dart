@@ -30,7 +30,7 @@ const _languageSamples = {
   'powershell': '\$name = "Codex"\nWrite-Host \$name',
   'graphql': 'query User { user { id name } }',
   'vue': '<template><div>{{ message }}</div></template>',
-  'ini': 'enabled=true',
+  'ini': '[reader]\nenabled=true',
   'nginx': 'server { listen 80; }',
   'gradle': 'plugins { id "java" }',
   'makefile': 'build:\n\techo ok',

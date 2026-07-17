@@ -231,7 +231,7 @@ void main() {
 
     await tester.tap(find.byTooltip('搜索文档'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('工作'));
+    await tester.tap(find.byKey(const ValueKey('search_tag_工作')));
     await tester.pumpAndSettle();
 
     expect(find.text('alpha.md'), findsOneWidget);
@@ -282,7 +282,7 @@ void main() {
 
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('外观'));
+    await tester.tap(find.text('外观与动画'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('书架'));
     await tester.pumpAndSettle();
@@ -459,7 +459,7 @@ void main() {
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
 
-    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('外观与动画'), findsOneWidget);
     expect(find.text('阅读体验'), findsOneWidget);
     expect(find.text('关于应用'), findsOneWidget);
     expect(find.text('阅读主题'), findsNothing);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Serializes metadata mutations and replaces JSON files atomically.
@@ -9,12 +10,19 @@ class MetadataFileStore {
   MetadataFileStore._();
 
   static final Map<String, Future<void>> _queues = {};
+  static Directory? _baseDirectoryForTesting;
 
   static Future<File> file(String fileName) async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir =
+        _baseDirectoryForTesting ?? await getApplicationDocumentsDirectory();
     final metadataDir = Directory('${dir.path}/metadata');
     await metadataDir.create(recursive: true);
     return File('${metadataDir.path}/$fileName');
+  }
+
+  @visibleForTesting
+  static void setBaseDirectoryForTesting(Directory? directory) {
+    _baseDirectoryForTesting = directory;
   }
 
   static Future<T> serialize<T>(String fileName, Future<T> Function() action) {

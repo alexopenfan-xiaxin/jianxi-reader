@@ -563,7 +563,10 @@ class LiquidGlassSheetPanel extends StatelessWidget {
       child: LiquidGlassPanel(
         padding: padding,
         borderRadius: borderRadius,
-        child: SafeArea(top: false, child: child),
+        child: SafeArea(
+          top: false,
+          child: Material(type: MaterialType.transparency, child: child),
+        ),
       ),
     );
   }

@@ -247,6 +247,7 @@ class _SearchTagChip extends StatelessWidget {
     final foreground = selected ? AppColors.primary : context.palette.ink;
     if (liquidGlassEnabled(context)) {
       return LiquidGlassChip(
+        key: ValueKey('search_tag_$label'),
         label: label,
         selected: selected,
         icon: Icons.label_outline_rounded,
@@ -254,6 +255,7 @@ class _SearchTagChip extends StatelessWidget {
       );
     }
     return ActionChip(
+      key: ValueKey('search_tag_$label'),
       onPressed: onTap,
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
       label: Text(label),

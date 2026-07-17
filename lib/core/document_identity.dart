@@ -55,10 +55,12 @@ class DocumentIdentityService {
   }
 
   static String sourceIdFor(String sourceUri) {
-    var hash = 0xcbf29ce484222325;
+    var hash = BigInt.parse('cbf29ce484222325', radix: 16);
+    final prime = BigInt.parse('100000001b3', radix: 16);
+    final mask = (BigInt.one << 64) - BigInt.one;
     for (final byte in utf8.encode(sourceUri)) {
-      hash ^= byte;
-      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+      hash ^= BigInt.from(byte);
+      hash = (hash * prime) & mask;
     }
     return 'ref_${hash.toRadixString(16).padLeft(16, '0')}';
   }
