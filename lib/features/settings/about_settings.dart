@@ -35,9 +35,9 @@ class _AboutIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
       ),
       child: const Icon(
         Icons.info_outline_rounded,
@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '190';
+  static const _fallbackBuildNumber = '191';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -203,6 +203,7 @@ class _AboutPageState extends State<AboutPage> {
     final cacheDir = await getTemporaryDirectory();
     final updateDir = Directory('${cacheDir.path}/updates');
     await updateDir.create(recursive: true);
+    if (!mounted) return;
     final filePath = '${updateDir.path}/jianxi_reader.apk';
     final file = File(filePath);
     final partialFile = File('$filePath.part');
@@ -559,12 +560,12 @@ class _AboutPageState extends State<AboutPage> {
                               width: 54,
                               height: 54,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.10),
+                                color: AppColors.primary.withValues(alpha: 0.10),
                                 borderRadius: BorderRadius.circular(
                                   AppRadii.sm,
                                 ),
                                 border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.12),
+                                  color: AppColors.primary.withValues(alpha: 0.12),
                                 ),
                               ),
                               child: const Icon(
@@ -736,14 +737,14 @@ class _AboutActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.pill),
           color: liquidGlassContainerColor(context, alpha: dark ? 0 : 0.26),
           borderColor: dark
-              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.28)
-              : AppColors.primary.withOpacity(0.24),
+              ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.28)
+              : AppColors.primary.withValues(alpha: 0.24),
           blurSigma: LiquidGlassTokens.effectBlurSigma,
           boxShadow: [
             BoxShadow(
               color: dark
-                  ? LiquidGlassTokens.metalFxCyan.withOpacity(0.09)
-                  : AppColors.primary.withOpacity(0.10),
+                  ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.09)
+                  : AppColors.primary.withValues(alpha: 0.10),
               blurRadius: 20,
               spreadRadius: dark ? -8 : 0,
               offset: const Offset(0, 8),
@@ -756,7 +757,7 @@ class _AboutActionButton extends StatelessWidget {
               onTap: busy ? null : onPressed,
               borderRadius: BorderRadius.circular(AppRadii.pill),
               splashFactory: NoSplash.splashFactory,
-              highlightColor: AppColors.primary.withOpacity(0.05),
+              highlightColor: AppColors.primary.withValues(alpha: 0.05),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

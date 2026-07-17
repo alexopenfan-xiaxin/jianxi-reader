@@ -84,29 +84,29 @@ class LiquidGlassSurface extends StatelessWidget {
         ? Colors.transparent
         : color ??
               (dark
-                  ? Colors.white.withOpacity(
+                  ? Colors.white.withValues(alpha:
                       LiquidGlassTokens.materialAlphaDark,
                     )
-                  : palette.card.withOpacity(
+                  : palette.card.withValues(alpha:
                       LiquidGlassTokens.materialAlphaLight,
                     ));
     final resolvedBorder =
         borderColor ??
         (useMetalFxDark
-            ? LiquidGlassTokens.metalFxCyan.withOpacity(0.24)
+            ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.24)
             : dark
-            ? Colors.white.withOpacity(0.16)
-            : Colors.white.withOpacity(0.42));
+            ? Colors.white.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.42));
     final resolvedShadows = useMetalFxDark
         ? [
             BoxShadow(
-              color: LiquidGlassTokens.metalFxCyan.withOpacity(0.13),
+              color: LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.13),
               blurRadius: 28,
               spreadRadius: -6,
               offset: const Offset(0, 8),
             ),
             BoxShadow(
-              color: LiquidGlassTokens.metalFxRose.withOpacity(0.08),
+              color: LiquidGlassTokens.metalFxRose.withValues(alpha: 0.08),
               blurRadius: 34,
               spreadRadius: -10,
               offset: const Offset(0, -3),
@@ -153,9 +153,9 @@ class LiquidGlassSurface extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Colors.white.withOpacity(dark ? 0.20 : 0.38),
-                                Colors.white.withOpacity(0.05),
-                                Colors.black.withOpacity(dark ? 0.14 : 0.05),
+                                Colors.white.withValues(alpha: dark ? 0.20 : 0.38),
+                                Colors.white.withValues(alpha: 0.05),
+                                Colors.black.withValues(alpha: dark ? 0.14 : 0.05),
                               ],
                               stops: const [0, 0.52, 1],
                             ),
@@ -180,9 +180,9 @@ class LiquidGlassSurface extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppColors.primary.withOpacity(0.12),
+                                AppColors.primary.withValues(alpha: 0.12),
                                 Colors.transparent,
-                                AppColors.primaryFocus.withOpacity(0.08),
+                                AppColors.primaryFocus.withValues(alpha: 0.08),
                               ],
                             ),
                           ),
@@ -226,7 +226,7 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: LiquidGlassTokens.metalFxRose.withOpacity(
+                    color: LiquidGlassTokens.metalFxRose.withValues(alpha:
                       roseOpacity,
                     ),
                     width: 1,
@@ -241,7 +241,7 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: LiquidGlassTokens.metalFxCyan.withOpacity(
+                    color: LiquidGlassTokens.metalFxCyan.withValues(alpha:
                       cyanOpacity,
                     ),
                     width: 1,
@@ -282,10 +282,10 @@ class _LiquidGlassEdgeHighlight extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0),
-                midColor.withOpacity((darkMetal ? 0.18 : 0.12) * opacity),
-                brightColor.withOpacity((darkMetal ? 0.34 : 0.40) * opacity),
-                Colors.white.withOpacity(0),
+                Colors.white.withValues(alpha: 0),
+                midColor.withValues(alpha: (darkMetal ? 0.18 : 0.12) * opacity),
+                brightColor.withValues(alpha: (darkMetal ? 0.34 : 0.40) * opacity),
+                Colors.white.withValues(alpha: 0),
               ],
               stops: const [0, 0.28, 0.66, 1],
             ),
@@ -313,8 +313,8 @@ class _MetalFxDarkReflection extends StatelessWidget {
               center: const Alignment(-0.78, -0.92),
               radius: 1.25,
               colors: [
-                LiquidGlassTokens.metalFxCyan.withOpacity(0.18 * opacity),
-                LiquidGlassTokens.metalFxMint.withOpacity(0.10 * opacity),
+                LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.18 * opacity),
+                LiquidGlassTokens.metalFxMint.withValues(alpha: 0.10 * opacity),
                 Colors.transparent,
               ],
               stops: const [0, 0.22, 0.72],
@@ -327,8 +327,8 @@ class _MetalFxDarkReflection extends StatelessWidget {
                 center: const Alignment(0.86, 0.92),
                 radius: 1.1,
                 colors: [
-                  LiquidGlassTokens.metalFxRose.withOpacity(0.12 * opacity),
-                  LiquidGlassTokens.metalFxBlue.withOpacity(0.10 * opacity),
+                  LiquidGlassTokens.metalFxRose.withValues(alpha: 0.12 * opacity),
+                  LiquidGlassTokens.metalFxBlue.withValues(alpha: 0.10 * opacity),
                   Colors.transparent,
                 ],
                 stops: const [0, 0.20, 0.68],
@@ -382,10 +382,10 @@ class _MetalFxDarkRimPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          LiquidGlassTokens.metalFxCyan.withOpacity(0.30 * glowOpacity),
-          LiquidGlassTokens.metalFxMint.withOpacity(0.24 * glowOpacity),
-          LiquidGlassTokens.metalFxRose.withOpacity(0.20 * glowOpacity),
-          LiquidGlassTokens.metalFxBlue.withOpacity(0.24 * glowOpacity),
+          LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.30 * glowOpacity),
+          LiquidGlassTokens.metalFxMint.withValues(alpha: 0.24 * glowOpacity),
+          LiquidGlassTokens.metalFxRose.withValues(alpha: 0.20 * glowOpacity),
+          LiquidGlassTokens.metalFxBlue.withValues(alpha: 0.24 * glowOpacity),
         ],
         stops: const [0, 0.34, 0.68, 1],
       ).createShader(rect);
@@ -398,11 +398,11 @@ class _MetalFxDarkRimPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withOpacity(0.08),
-          LiquidGlassTokens.metalFxCyan.withOpacity(0.70),
-          LiquidGlassTokens.metalFxGold.withOpacity(0.62),
-          LiquidGlassTokens.metalFxRose.withOpacity(0.42),
-          LiquidGlassTokens.metalFxBlue.withOpacity(0.58),
+          Colors.white.withValues(alpha: 0.08),
+          LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.70),
+          LiquidGlassTokens.metalFxGold.withValues(alpha: 0.62),
+          LiquidGlassTokens.metalFxRose.withValues(alpha: 0.42),
+          LiquidGlassTokens.metalFxBlue.withValues(alpha: 0.58),
         ],
         stops: const [0, 0.22, 0.48, 0.74, 1],
       ).createShader(rect);
@@ -415,9 +415,9 @@ class _MetalFxDarkRimPainter extends CustomPainter {
         begin: Alignment.bottomLeft,
         end: Alignment.topRight,
         colors: [
-          Colors.black.withOpacity(0.0),
-          Colors.white.withOpacity(0.18),
-          Colors.black.withOpacity(0.16),
+          Colors.black.withValues(alpha: 0.0),
+          Colors.white.withValues(alpha: 0.18),
+          Colors.black.withValues(alpha: 0.16),
         ],
         stops: const [0, 0.46, 1],
       ).createShader(rect);
@@ -441,7 +441,7 @@ Color liquidGlassContainerColor(BuildContext context, {double? alpha}) {
   if (dark) {
     return Colors.transparent;
   }
-  return palette.card.withOpacity(resolvedAlpha);
+  return palette.card.withValues(alpha: resolvedAlpha);
 }
 
 Color liquidGlassCardColor(BuildContext context) {
@@ -450,7 +450,7 @@ Color liquidGlassCardColor(BuildContext context) {
   if (dark) {
     return Colors.transparent;
   }
-  return palette.card.withOpacity(LiquidGlassTokens.cardAlphaLight);
+  return palette.card.withValues(alpha: LiquidGlassTokens.cardAlphaLight);
 }
 
 Color liquidGlassHeaderColor(BuildContext context) {
@@ -459,7 +459,7 @@ Color liquidGlassHeaderColor(BuildContext context) {
   if (dark) {
     return Colors.transparent;
   }
-  return palette.card.withOpacity(LiquidGlassTokens.headerAlphaLight);
+  return palette.card.withValues(alpha: LiquidGlassTokens.headerAlphaLight);
 }
 
 bool liquidGlassEnabled(BuildContext context) {
@@ -500,23 +500,23 @@ class LiquidGlassPanel extends StatelessWidget {
       borderColor:
           borderColor ??
           (dark
-              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.26)
-              : Colors.white.withOpacity(0.46)),
+              ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.26)
+              : Colors.white.withValues(alpha: 0.46)),
       blurSigma: LiquidGlassTokens.effectBlurSigma,
       boxShadow:
           boxShadow ??
           [
             BoxShadow(
               color: dark
-                  ? LiquidGlassTokens.metalFxCyan.withOpacity(0.12)
-                  : Colors.black.withOpacity(0.12),
+                  ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.12),
               blurRadius: dark ? 34 : 28,
               spreadRadius: dark ? -8 : 0,
               offset: const Offset(0, 14),
             ),
             if (dark)
               BoxShadow(
-                color: LiquidGlassTokens.metalFxRose.withOpacity(0.08),
+                color: LiquidGlassTokens.metalFxRose.withValues(alpha: 0.08),
                 blurRadius: 26,
                 spreadRadius: -12,
                 offset: const Offset(0, -4),
@@ -583,14 +583,14 @@ class LiquidGlassTextFieldFrame extends StatelessWidget {
         padding: padding,
         color: liquidGlassContainerColor(context, alpha: dark ? 0.54 : 0.34),
         borderColor: dark
-            ? LiquidGlassTokens.metalFxCyan.withOpacity(0.22)
-            : Colors.white.withOpacity(0.42),
+            ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.22)
+            : Colors.white.withValues(alpha: 0.42),
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         boxShadow: [
           BoxShadow(
             color: dark
-                ? LiquidGlassTokens.metalFxBlue.withOpacity(0.10)
-                : Colors.black.withOpacity(0.06),
+                ? LiquidGlassTokens.metalFxBlue.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.06),
             blurRadius: dark ? 22 : 16,
             spreadRadius: dark ? -8 : 0,
             offset: const Offset(0, 8),
@@ -629,23 +629,23 @@ class LiquidGlassChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadii.pill),
       color: selected
           ? (dark
-                ? LiquidGlassTokens.metalFxCyan.withOpacity(0.18)
-                : AppColors.primary.withOpacity(0.12))
+                ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.18)
+                : AppColors.primary.withValues(alpha: 0.12))
           : liquidGlassContainerColor(context, alpha: dark ? 0.50 : 0.32),
       borderColor: selected
           ? (dark
-                ? LiquidGlassTokens.metalFxCyan.withOpacity(0.42)
-                : AppColors.primary.withOpacity(0.24))
+                ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.42)
+                : AppColors.primary.withValues(alpha: 0.24))
           : (dark
-                ? LiquidGlassTokens.metalFxCyan.withOpacity(0.20)
-                : Colors.white.withOpacity(0.38)),
+                ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.20)
+                : Colors.white.withValues(alpha: 0.38)),
       blurSigma: LiquidGlassTokens.effectBlurSigma,
       tintPrimary: selected,
       boxShadow: [
         BoxShadow(
           color: dark
-              ? LiquidGlassTokens.metalFxCyan.withOpacity(0.08)
-              : Colors.black.withOpacity(0.06),
+              ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
           blurRadius: dark ? 18 : 14,
           spreadRadius: dark ? -8 : 0,
           offset: const Offset(0, 6),
@@ -658,7 +658,7 @@ class LiquidGlassChip extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           splashFactory: NoSplash.splashFactory,
-          highlightColor: AppColors.primary.withOpacity(0.05),
+          highlightColor: AppColors.primary.withValues(alpha: 0.05),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             child: Row(

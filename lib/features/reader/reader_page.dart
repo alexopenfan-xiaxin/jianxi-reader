@@ -168,7 +168,7 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   Future<void> _saveProgressNow() async {
-    double? ratio;
+    final double ratio;
     if (_isHtmlDocument) {
       ratio = _htmlScrollRatio;
     } else {
@@ -177,7 +177,6 @@ class _ReaderPageState extends State<ReaderPage> {
       if (position.maxScrollExtent <= 0) return;
       ratio = position.pixels / position.maxScrollExtent;
     }
-    if (ratio == null) return;
     try {
       await ReadingProgressService.saveProgress(_document.path, ratio);
     } catch (error) {
@@ -295,7 +294,7 @@ class _ReaderPageState extends State<ReaderPage> {
         flexibleSpace: showGlassAppBar
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.zero,
-                color: readingPalette.background.withOpacity(
+                color: readingPalette.background.withValues(alpha:
                   settings.liquidGlassEnabled ? 0.42 : 0.80,
                 ),
                 borderColor: Colors.transparent,
@@ -656,7 +655,7 @@ Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) {
     context: context,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.14),
+    barrierColor: Colors.black.withValues(alpha: 0.14),
     builder: (context) {
       return LiquidGlassSheetPanel(
         padding: EdgeInsets.zero,
@@ -744,7 +743,7 @@ class _ReaderProgressBar extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: progress,
                 heightFactor: 1,
-                child: ColoredBox(color: AppColors.primary.withOpacity(0.70)),
+                child: ColoredBox(color: AppColors.primary.withValues(alpha: 0.70)),
               ),
             ),
           ),
@@ -915,12 +914,12 @@ class _ReadingProgressHint extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: readingPalette.surface.withOpacity(0.92),
+            color: readingPalette.surface.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(color: readingPalette.border.withOpacity(0.40)),
+            border: Border.all(color: readingPalette.border.withValues(alpha: 0.40)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -932,13 +931,13 @@ class _ReadingProgressHint extends StatelessWidget {
               Icon(
                 Icons.history_rounded,
                 size: 14,
-                color: readingPalette.foreground.withOpacity(0.65),
+                color: readingPalette.foreground.withValues(alpha: 0.65),
               ),
               const SizedBox(width: 6),
               Text(
                 '上次阅读到这里',
                 style: TextStyle(
-                  color: readingPalette.foreground.withOpacity(0.80),
+                  color: readingPalette.foreground.withValues(alpha: 0.80),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0,
@@ -991,7 +990,7 @@ void showReadingDisplaySheet(BuildContext context) {
     isScrollControlled: true,
     backgroundColor: isLiquidGlass ? Colors.transparent : context.palette.card,
     barrierColor: isLiquidGlass
-        ? Colors.black.withOpacity(0.14)
+        ? Colors.black.withValues(alpha: 0.14)
         : Colors.black54,
     sheetAnimationStyle: const AnimationStyle(
       duration: AppMotion.normal,
@@ -1041,10 +1040,10 @@ class _ReadingDisplaySheet extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppRadii.sm),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.12),
+                    color: AppColors.primary.withValues(alpha: 0.12),
                   ),
                 ),
                 child: const Icon(

@@ -61,7 +61,7 @@ class ReadingProgressService {
     final result = _pendingMutation.then((_) => mutation());
     _pendingMutation = result.then<void>(
       (_) {},
-      onError: (Object _, StackTrace __) {},
+      onError: (Object _, StackTrace _) {},
     );
     return result;
   }

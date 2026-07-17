@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/app_settings_controller.dart';
-import '../../core/design_tokens.dart';
 
 /// A smart scrollbar that detects fast scrolling and switches between
 /// a subtle default style and a wider, draggable style.
@@ -189,11 +188,11 @@ class SmartScrollbarState extends State<SmartScrollbar> {
   /// Native Flutter Scrollbar (for Markdown documents).
   Widget _buildNative() {
     final isDark = widget.readingPalette.background.computeLuminance() < 0.5;
-    final thumbColor = widget.readingPalette.foreground.withOpacity(
+    final thumbColor = widget.readingPalette.foreground.withValues(alpha:
       _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
     );
     final trackColor = _isFastScrolling
-        ? widget.readingPalette.border.withOpacity(isDark ? 0.18 : 0.12)
+        ? widget.readingPalette.border.withValues(alpha: isDark ? 0.18 : 0.12)
         : Colors.transparent;
 
     return ScrollbarTheme(
@@ -239,11 +238,11 @@ class SmartScrollbarState extends State<SmartScrollbar> {
   /// Custom scrollbar overlay (for HTML WebView documents).
   Widget _buildExternal() {
     final isDark = widget.readingPalette.background.computeLuminance() < 0.5;
-    final thumbColor = widget.readingPalette.foreground.withOpacity(
+    final thumbColor = widget.readingPalette.foreground.withValues(alpha:
       _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
     );
     final trackColor = _isFastScrolling
-        ? widget.readingPalette.border.withOpacity(isDark ? 0.18 : 0.12)
+        ? widget.readingPalette.border.withValues(alpha: isDark ? 0.18 : 0.12)
         : Colors.transparent;
     final thumbWidth = _isFastScrolling ? 8.0 : 4.0;
 

@@ -65,11 +65,11 @@ class _FixedLibraryHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withOpacity(0.16),
+        borderColor: Colors.white.withValues(alpha: 0.16),
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -78,7 +78,7 @@ class _FixedLibraryHeader extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border(
-              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+              bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.20)),
             ),
           ),
           child: headerContent,
@@ -88,9 +88,9 @@ class _FixedLibraryHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withOpacity(0.92),
+        color: palette.parchment.withValues(alpha: 0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
+          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
         ),
       ),
       child: ClipRect(
@@ -114,7 +114,7 @@ class _FixedLibraryHeader extends StatelessWidget {
       useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.36),
+      barrierColor: Colors.black.withValues(alpha: 0.36),
       builder: (context) => const _SortSheet(),
     );
   }
@@ -192,7 +192,7 @@ class _SelectionHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withOpacity(0.16),
+        borderColor: Colors.white.withValues(alpha: 0.16),
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         child: content,
       );
@@ -200,9 +200,9 @@ class _SelectionHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withOpacity(0.94),
+        color: palette.parchment.withValues(alpha: 0.94),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
+          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
         ),
       ),
       child: ClipRect(
@@ -225,12 +225,12 @@ class _LibraryHomeIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.primary.withValues(alpha: 0.14),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -260,14 +260,14 @@ class _DocumentTypeIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final backPaint = Paint()..color = primary.withOpacity(0.18);
-    final paperPaint = Paint()..color = paper.withOpacity(0.92);
+    final backPaint = Paint()..color = primary.withValues(alpha: 0.18);
+    final paperPaint = Paint()..color = paper.withValues(alpha: 0.92);
     final outlinePaint = Paint()
-      ..color = primary.withOpacity(0.70)
+      ..color = primary.withValues(alpha: 0.70)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8;
     final linePaint = Paint()
-      ..color = line.withOpacity(0.62)
+      ..color = line.withValues(alpha: 0.62)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     final backRect = RRect.fromRectAndRadius(
@@ -287,7 +287,7 @@ class _DocumentTypeIconPainter extends CustomPainter {
       ..lineTo(size.width * 0.76, size.height * 0.44)
       ..lineTo(size.width * 0.61, size.height * 0.44)
       ..close();
-    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.18));
+    canvas.drawPath(foldPath, Paint()..color = primary.withValues(alpha: 0.18));
     canvas.drawLine(
       Offset(size.width * 0.61, size.height * 0.30),
       Offset(size.width * 0.75, size.height * 0.44),
@@ -354,9 +354,9 @@ class _FloatingImportButton extends StatelessWidget {
     final button = Material(
       color: liquidGlassEnabled(context)
           ? Colors.transparent
-          : AppColors.primary.withOpacity(fillOpacity),
+          : AppColors.primary.withValues(alpha: fillOpacity),
       shape: CircleBorder(
-        side: BorderSide(color: Colors.white.withOpacity(0.34)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.34)),
       ),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -383,13 +383,13 @@ class _FloatingImportButton extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(enabled ? 0.30 : 0.12),
+            color: AppColors.primary.withValues(alpha: enabled ? 0.30 : 0.12),
             blurRadius: enabled ? 34 : 18,
             spreadRadius: enabled ? 1 : 0,
             offset: const Offset(0, 11),
           ),
           BoxShadow(
-            color: AppColors.primary.withOpacity(enabled ? 0.18 : 0.08),
+            color: AppColors.primary.withValues(alpha: enabled ? 0.18 : 0.08),
             blurRadius: enabled ? 14 : 8,
             offset: const Offset(0, 3),
           ),
@@ -400,8 +400,8 @@ class _FloatingImportButton extends StatelessWidget {
         child: liquidGlassEnabled(context)
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.circular(30),
-                color: AppColors.primary.withOpacity(fillOpacity),
-                borderColor: Colors.white.withOpacity(0.34),
+                color: AppColors.primary.withValues(alpha: fillOpacity),
+                borderColor: Colors.white.withValues(alpha: 0.34),
                 blurSigma: LiquidGlassTokens.effectBlurSigma,
                 tintPrimary: true,
                 child: button,
@@ -548,11 +548,11 @@ class _SortOptionTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           borderRadius: BorderRadius.circular(18),
           color: selected
-              ? AppColors.primary.withOpacity(0.10)
+              ? AppColors.primary.withValues(alpha: 0.10)
               : liquidGlassContainerColor(context, alpha: 0.18),
           borderColor: selected
-              ? AppColors.primary.withOpacity(0.22)
-              : Colors.white.withOpacity(0.28),
+              ? AppColors.primary.withValues(alpha: 0.22)
+              : Colors.white.withValues(alpha: 0.28),
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(18),

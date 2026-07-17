@@ -101,11 +101,11 @@ class _FixedSettingsHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withOpacity(0.16),
+        borderColor: Colors.white.withValues(alpha: 0.16),
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -114,7 +114,7 @@ class _FixedSettingsHeader extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border(
-              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+              bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.20)),
             ),
           ),
           child: headerContent,
@@ -124,9 +124,9 @@ class _FixedSettingsHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.parchment.withOpacity(0.92),
+        color: palette.parchment.withValues(alpha: 0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withOpacity(0.34)),
+          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
         ),
       ),
       child: ClipRect(
@@ -170,11 +170,11 @@ class _LiquidSettingsAppBar extends StatelessWidget
     return LiquidGlassSurface(
       borderRadius: BorderRadius.circular(24),
       color: liquidGlassHeaderColor(context),
-      borderColor: Colors.white.withOpacity(0.16),
+      borderColor: Colors.white.withValues(alpha: 0.16),
       blurSigma: LiquidGlassTokens.effectBlurSigma,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           blurRadius: 18,
           offset: const Offset(0, 8),
         ),
@@ -185,7 +185,7 @@ class _LiquidSettingsAppBar extends StatelessWidget
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border(
-              bottom: BorderSide(color: palette.hairline.withOpacity(0.20)),
+              bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.20)),
             ),
           ),
           child: SizedBox(
@@ -221,12 +221,12 @@ class _SettingsHomeIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.primary.withValues(alpha: 0.14),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -250,12 +250,12 @@ class _SettingsHomeIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final knobPaint = Paint()..color = primary.withOpacity(0.92);
+    final knobPaint = Paint()..color = primary.withValues(alpha: 0.92);
     final trackPaint = Paint()
-      ..color = line.withOpacity(0.58)
+      ..color = line.withValues(alpha: 0.58)
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
-    final glowPaint = Paint()..color = primary.withOpacity(0.15);
+    final glowPaint = Paint()..color = primary.withValues(alpha: 0.15);
 
     final rows = <double>[0.34, 0.50, 0.66];
     final knobs = <double>[0.58, 0.42, 0.64];
@@ -308,15 +308,15 @@ class _SettingsCompanionIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bodyPaint = Paint()..color = primary.withOpacity(0.10);
+    final bodyPaint = Paint()..color = primary.withValues(alpha: 0.10);
     final linePaint = Paint()
-      ..color = line.withOpacity(0.70)
+      ..color = line.withValues(alpha: 0.70)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final accentPaint = Paint()
-      ..color = primary.withOpacity(0.82)
+      ..color = primary.withValues(alpha: 0.82)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
@@ -341,12 +341,12 @@ class _SettingsCompanionIconPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.43, size.height * 0.53),
       1.8,
-      Paint()..color = line.withOpacity(0.80),
+      Paint()..color = line.withValues(alpha: 0.80),
     );
     canvas.drawCircle(
       Offset(size.width * 0.57, size.height * 0.53),
       1.8,
-      Paint()..color = line.withOpacity(0.80),
+      Paint()..color = line.withValues(alpha: 0.80),
     );
     canvas.drawArc(
       Rect.fromCenter(
@@ -403,9 +403,9 @@ class _ReadingSettingsIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
       ),
       child: const Icon(
         Icons.menu_book_rounded,
@@ -499,7 +499,7 @@ class _CardTitle extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
           child: Icon(icon, size: 18, color: AppColors.primary),

@@ -158,7 +158,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                     colors: [cover.start, cover.end],
                   ),
                   borderRadius: BorderRadius.circular(AppRadii.lg),
-                  border: Border.all(color: cover.border.withOpacity(0.55)),
+                  border: Border.all(color: cover.border.withValues(alpha: 0.55)),
                 ),
                 child: Stack(
                   children: [
@@ -168,7 +168,7 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                       bottom: 0,
                       child: Container(
                         width: 18,
-                        color: cover.spine.withOpacity(0.72),
+                        color: cover.spine.withValues(alpha: 0.72),
                       ),
                     ),
                     Padding(
@@ -244,23 +244,6 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
     }
   }
 
-  Future<void> _handleAction(
-    BuildContext context,
-    _DocumentMenuAction action,
-  ) async {
-    switch (action) {
-      case _DocumentMenuAction.pin:
-        final controller = context.read<LibraryController>();
-        await controller.setPinned(widget.document, !widget.document.pinned);
-      case _DocumentMenuAction.rename:
-        await showRenameDocumentDialog(context, widget.document);
-      case _DocumentMenuAction.tags:
-        await _showTagEditor(context, widget.document);
-      case _DocumentMenuAction.remove:
-        await removeDocumentFromLibrary(context, widget.document);
-    }
-  }
-
   void _handleLongPress(BuildContext context) {
     if (widget.selectionActive) {
       widget.onToggleSelection(widget.document);
@@ -283,9 +266,9 @@ class _ShelfTypeMark extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        border: Border.all(color: Colors.white.withOpacity(0.22)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

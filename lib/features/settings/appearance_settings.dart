@@ -36,9 +36,9 @@ class _AppearanceIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.primary.withOpacity(0.10)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
       ),
       child: const Icon(
         Icons.palette_outlined,

@@ -154,13 +154,13 @@ class _GlassTrack extends StatelessWidget {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
-        borderColor: dark ? Colors.white.withOpacity(0.34) : Colors.transparent,
+        borderColor: dark ? Colors.white.withValues(alpha: 0.34) : Colors.transparent,
         chromaticEdge: dark,
         edgeHighlight: dark,
         innerHighlight: dark,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(dark ? 0.10 : 0.03),
+            color: Colors.black.withValues(alpha: dark ? 0.10 : 0.03),
             blurRadius: dark ? 22 : 12,
             offset: Offset(0, dark ? 10 : 5),
           ),
@@ -179,9 +179,9 @@ class _GlassTrack extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: palette.card.withOpacity(0.70),
+              color: palette.card.withValues(alpha: 0.70),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withOpacity(0.42)),
+              border: Border.all(color: palette.hairline.withValues(alpha: 0.42)),
             ),
           ),
         ),
@@ -201,9 +201,9 @@ class _GlassThumb extends StatelessWidget {
     if (liquidGlass) {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
-        color: AppColors.primary.withOpacity(0.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderColor: dark
-            ? AppColors.primary.withOpacity(0.22)
+            ? AppColors.primary.withValues(alpha: 0.22)
             : Colors.transparent,
         tintPrimary: dark,
         chromaticEdge: dark,
@@ -211,7 +211,7 @@ class _GlassThumb extends StatelessWidget {
         innerHighlight: dark,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(dark ? 0.18 : 0.08),
+            color: AppColors.primary.withValues(alpha: dark ? 0.18 : 0.08),
             blurRadius: dark ? 18 : 10,
             offset: Offset(0, dark ? 7 : 4),
           ),
@@ -225,7 +225,7 @@ class _GlassThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.14),
+            color: AppColors.primary.withValues(alpha: 0.14),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -237,9 +237,9 @@ class _GlassThumb extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.18),
+              color: AppColors.primary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
             ),
           ),
         ),

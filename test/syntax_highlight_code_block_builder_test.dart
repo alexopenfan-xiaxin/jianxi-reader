@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/features/reader/markdown/builders/syntax_highlight_code_block_builder.dart';
+import 'package:jianxi_reader/features/reader/markdown/builders/syntax_highlight_code_block_builder.dart';
 
 const _languageSamples = {
   'bash': 'if true; then echo "\$HOME"; fi',

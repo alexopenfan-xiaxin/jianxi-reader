@@ -108,10 +108,10 @@ class _LibraryStateIllustrationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pagePaint = Paint()
-      ..color = primary.withOpacity(0.08)
+      ..color = primary.withValues(alpha: 0.08)
       ..style = PaintingStyle.fill;
     final linePaint = Paint()
-      ..color = line.withOpacity(0.58)
+      ..color = line.withValues(alpha: 0.58)
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.shortestSide * 0.035
       ..strokeCap = StrokeCap.round
@@ -140,14 +140,14 @@ class _LibraryStateIllustrationPainter extends CustomPainter {
       ..lineTo(size.width * 0.72, size.height * 0.27)
       ..lineTo(size.width * 0.59, size.height * 0.27)
       ..close();
-    canvas.drawPath(foldPath, Paint()..color = primary.withOpacity(0.12));
+    canvas.drawPath(foldPath, Paint()..color = primary.withValues(alpha: 0.12));
     canvas.drawPath(foldPath, linePaint);
 
     for (final y in [0.40, 0.52, 0.64]) {
       canvas.drawLine(
         Offset(size.width * 0.32, size.height * y),
         Offset(size.width * 0.62, size.height * y),
-        linePaint..color = muted.withOpacity(0.45),
+        linePaint..color = muted.withValues(alpha: 0.45),
       );
     }
 

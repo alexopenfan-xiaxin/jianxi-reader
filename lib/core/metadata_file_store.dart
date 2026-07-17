@@ -22,7 +22,7 @@ class MetadataFileStore {
     final result = previous.then((_) => action());
     final tail = result.then<void>(
       (_) {},
-      onError: (Object _, StackTrace __) {},
+      onError: (Object _, StackTrace _) {},
     );
     _queues[fileName] = tail;
     unawaited(

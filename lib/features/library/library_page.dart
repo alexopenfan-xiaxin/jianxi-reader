@@ -315,7 +315,7 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
     context: context,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.14),
+    barrierColor: Colors.black.withValues(alpha: 0.14),
     builder: (context) {
       final content = Column(
         mainAxisSize: MainAxisSize.min,

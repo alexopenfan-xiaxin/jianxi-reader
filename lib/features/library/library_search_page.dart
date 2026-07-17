@@ -258,7 +258,7 @@ class _SearchTagChip extends StatelessWidget {
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
       label: Text(label),
       backgroundColor: selected
-          ? AppColors.primary.withOpacity(0.12)
+          ? AppColors.primary.withValues(alpha: 0.12)
           : context.palette.dividerSoft,
       labelStyle: TextStyle(
         color: foreground,

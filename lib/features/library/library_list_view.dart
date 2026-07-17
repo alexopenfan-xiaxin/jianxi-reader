@@ -646,7 +646,7 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
     context: context,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.14),
+    barrierColor: Colors.black.withValues(alpha: 0.14),
     builder: (context) {
       return LiquidGlassSheetPanel(
         padding: EdgeInsets.zero,
@@ -905,7 +905,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
               filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: context.palette.card.withOpacity(0.78),
+                  color: context.palette.card.withValues(alpha: 0.78),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
@@ -1050,7 +1050,7 @@ class _EditableTagChip extends StatelessWidget {
       onSelected: onSelected,
       onDeleted: canDelete ? onDeleted : null,
       selectedColor: color,
-      backgroundColor: color.withOpacity(0.12),
+      backgroundColor: color.withValues(alpha: 0.12),
       labelStyle: TextStyle(
         color: selected ? Colors.white : color,
         fontWeight: FontWeight.w700,
@@ -1133,7 +1133,7 @@ class _SmallTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
@@ -1179,9 +1179,9 @@ class _TypeBadge extends StatelessWidget {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.07),
+        color: badgeColor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: badgeColor.withOpacity(0.18)),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.18)),
       ),
       child: Icon(
         isMd ? Icons.description_rounded : Icons.code_rounded,

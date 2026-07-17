@@ -78,7 +78,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
               borderColor: dark
-                  ? Colors.white.withOpacity(0.18)
+                  ? Colors.white.withValues(alpha: 0.18)
                   : Colors.transparent,
               blurSigma: LiquidGlassTokens.effectBlurSigma,
               chromaticEdge: dark,
@@ -86,7 +86,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
               innerHighlight: dark,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(dark ? 0.18 : 0.04),
+                  color: Colors.black.withValues(alpha: dark ? 0.18 : 0.04),
                   blurRadius: dark ? 24 : 16,
                   offset: Offset(0, dark ? 12 : 8),
                 ),
@@ -127,11 +127,11 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                 onTapCancel: _hasAction ? _springBack : null,
                 borderRadius: borderRadius,
                 splashFactory: NoSplash.splashFactory,
-                highlightColor: AppColors.primary.withOpacity(0.05),
+                highlightColor: AppColors.primary.withValues(alpha: 0.05),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: palette.hairline.withOpacity(0.72),
+                      color: palette.hairline.withValues(alpha: 0.72),
                     ),
                     borderRadius: borderRadius,
                   ),

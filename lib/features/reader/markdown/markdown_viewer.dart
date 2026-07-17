@@ -509,7 +509,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
                           '下滑加载更多…',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: widget.readingPalette.muted.withOpacity(0.6),
+                            color: widget.readingPalette.muted.withValues(alpha: 0.6),
                             fontSize: 13,
                           ),
                         ),
@@ -530,7 +530,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
                 minHeight: 2,
                 backgroundColor: widget.readingPalette.background,
                 valueColor: AlwaysStoppedAnimation(
-                  widget.readingPalette.link.withOpacity(0.6),
+                  widget.readingPalette.link.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -608,6 +608,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
       context = _headingKeys[entry.index]?.currentContext;
     }
     if (context == null) return;
+    if (!context.mounted) return;
     await Scrollable.ensureVisible(
       context,
       duration: AppMotion.normal,
@@ -661,7 +662,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
       return;
     }
 
-    if (_cachedSearchText == null && data != null) {
+    if (_cachedSearchText == null) {
       _rebuildSearchTextCache();
     }
     _searchText = _cachedSearchText ?? '';
@@ -963,7 +964,7 @@ class _ImagePreviewInfo extends StatelessWidget {
     final text = caption.isEmpty ? url : '$caption\n$url';
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.62),
+        color: Colors.black.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
       child: Padding(

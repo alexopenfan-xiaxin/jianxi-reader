@@ -303,16 +303,16 @@ class _ReadingPreviewPanel extends StatelessWidget {
           vertical: AppSpacing.md,
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        color: readingPalette.background.withOpacity(0.42),
+        color: readingPalette.background.withValues(alpha: 0.42),
         borderColor: dark
-            ? readingPalette.border.withOpacity(0.55)
+            ? readingPalette.border.withValues(alpha: 0.55)
             : Colors.transparent,
         chromaticEdge: dark,
         edgeHighlight: dark,
         innerHighlight: dark,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(dark ? 0.12 : 0.03),
+            color: Colors.black.withValues(alpha: dark ? 0.12 : 0.03),
             blurRadius: dark ? 22 : 12,
             offset: Offset(0, dark ? 10 : 5),
           ),
@@ -409,11 +409,11 @@ class _ReadingValueSlider extends StatelessWidget {
                   ? const Icon(Icons.check_rounded, size: 16)
                   : null,
               backgroundColor: selected
-                  ? AppColors.primary.withOpacity(0.12)
-                  : palette.card.withOpacity(0.72),
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : palette.card.withValues(alpha: 0.72),
               side: BorderSide(
                 color: selected
-                    ? AppColors.primary.withOpacity(0.28)
+                    ? AppColors.primary.withValues(alpha: 0.28)
                     : palette.hairline,
               ),
               onPressed: () => onChanged(preset.value),

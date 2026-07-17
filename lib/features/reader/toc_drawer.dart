@@ -177,7 +177,7 @@ class _TocTile extends StatelessWidget {
     return ListTile(
       dense: true,
       selected: active,
-      selectedTileColor: AppColors.primary.withOpacity(0.10),
+      selectedTileColor: AppColors.primary.withValues(alpha: 0.10),
       contentPadding: EdgeInsets.fromLTRB(
         AppSpacing.lg + indent,
         0,

@@ -1,7 +1,7 @@
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/features/reader/markdown/markdown_preprocessor.dart';
+import 'package:jianxi_reader/features/reader/markdown/markdown_preprocessor.dart';
 
 void main() {
   test('normalizes Windows and legacy line endings before parsing', () {

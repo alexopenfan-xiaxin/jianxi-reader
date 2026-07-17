@@ -403,7 +403,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                             decoration: BoxDecoration(
                               color: Theme.of(
                                 context,
-                              ).colorScheme.primaryContainer.withOpacity(0.3),
+                              ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -430,8 +430,8 @@ class _SyntaxHighlightCodeBlockWidgetState
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               color: _copied
-                                  ? Colors.green.withOpacity(0.2)
-                                  : Colors.grey.withOpacity(0.1),
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
@@ -443,7 +443,7 @@ class _SyntaxHighlightCodeBlockWidgetState
                                   color: _copied
                                       ? Colors.green[700]
                                       : Theme.of(context).colorScheme.onSurface
-                                            .withOpacity(0.6),
+                                            .withValues(alpha: 0.6),
                                 ),
                                 if (_copied) ...[
                                   const SizedBox(width: 4),
