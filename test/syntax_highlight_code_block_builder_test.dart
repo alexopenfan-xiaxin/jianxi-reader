@@ -160,6 +160,8 @@ Set<Color> _tokenColors(TextSpan span) {
       in span.children?.whereType<TextSpan>() ?? const <TextSpan>[]) {
     final color = child.style?.color;
     if (color != null) colors.add(color);
+    final backgroundColor = child.style?.backgroundColor;
+    if (backgroundColor != null) colors.add(backgroundColor);
     colors.addAll(_tokenColors(child));
   }
   return colors;
