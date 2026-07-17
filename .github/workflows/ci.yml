@@ -35,7 +35,19 @@ jobs:
         run: flutter pub get --enforce-lockfile
 
       - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        id: formatting
+        run: |
+          dart format lib test
+          git diff --binary -- lib test > formatting.patch
+          git diff --exit-code -- lib test
+
+      - name: Upload formatting patch
+        if: failure() && steps.formatting.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatting-patch
+          path: formatting.patch
+          retention-days: 1
 
       - name: Analyze
         run: flutter analyze --fatal-infos
