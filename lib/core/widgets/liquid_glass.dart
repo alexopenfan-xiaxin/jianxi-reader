@@ -84,11 +84,11 @@ class LiquidGlassSurface extends StatelessWidget {
         ? Colors.transparent
         : color ??
               (dark
-                  ? Colors.white.withValues(alpha:
-                      LiquidGlassTokens.materialAlphaDark,
+                  ? Colors.white.withValues(
+                      alpha: LiquidGlassTokens.materialAlphaDark,
                     )
-                  : palette.card.withValues(alpha:
-                      LiquidGlassTokens.materialAlphaLight,
+                  : palette.card.withValues(
+                      alpha: LiquidGlassTokens.materialAlphaLight,
                     ));
     final resolvedBorder =
         borderColor ??
@@ -153,9 +153,13 @@ class LiquidGlassSurface extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Colors.white.withValues(alpha: dark ? 0.20 : 0.38),
+                                Colors.white.withValues(
+                                  alpha: dark ? 0.20 : 0.38,
+                                ),
                                 Colors.white.withValues(alpha: 0.05),
-                                Colors.black.withValues(alpha: dark ? 0.14 : 0.05),
+                                Colors.black.withValues(
+                                  alpha: dark ? 0.14 : 0.05,
+                                ),
                               ],
                               stops: const [0, 0.52, 1],
                             ),
@@ -226,8 +230,8 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: LiquidGlassTokens.metalFxRose.withValues(alpha:
-                      roseOpacity,
+                    color: LiquidGlassTokens.metalFxRose.withValues(
+                      alpha: roseOpacity,
                     ),
                     width: 1,
                   ),
@@ -241,8 +245,8 @@ class _LiquidGlassChromaticEdge extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
-                    color: LiquidGlassTokens.metalFxCyan.withValues(alpha:
-                      cyanOpacity,
+                    color: LiquidGlassTokens.metalFxCyan.withValues(
+                      alpha: cyanOpacity,
                     ),
                     width: 1,
                   ),
@@ -284,7 +288,9 @@ class _LiquidGlassEdgeHighlight extends StatelessWidget {
               colors: [
                 Colors.white.withValues(alpha: 0),
                 midColor.withValues(alpha: (darkMetal ? 0.18 : 0.12) * opacity),
-                brightColor.withValues(alpha: (darkMetal ? 0.34 : 0.40) * opacity),
+                brightColor.withValues(
+                  alpha: (darkMetal ? 0.34 : 0.40) * opacity,
+                ),
                 Colors.white.withValues(alpha: 0),
               ],
               stops: const [0, 0.28, 0.66, 1],
@@ -327,8 +333,12 @@ class _MetalFxDarkReflection extends StatelessWidget {
                 center: const Alignment(0.86, 0.92),
                 radius: 1.1,
                 colors: [
-                  LiquidGlassTokens.metalFxRose.withValues(alpha: 0.12 * opacity),
-                  LiquidGlassTokens.metalFxBlue.withValues(alpha: 0.10 * opacity),
+                  LiquidGlassTokens.metalFxRose.withValues(
+                    alpha: 0.12 * opacity,
+                  ),
+                  LiquidGlassTokens.metalFxBlue.withValues(
+                    alpha: 0.10 * opacity,
+                  ),
                   Colors.transparent,
                 ],
                 stops: const [0, 0.20, 0.68],

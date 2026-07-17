@@ -294,8 +294,8 @@ class _ReaderPageState extends State<ReaderPage> {
         flexibleSpace: showGlassAppBar
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.zero,
-                color: readingPalette.background.withValues(alpha:
-                  settings.liquidGlassEnabled ? 0.42 : 0.80,
+                color: readingPalette.background.withValues(
+                  alpha: settings.liquidGlassEnabled ? 0.42 : 0.80,
                 ),
                 borderColor: Colors.transparent,
                 blurSigma: settings.liquidGlassEnabled
@@ -743,7 +743,9 @@ class _ReaderProgressBar extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: progress,
                 heightFactor: 1,
-                child: ColoredBox(color: AppColors.primary.withValues(alpha: 0.70)),
+                child: ColoredBox(
+                  color: AppColors.primary.withValues(alpha: 0.70),
+                ),
               ),
             ),
           ),
@@ -916,7 +918,9 @@ class _ReadingProgressHint extends StatelessWidget {
           decoration: BoxDecoration(
             color: readingPalette.surface.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(color: readingPalette.border.withValues(alpha: 0.40)),
+            border: Border.all(
+              color: readingPalette.border.withValues(alpha: 0.40),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),

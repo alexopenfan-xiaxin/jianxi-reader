@@ -509,7 +509,9 @@ class MarkdownViewerState extends State<MarkdownViewer>
                           '下滑加载更多…',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: widget.readingPalette.muted.withValues(alpha: 0.6),
+                            color: widget.readingPalette.muted.withValues(
+                              alpha: 0.6,
+                            ),
                             fontSize: 13,
                           ),
                         ),

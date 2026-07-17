@@ -67,7 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '191';
+  static const _fallbackBuildNumber = '192';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -560,12 +560,16 @@ class _AboutPageState extends State<AboutPage> {
                               width: 54,
                               height: 54,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.10),
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.10,
+                                ),
                                 borderRadius: BorderRadius.circular(
                                   AppRadii.sm,
                                 ),
                                 border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.12),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
                                 ),
                               ),
                               child: const Icon(

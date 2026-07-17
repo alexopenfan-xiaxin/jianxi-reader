@@ -158,7 +158,9 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                     colors: [cover.start, cover.end],
                   ),
                   borderRadius: BorderRadius.circular(AppRadii.lg),
-                  border: Border.all(color: cover.border.withValues(alpha: 0.55)),
+                  border: Border.all(
+                    color: cover.border.withValues(alpha: 0.55),
+                  ),
                 ),
                 child: Stack(
                   children: [

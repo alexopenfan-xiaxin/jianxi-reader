@@ -188,8 +188,8 @@ class SmartScrollbarState extends State<SmartScrollbar> {
   /// Native Flutter Scrollbar (for Markdown documents).
   Widget _buildNative() {
     final isDark = widget.readingPalette.background.computeLuminance() < 0.5;
-    final thumbColor = widget.readingPalette.foreground.withValues(alpha:
-      _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
+    final thumbColor = widget.readingPalette.foreground.withValues(
+      alpha: _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
     );
     final trackColor = _isFastScrolling
         ? widget.readingPalette.border.withValues(alpha: isDark ? 0.18 : 0.12)
@@ -238,8 +238,8 @@ class SmartScrollbarState extends State<SmartScrollbar> {
   /// Custom scrollbar overlay (for HTML WebView documents).
   Widget _buildExternal() {
     final isDark = widget.readingPalette.background.computeLuminance() < 0.5;
-    final thumbColor = widget.readingPalette.foreground.withValues(alpha:
-      _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
+    final thumbColor = widget.readingPalette.foreground.withValues(
+      alpha: _isFastScrolling ? (isDark ? 0.55 : 0.45) : (isDark ? 0.28 : 0.22),
     );
     final trackColor = _isFastScrolling
         ? widget.readingPalette.border.withValues(alpha: isDark ? 0.18 : 0.12)

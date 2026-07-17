@@ -154,7 +154,9 @@ class _GlassTrack extends StatelessWidget {
       return LiquidGlassSurface(
         blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
-        borderColor: dark ? Colors.white.withValues(alpha: 0.34) : Colors.transparent,
+        borderColor: dark
+            ? Colors.white.withValues(alpha: 0.34)
+            : Colors.transparent,
         chromaticEdge: dark,
         edgeHighlight: dark,
         innerHighlight: dark,
@@ -181,7 +183,9 @@ class _GlassTrack extends StatelessWidget {
             decoration: BoxDecoration(
               color: palette.card.withValues(alpha: 0.70),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withValues(alpha: 0.42)),
+              border: Border.all(
+                color: palette.hairline.withValues(alpha: 0.42),
+              ),
             ),
           ),
         ),
@@ -239,7 +243,9 @@ class _GlassThumb extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.25),
+              ),
             ),
           ),
         ),

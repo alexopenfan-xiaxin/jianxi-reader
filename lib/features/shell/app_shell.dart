@@ -384,8 +384,8 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
         LiquidGlassTokens.floatingBottomBarPanelOffsetMax *
         Curves.easeOutCubic.transform(dragProgress);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final indicatorColor = (dark ? Colors.white : Colors.black).withValues(alpha:
-      0.10,
+    final indicatorColor = (dark ? Colors.white : Colors.black).withValues(
+      alpha: 0.10,
     );
     final indicatorBorder = Colors.white.withValues(alpha: dark ? 0.18 : 0.38);
 
@@ -663,7 +663,9 @@ class _NavGlassBase extends StatelessWidget {
             decoration: BoxDecoration(
               color: palette.card.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: palette.hairline.withValues(alpha: 0.38)),
+              border: Border.all(
+                color: palette.hairline.withValues(alpha: 0.38),
+              ),
             ),
           ),
         ),
@@ -696,7 +698,9 @@ class _SelectedNavCapsule extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.22),
+              ),
             ),
           ),
         ),
