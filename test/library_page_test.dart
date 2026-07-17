@@ -288,7 +288,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('首页'));
+    await tester.tap(find.text('文库'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('library_shelf_grid')), findsOneWidget);
