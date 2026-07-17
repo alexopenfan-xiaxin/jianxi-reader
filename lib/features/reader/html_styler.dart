@@ -31,6 +31,7 @@ class HtmlStyler {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: file: http: https:; media-src data: file: http: https:; font-src data: file: http: https:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <style>
     :root {
       color-scheme: $colorScheme;

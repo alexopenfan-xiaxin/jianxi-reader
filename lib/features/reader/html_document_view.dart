@@ -186,7 +186,6 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 ''';
 
   /// Injected after page load to report scroll position to Flutter.
-  /// Embedded directly in the HTML for maximum reliability.
   static const _scrollBridgeScript = r'''
 (function() {
   if (window.__jianxiScrollBridge) return;
@@ -310,7 +309,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       }
       final rawHtml = await widget.file.readAsString();
       const isolateThreshold = 50 * 1024; // 50 KB
-      var html = rawHtml.length > isolateThreshold
+      final html = rawHtml.length > isolateThreshold
           ? await compute(_buildHtmlInIsolate, {
               'rawHtml': rawHtml,
               'fontSize': widget.fontSize,
@@ -333,9 +332,6 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
               horizontalPadding: widget.horizontalPadding,
               topPadding: widget.topPadding,
             );
-      // Embed the scroll bridge script directly into the HTML content
-      // so it runs in the same JS context as the loaded page.
-      html = html.replaceFirst('</body>', '<script>$_scrollBridgeScript</script></body>');
       final baseUrl = widget.file.parent.uri.toString();
       if (generation != _loadGeneration || !mounted) {
         return;
@@ -396,7 +392,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
       return NavigationDecision.prevent;
     }
-    if (uri.scheme.isEmpty) {
+    if (uri.scheme.isEmpty && !uri.hasAuthority) {
       return NavigationDecision.navigate;
     }
     _showNavigationMessage('不支持的链接类型：${uri.scheme}');
@@ -446,9 +442,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   Future<void> _finishPageLoad() async {
     await _installSearchScript();
-    // The scroll bridge script is embedded in the HTML content,
-    // so it's already active. Mark as ready and run backup injection.
-    _isScrollBridgeReady = true;
+    await _installScrollBridge();
     await _loadToc();
     await _runSearch();
     widget.onPageReady?.call();
@@ -476,6 +470,18 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       _isSearchScriptReady = true;
     } catch (error) {
       debugPrint('[HtmlDocumentView] install search script failed: $error');
+    }
+  }
+
+  Future<void> _installScrollBridge() async {
+    if (_isScrollBridgeReady) {
+      return;
+    }
+    try {
+      await _controller.runJavaScript(_scrollBridgeScript);
+      _isScrollBridgeReady = true;
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] install scroll bridge failed: $error');
     }
   }
 

@@ -11,7 +11,7 @@ Flutter mobile reader for Markdown and HTML documents. Library management, readi
 - **Cards**: `AppCard` widget in `lib/core/widgets/app_card.dart`
 - **File service**: `DocumentFileService` in `lib/core/document_file_service.dart` (scan, import, rename, remove, metadata)
 - **Android permissions**: `INTERNET` required in `AndroidManifest.xml` for release builds (debug manifest has it, main manifest does not by default)
-- **SSL**: `badCertificateCallback` bypasses certificate validation for update check server
+- **TLS**: Update checks use the platform trust store; never bypass certificate validation
 
 ## Project Structure
 ```
@@ -50,7 +50,7 @@ lib/
 - Modal bottom sheets should use `DraggableScrollableSheet` + `isScrollControlled: true`
 - `SmoothMarkdown` uses `selectable: true` for text selection
 - All navigation uses `PageRouteBuilder` with 300ms `easeOutCubic` slide
-- HTTP requests use `dart:io` `HttpClient` with `badCertificateCallback` (server uses self-signed cert)
+- HTTP requests use `dart:io` `HttpClient` with normal platform certificate validation
 - Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
 - After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
 - On this local machine, do not probe whether `dart` / `flutter` commands are available. Unless the user explicitly asks to run them, skip `dart format`, `flutter analyze`, builds, and Flutter tests here; rely on static review and state that these commands were skipped by local rule.
@@ -147,7 +147,7 @@ import 'dart:io';
 - `selectable: true` on SmoothMarkdown enables long-press copy
 - `FocusManager.instance.primaryFocus?.unfocus()` before navigation dismisses keyboard
 - Removed `isReferenced` check in `renameDocument` to allow renaming external files
-- `badCertificateCallback` added because update server uses untrusted SSL certificate
+- Update downloads use normal TLS certificate validation and a 15-second connection timeout
 - `INTERNET` permission added to main `AndroidManifest.xml` (debug has it, release didn't)
 - APK ~10MB ARM64
 - `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (wraps a `Text` in `GestureDetector` with `HitTestBehavior.opaque`; the package's `renderInline` keeps non-text widgets as a `WidgetSpan`, so the `GestureDetector` survives the unwrap step that strips a plain `Text`)
@@ -164,7 +164,7 @@ import 'dart:io';
 - `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
 - Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
-- `file_paths.xml` now includes `<root-path>` to authorize FileProvider access to the entire app data directory (needed for APK install after download to `getApplicationDocumentsDirectory()`)
+- Update APKs are stored under the dedicated cache `updates/` directory; FileProvider exposes only that directory
 - `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
 - File hot-reload uses `Timer.periodic(3s)` in `_MarkdownViewerState` to poll `lastModifiedSync()`; `_checkFileChanged` now logs errors and guards against deleted files
 

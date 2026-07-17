@@ -67,8 +67,9 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _fallbackBuildNumber = '182';
+  static const _fallbackBuildNumber = '183';
   static const _apkContentType = 'application/vnd.android.package-archive';
+  static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse(
     'https://qm.qq.com/q/IcQIMYOaQg',
   );
@@ -105,11 +106,6 @@ class _AboutPageState extends State<AboutPage> {
       final tempDir = await getTemporaryDirectory();
       if (await tempDir.exists()) {
         total += await _directorySize(tempDir);
-      }
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final downloadedApk = File('${documentsDir.path}/jianxi_reader.apk');
-      if (await downloadedApk.exists()) {
-        total += await downloadedApk.length();
       }
       // Include image cache estimate.
       total += PaintingBinding.instance.imageCache.currentSizeBytes;
@@ -206,8 +202,12 @@ class _AboutPageState extends State<AboutPage> {
 
   Future<void> _downloadAndInstall() async {
     if (!mounted) return;
-    final dir = await getApplicationDocumentsDirectory();
-    final filePath = '${dir.path}/jianxi_reader.apk';
+    final cacheDir = await getTemporaryDirectory();
+    final updateDir = Directory('${cacheDir.path}/updates');
+    await updateDir.create(recursive: true);
+    final filePath = '${updateDir.path}/jianxi_reader.apk';
+    final file = File(filePath);
+    final partialFile = File('$filePath.part');
     final progress = ValueNotifier<double>(0.0);
     final client = _createUpdateClient();
 
@@ -261,13 +261,18 @@ class _AboutPageState extends State<AboutPage> {
       }
 
       final total = response.contentLength;
-      final file = File(filePath);
-      sink = file.openWrite();
+      if (total > _maxApkBytes) {
+        throw const HttpException('更新包超过 200 MB 限制');
+      }
+      sink = partialFile.openWrite();
       var received = 0;
 
       await for (final chunk in response) {
         sink.add(chunk);
         received += chunk.length;
+        if (received > _maxApkBytes) {
+          throw const HttpException('更新包超过 200 MB 限制');
+        }
         if (total > 0) {
           progress.value = received / total;
         }
@@ -275,9 +280,6 @@ class _AboutPageState extends State<AboutPage> {
       await sink.close();
       sink = null;
       if (received == 0 || (total > 0 && received != total)) {
-        if (await file.exists()) {
-          await file.delete();
-        }
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -286,6 +288,10 @@ class _AboutPageState extends State<AboutPage> {
         }
         return;
       }
+      if (await file.exists()) {
+        await file.delete();
+      }
+      await partialFile.rename(filePath);
     } on HandshakeException {
       if (mounted) {
         Navigator.of(context).pop();
@@ -304,6 +310,9 @@ class _AboutPageState extends State<AboutPage> {
       return;
     } finally {
       await sink?.close();
+      if (await partialFile.exists()) {
+        await partialFile.delete();
+      }
       client.close(force: true);
       progress.dispose();
     }
@@ -376,13 +385,6 @@ class _AboutPageState extends State<AboutPage> {
         clearedBytes += await _deleteDirectoryContents(tempDir);
       }
 
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final downloadedApk = File('${documentsDir.path}/jianxi_reader.apk');
-      if (await downloadedApk.exists()) {
-        clearedBytes += await downloadedApk.length();
-        await downloadedApk.delete();
-      }
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已清理缓存：${_formatBytes(clearedBytes)}')),
@@ -443,8 +445,7 @@ class _AboutPageState extends State<AboutPage> {
 
   HttpClient _createUpdateClient() {
     final client = HttpClient();
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+    client.connectionTimeout = const Duration(seconds: 15);
     client.userAgent = 'JianxiReader/1.0';
     return client;
   }
