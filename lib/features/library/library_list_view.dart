@@ -425,7 +425,7 @@ class _AnimatedDocumentSliverListState
         opacity: curve,
         child: SizeTransition(
           sizeFactor: curve,
-          axisAlignment: -1,
+          alignment: Alignment.topCenter,
           child: SlideTransition(
             position: Tween<Offset>(
               begin: removing ? Offset.zero : const Offset(0, -0.04),
