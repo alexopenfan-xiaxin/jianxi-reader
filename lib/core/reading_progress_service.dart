@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persists reading scroll-progress ratio per document path.
@@ -15,7 +17,9 @@ class ReadingProgressService {
       return;
     }
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setDouble(_key(path), clamped);
+    if (!await preferences.setDouble(_key(path), clamped)) {
+      throw const FileSystemException('无法保存阅读进度');
+    }
   }
 
   /// Load the previously saved progress ratio, or `null` if none exists.
@@ -27,16 +31,22 @@ class ReadingProgressService {
   /// Remove stored progress for a document.
   static Future<void> removeProgress(String path) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.remove(_key(path));
+    if (!await preferences.remove(_key(path))) {
+      throw const FileSystemException('无法清除阅读进度');
+    }
   }
 
   /// Move stored progress when a document path changes.
   static Future<void> moveProgress(String oldPath, String newPath) async {
     final preferences = await SharedPreferences.getInstance();
     final value = preferences.getDouble(_key(oldPath));
-    await preferences.remove(_key(oldPath));
     if (value != null) {
-      await preferences.setDouble(_key(newPath), value);
+      if (!await preferences.setDouble(_key(newPath), value)) {
+        throw const FileSystemException('无法迁移阅读进度');
+      }
+    }
+    if (!await preferences.remove(_key(oldPath))) {
+      throw const FileSystemException('无法迁移阅读进度');
     }
   }
 

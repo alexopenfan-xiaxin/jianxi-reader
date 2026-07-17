@@ -154,8 +154,17 @@ class DocumentFileService implements DocumentLibraryService {
       );
     }
     if (pathsChanged) {
-      await preferences.setStringList(_referencedPathsKey, referencedPaths);
+      await _persistPreference(
+        preferences.setStringList(_referencedPathsKey, referencedPaths),
+      );
     }
+    final activeReferencedPaths = entries
+        .where((entry) => entry.isReferenced)
+        .map((entry) => entry.path)
+        .toSet();
+    _lastRefreshTimes.removeWhere(
+      (path, _) => !activeReferencedPaths.contains(path),
+    );
 
     _cachedEntries = entries;
     _cacheTimestamp = DateTime.now();
@@ -231,7 +240,9 @@ class DocumentFileService implements DocumentLibraryService {
         ),
       );
     }
-    await preferences.setStringList(_referencedPathsKey, paths);
+    await _persistPreference(
+      preferences.setStringList(_referencedPathsKey, paths),
+    );
 
     return imported;
   }
@@ -354,13 +365,15 @@ class DocumentFileService implements DocumentLibraryService {
     if (!file.existsSync()) {
       throw FileSystemException('文档不存在或已被移出', path);
     }
-    return DocumentEntry.fromFile(
+    final refreshed = await DocumentEntry.fromFile(
       file,
       recentOpenedAt: _recentOpenedAt(preferences, path),
       isReferenced: document.isReferenced,
       tags: _documentTags(preferences, path),
       pinned: _documentPinned(preferences, path),
     );
+    invalidateLibraryCache();
+    return refreshed;
   }
 
   Future<Directory> ensureLibraryDirectory() async {
@@ -399,16 +412,50 @@ class DocumentFileService implements DocumentLibraryService {
       throw FileSystemException('同名文档已存在', destinationPath);
     }
 
-    final renamedFile = await source.rename(destinationPath);
     final preferences = await _preferences();
-    await _moveDocumentMetadata(preferences, document.path, renamedFile.path);
+    final renamedFile = await source.rename(destinationPath);
+    try {
+      await _moveDocumentMetadata(preferences, document.path, renamedFile.path);
+      if (document.isReferenced) {
+        await _updateReferencedPath(
+          preferences,
+          document.path,
+          renamedFile.path,
+        );
+        await _moveReferencedSourceUri(
+          preferences,
+          document.path,
+          renamedFile.path,
+        );
+      }
+    } catch (error, stackTrace) {
+      try {
+        await renamedFile.rename(source.path);
+        if (document.isReferenced) {
+          await _updateReferencedPath(
+            preferences,
+            renamedFile.path,
+            source.path,
+          );
+          await _moveReferencedSourceUri(
+            preferences,
+            renamedFile.path,
+            source.path,
+          );
+        }
+        await _moveDocumentMetadata(preferences, renamedFile.path, source.path);
+      } catch (rollbackError) {
+        throw FileSystemException(
+          '重命名失败，且自动回滚未完成：$rollbackError',
+          document.path,
+        );
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    invalidateLibraryCache();
+    _lastRefreshTimes.remove(document.path);
     if (document.isReferenced) {
-      await _updateReferencedPath(preferences, document.path, renamedFile.path);
-      await _moveReferencedSourceUri(
-        preferences,
-        document.path,
-        renamedFile.path,
-      );
+      _lastRefreshTimes[renamedFile.path] = DateTime.now();
     }
     return DocumentEntry.fromFile(
       renamedFile,
@@ -428,37 +475,99 @@ class DocumentFileService implements DocumentLibraryService {
     final index = paths.indexOf(oldPath);
     if (index != -1) {
       paths[index] = newPath;
-      await preferences.setStringList(_referencedPathsKey, paths);
+      await _persistPreference(
+        preferences.setStringList(_referencedPathsKey, paths),
+      );
     }
   }
 
   @override
   Future<void> removeDocument(DocumentEntry document) async {
     final preferences = await _preferences();
-
-    if (document.isReferenced) {
-      final paths = preferences.getStringList(_referencedPathsKey) ?? [];
-      paths.remove(document.path);
-      await preferences.setStringList(_referencedPathsKey, paths);
-      final sourceUri = preferences.getString(
-        _referencedSourceUriKey(document.path),
+    final referencedPaths = document.isReferenced
+        ? preferences.getStringList(_referencedPathsKey) ?? []
+        : null;
+    final sourceUri = document.isReferenced
+        ? preferences.getString(_referencedSourceUriKey(document.path))
+        : null;
+    final recentOpened = preferences.getInt(_recentOpenedKey(document.path));
+    final pinned = preferences.getBool(_documentPinnedKey(document.path));
+    final tags = preferences.getStringList(_documentTagsKey(document.path));
+    final progress = await ReadingProgressService.loadProgress(document.path);
+    final documentId = await DocumentIdentityService.getIdForPath(
+      document.path,
+    );
+    final file = File(document.path);
+    File? stagedFile;
+    if ((!document.isReferenced || sourceUri != null) && file.existsSync()) {
+      final stagedName =
+          '${p.basenameWithoutExtension(file.path)}.deleting-'
+          '${DateTime.now().microsecondsSinceEpoch}${p.extension(file.path)}';
+      stagedFile = await file.rename(
+        p.join(file.parent.path, stagedName),
       );
-      await preferences.remove(_referencedSourceUriKey(document.path));
-      if (sourceUri != null) {
-        final mirror = File(document.path);
-        if (mirror.existsSync()) {
-          await mirror.delete();
-        }
-      }
-    } else {
-      final file = File(document.path);
-      if (file.existsSync()) {
-        await file.delete();
-      }
     }
 
-    await _clearDocumentMetadata(preferences, document.path);
-    await DocumentIdentityService.removePath(document.path);
+    try {
+      if (document.isReferenced) {
+        final paths = List<String>.from(referencedPaths!);
+        paths.remove(document.path);
+        await _persistPreference(
+          preferences.setStringList(_referencedPathsKey, paths),
+        );
+        await _persistPreference(
+          preferences.remove(_referencedSourceUriKey(document.path)),
+        );
+      }
+      await _clearDocumentMetadata(preferences, document.path);
+      await DocumentIdentityService.removePath(document.path);
+      if (stagedFile != null && stagedFile.existsSync()) {
+        await stagedFile.delete();
+      }
+    } catch (error, stackTrace) {
+      try {
+        if (stagedFile != null &&
+            stagedFile.existsSync() &&
+            !file.existsSync()) {
+          await stagedFile.rename(file.path);
+        }
+        if (referencedPaths != null) {
+          await _persistPreference(
+            preferences.setStringList(
+              _referencedPathsKey,
+              referencedPaths,
+            ),
+          );
+          if (sourceUri != null) {
+            await _persistPreference(
+              preferences.setString(
+                _referencedSourceUriKey(document.path),
+                sourceUri,
+              ),
+            );
+          }
+        }
+        await _restoreDocumentMetadata(
+          preferences,
+          document.path,
+          recentOpened: recentOpened,
+          pinned: pinned,
+          tags: tags,
+          progress: progress,
+        );
+        if (documentId != null) {
+          await DocumentIdentityService.restorePath(document.path, documentId);
+        }
+      } catch (rollbackError) {
+        throw FileSystemException(
+          '移出失败，且自动回滚未完成：$rollbackError',
+          document.path,
+        );
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    invalidateLibraryCache();
+    _lastRefreshTimes.remove(document.path);
   }
 
   @override
@@ -468,10 +577,15 @@ class DocumentFileService implements DocumentLibraryService {
   ) async {
     final preferences = await _preferences();
     if (pinned) {
-      await preferences.setBool(_documentPinnedKey(document.path), true);
+      await _persistPreference(
+        preferences.setBool(_documentPinnedKey(document.path), true),
+      );
     } else {
-      await preferences.remove(_documentPinnedKey(document.path));
+      await _persistPreference(
+        preferences.remove(_documentPinnedKey(document.path)),
+      );
     }
+    invalidateLibraryCache();
     return document.copyWith(pinned: pinned);
   }
 
@@ -479,10 +593,13 @@ class DocumentFileService implements DocumentLibraryService {
   Future<DateTime> markDocumentOpened(DocumentEntry document) async {
     final preferences = await _preferences();
     final openedAt = DateTime.now();
-    await preferences.setInt(
-      _recentOpenedKey(document.path),
-      openedAt.millisecondsSinceEpoch,
+    await _persistPreference(
+      preferences.setInt(
+        _recentOpenedKey(document.path),
+        openedAt.millisecondsSinceEpoch,
+      ),
     );
+    invalidateLibraryCache();
     return openedAt;
   }
 
@@ -506,8 +623,9 @@ class DocumentFileService implements DocumentLibraryService {
     if (!tags.contains(tag)) {
       tags.add(tag);
       tags.sort();
-      await preferences.setStringList(_tagsKey, tags);
+      await _persistPreference(preferences.setStringList(_tagsKey, tags));
     }
+    invalidateLibraryCache();
   }
 
   @override
@@ -515,11 +633,13 @@ class DocumentFileService implements DocumentLibraryService {
     final tag = _validateTagName(name);
     final preferences = await _preferences();
     final tags = _allTags(preferences)..remove(tag);
-    await preferences.setStringList(_tagsKey, tags);
+    await _persistPreference(preferences.setStringList(_tagsKey, tags));
     final pinnedTags = _cleanTags(
       preferences.getStringList(_pinnedTagsKey) ?? [],
     )..remove(tag);
-    await preferences.setStringList(_pinnedTagsKey, pinnedTags);
+    await _persistPreference(
+      preferences.setStringList(_pinnedTagsKey, pinnedTags),
+    );
 
     for (final key in preferences.getKeys()) {
       if (!key.startsWith(_documentTagsPrefix)) {
@@ -527,9 +647,12 @@ class DocumentFileService implements DocumentLibraryService {
       }
       final documentTags = preferences.getStringList(key) ?? [];
       if (documentTags.remove(tag)) {
-        await preferences.setStringList(key, documentTags);
+        await _persistPreference(
+          preferences.setStringList(key, documentTags),
+        );
       }
     }
+    invalidateLibraryCache();
   }
 
   @override
@@ -545,7 +668,10 @@ class DocumentFileService implements DocumentLibraryService {
       pinnedTags.remove(tag);
     }
     pinnedTags.sort();
-    await preferences.setStringList(_pinnedTagsKey, pinnedTags);
+    await _persistPreference(
+      preferences.setStringList(_pinnedTagsKey, pinnedTags),
+    );
+    invalidateLibraryCache();
   }
 
   @override
@@ -562,8 +688,11 @@ class DocumentFileService implements DocumentLibraryService {
       }
     }
     allTags.sort();
-    await preferences.setStringList(_tagsKey, allTags);
-    await preferences.setStringList(_documentTagsKey(document.path), cleanTags);
+    await _persistPreference(preferences.setStringList(_tagsKey, allTags));
+    await _persistPreference(
+      preferences.setStringList(_documentTagsKey(document.path), cleanTags),
+    );
+    invalidateLibraryCache();
     return DocumentTagUpdate(documentTags: cleanTags, allTags: allTags);
   }
 
@@ -628,14 +757,48 @@ class DocumentFileService implements DocumentLibraryService {
     return cleanName;
   }
 
+  static Future<void> _persistPreference(Future<bool> write) async {
+    if (!await write) {
+      throw const FileSystemException('无法保存文档库状态');
+    }
+  }
+
   static Future<void> _clearDocumentMetadata(
     SharedPreferences preferences,
     String path,
   ) async {
-    await preferences.remove(_recentOpenedKey(path));
-    await preferences.remove(_documentPinnedKey(path));
-    await preferences.remove(_documentTagsKey(path));
+    await _persistPreference(preferences.remove(_recentOpenedKey(path)));
+    await _persistPreference(preferences.remove(_documentPinnedKey(path)));
+    await _persistPreference(preferences.remove(_documentTagsKey(path)));
     await ReadingProgressService.removeProgress(path);
+  }
+
+  static Future<void> _restoreDocumentMetadata(
+    SharedPreferences preferences,
+    String path, {
+    required int? recentOpened,
+    required bool? pinned,
+    required List<String>? tags,
+    required double? progress,
+  }) async {
+    if (recentOpened != null) {
+      await _persistPreference(
+        preferences.setInt(_recentOpenedKey(path), recentOpened),
+      );
+    }
+    if (pinned != null) {
+      await _persistPreference(
+        preferences.setBool(_documentPinnedKey(path), pinned),
+      );
+    }
+    if (tags != null) {
+      await _persistPreference(
+        preferences.setStringList(_documentTagsKey(path), tags),
+      );
+    }
+    if (progress != null) {
+      await ReadingProgressService.saveProgress(path, progress);
+    }
   }
 
   static Future<void> _moveDocumentMetadata(
@@ -646,18 +809,26 @@ class DocumentFileService implements DocumentLibraryService {
     final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
     final pinned = preferences.getBool(_documentPinnedKey(oldPath));
     final tags = preferences.getStringList(_documentTagsKey(oldPath));
-    await ReadingProgressService.moveProgress(oldPath, newPath);
-    await _clearDocumentMetadata(preferences, oldPath);
-    await DocumentIdentityService.movePath(oldPath, newPath);
     if (recentOpened != null) {
-      await preferences.setInt(_recentOpenedKey(newPath), recentOpened);
+      await _persistPreference(
+        preferences.setInt(_recentOpenedKey(newPath), recentOpened),
+      );
     }
     if (pinned == true) {
-      await preferences.setBool(_documentPinnedKey(newPath), true);
+      await _persistPreference(
+        preferences.setBool(_documentPinnedKey(newPath), true),
+      );
     }
     if (tags != null) {
-      await preferences.setStringList(_documentTagsKey(newPath), tags);
+      await _persistPreference(
+        preferences.setStringList(_documentTagsKey(newPath), tags),
+      );
     }
+    await ReadingProgressService.moveProgress(oldPath, newPath);
+    await DocumentIdentityService.movePath(oldPath, newPath);
+    await _persistPreference(preferences.remove(_recentOpenedKey(oldPath)));
+    await _persistPreference(preferences.remove(_documentPinnedKey(oldPath)));
+    await _persistPreference(preferences.remove(_documentTagsKey(oldPath)));
   }
 
   static Future<void> _moveReferencedSourceUri(
@@ -666,10 +837,14 @@ class DocumentFileService implements DocumentLibraryService {
     String newPath,
   ) async {
     final sourceUri = preferences.getString(_referencedSourceUriKey(oldPath));
-    await preferences.remove(_referencedSourceUriKey(oldPath));
     if (sourceUri != null) {
-      await preferences.setString(_referencedSourceUriKey(newPath), sourceUri);
+      await _persistPreference(
+        preferences.setString(_referencedSourceUriKey(newPath), sourceUri),
+      );
     }
+    await _persistPreference(
+      preferences.remove(_referencedSourceUriKey(oldPath)),
+    );
   }
 
   Future<List<DocumentEntry>> _pickAndroidReferencedDocuments() async {
@@ -822,28 +997,43 @@ class DocumentFileService implements DocumentLibraryService {
                   sourceUri,
           orElse: () => null,
         );
+    await _persistPreference(
+      preferences.setString(_referencedSourceUriKey(path), sourceUri),
+    );
     if (previousPath != null) {
-      paths.remove(previousPath);
-      await preferences.remove(_referencedSourceUriKey(previousPath));
       await _moveDocumentMetadata(preferences, previousPath, path);
-      final previousFile = File(previousPath);
-      if (previousFile.existsSync()) {
-        try {
-          await previousFile.delete();
-        } catch (error) {
-          debugPrint(
-            '[DocumentFileService] remove old referenced mirror failed: $error',
-          );
-        }
-      }
+      paths.remove(previousPath);
     }
     if (!paths.contains(path)) {
       paths.add(path);
-      await preferences.setStringList(_referencedPathsKey, paths);
-    } else if (previousPath != null) {
-      await preferences.setStringList(_referencedPathsKey, paths);
     }
-    await preferences.setString(_referencedSourceUriKey(path), sourceUri);
+    if (previousPath != null ||
+        !(preferences.getStringList(_referencedPathsKey) ?? []).contains(path)) {
+      await _persistPreference(
+        preferences.setStringList(_referencedPathsKey, paths),
+      );
+    }
+    await DocumentIdentityService.getOrCreateId(
+      path: path,
+      sourceUri: sourceUri,
+    );
+    if (previousPath != null) {
+      await _persistPreference(
+        preferences.remove(_referencedSourceUriKey(previousPath)),
+      );
+      if (Platform.isAndroid) {
+        final previousFile = File(previousPath);
+        if (previousFile.existsSync()) {
+          try {
+            await previousFile.delete();
+          } catch (error) {
+            debugPrint(
+              '[DocumentFileService] remove old referenced mirror failed: $error',
+            );
+          }
+        }
+      }
+    }
   }
 
   Future<String?> _refreshReferencedMirror(
@@ -899,6 +1089,7 @@ class DocumentFileService implements DocumentLibraryService {
       return null;
     }
 
+    File? migratedFile;
     try {
       final parent = file.parent;
       final destinationDirectory = Directory(
@@ -906,7 +1097,7 @@ class DocumentFileService implements DocumentLibraryService {
       );
       await destinationDirectory.create(recursive: true);
       final destinationPath = p.join(destinationDirectory.path, restoredName);
-      final migratedFile = await file.rename(destinationPath);
+      migratedFile = await file.rename(destinationPath);
       await _moveDocumentMetadata(preferences, path, migratedFile.path);
       await _moveReferencedSourceUri(preferences, path, migratedFile.path);
       return migratedFile.path;
@@ -914,6 +1105,31 @@ class DocumentFileService implements DocumentLibraryService {
       debugPrint(
         '[DocumentFileService] migrate referenced mirror name failed: $error',
       );
+      if (migratedFile != null &&
+          migratedFile.existsSync() &&
+          !file.existsSync()) {
+        try {
+          await migratedFile.rename(file.path);
+          await _moveDocumentMetadata(
+            preferences,
+            migratedFile.path,
+            file.path,
+          );
+          await _moveReferencedSourceUri(
+            preferences,
+            migratedFile.path,
+            file.path,
+          );
+        } catch (rollbackError) {
+          debugPrint(
+            '[DocumentFileService] rollback mirror migration failed: '
+            '$rollbackError',
+          );
+        }
+      }
+      if (!file.existsSync() && migratedFile?.existsSync() == true) {
+        return migratedFile!.path;
+      }
       return null;
     }
   }

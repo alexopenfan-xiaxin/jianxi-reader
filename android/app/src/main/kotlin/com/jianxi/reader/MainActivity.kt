@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.system.Os
 import android.view.HapticFeedbackConstants
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
@@ -237,11 +238,41 @@ class MainActivity : FlutterActivity() {
 
     private fun copyUriToFile(uri: Uri, file: File): Map<String, Any?> {
         file.parentFile?.mkdirs()
-        val input = contentResolver.openInputStream(uri)
-            ?: throw IOException("无法读取文档内容")
-        input.use { source ->
-            file.outputStream().use { destination ->
-                source.copyTo(destination)
+        val fileExisted = file.exists()
+        val declaredSize = querySize(uri)
+        if (declaredSize > MAX_READABLE_BYTES) {
+            throw IOException("文档超过 100 MB 限制")
+        }
+        val temporary = File(
+            file.parentFile,
+            ".${file.name}.${System.nanoTime()}.tmp"
+        )
+        var replaced = false
+        try {
+            val input = contentResolver.openInputStream(uri)
+                ?: throw IOException("无法读取文档内容")
+            input.use { source ->
+                temporary.outputStream().use { destination ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var copied = 0L
+                    while (true) {
+                        val count = source.read(buffer)
+                        if (count < 0) break
+                        copied += count
+                        if (copied > MAX_READABLE_BYTES) {
+                            throw IOException("文档超过 100 MB 限制")
+                        }
+                        destination.write(buffer, 0, count)
+                    }
+                    destination.fd.sync()
+                }
+            }
+            Os.rename(temporary.absolutePath, file.absolutePath)
+            replaced = true
+        } finally {
+            temporary.delete()
+            if (!replaced && !fileExisted) {
+                file.parentFile?.delete()
             }
         }
 

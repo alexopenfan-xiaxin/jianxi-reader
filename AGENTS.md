@@ -68,8 +68,8 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `2.8.4+184` (versionName = 2.8.4, versionCode = 184)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=184`
+- `pubspec.yaml`: `2.8.5+185` (versionName = 2.8.5, versionCode = 185)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=185`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
@@ -167,6 +167,7 @@ import 'dart:io';
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
 - Update APKs are stored under the dedicated cache `updates/` directory; FileProvider exposes only that directory
 - Stable referenced-document IDs use deterministic FNV-1a hashes; never use Dart `hashCode` for persisted identifiers
+- Android document mirrors are copied to a size-limited sibling temporary file, flushed, then atomically replaced with `Os.rename`
 - `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
 - File hot-reload uses `Timer.periodic(3s)` in `_MarkdownViewerState` to poll `lastModifiedSync()`; `_checkFileChanged` now logs errors and guards against deleted files
 

@@ -151,5 +151,25 @@ void main() {
       expect(await ReadingProgressService.loadProgress(document.path), isNull);
     });
 
+    test('removing a referenced file never deletes the source', () async {
+      final targetDir = Directory.systemTemp.createTempSync('jianxi_source_');
+      addTearDown(() => targetDir.deleteSync(recursive: true));
+
+      final file = File(p.join(targetDir.path, 'external.md'));
+      await file.writeAsString('# External');
+      SharedPreferences.setMockInitialValues({
+        'referenced.paths': [file.path],
+      });
+      final document = await DocumentEntry.fromFile(
+        file,
+        isReferenced: true,
+      );
+
+      await DocumentFileService().removeDocument(document);
+
+      expect(file.existsSync(), isTrue);
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getStringList('referenced.paths'), isEmpty);
+    });
   });
 }

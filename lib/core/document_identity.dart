@@ -94,6 +94,16 @@ class DocumentIdentityService {
     });
   }
 
+  static Future<void> restorePath(String path, String id) {
+    return MetadataFileStore.serialize(_idMapFileName, () async {
+      final map = await _loadIdMap();
+      if (map[path] == id) return;
+      final next = Map<String, String>.from(map)..[path] = id;
+      await MetadataFileStore.writeJson(_idMapFileName, next);
+      _replaceMap(map, next);
+    });
+  }
+
   static void _replaceMap(
     Map<String, String> current,
     Map<String, String> next,
