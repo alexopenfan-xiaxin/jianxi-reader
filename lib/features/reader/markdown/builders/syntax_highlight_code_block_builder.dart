@@ -72,7 +72,8 @@ class _SyntaxHighlightCodeBlockWidgetState
   Timer? _copyResetTimer;
 
   static const _languageAliases = {
-    'sh': 'shell',
+    'sh': 'bash',
+    'shell': 'bash',
     'zsh': 'bash',
     'console': 'bash',
     'rest': 'http',
@@ -118,7 +119,7 @@ class _SyntaxHighlightCodeBlockWidgetState
     'sol': 'solidity',
     'toml': 'ini',
     'dotenv': 'ini',
-    'shell-session': 'shell',
+    'shell-session': 'bash',
     'serverpod': 'yaml',
     'serverpod_protocol': 'yaml',
   };
