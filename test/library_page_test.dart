@@ -286,7 +286,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('书架'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Back'));
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();
