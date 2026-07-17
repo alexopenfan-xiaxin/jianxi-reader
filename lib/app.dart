@@ -9,17 +9,16 @@ import 'features/library/library_controller.dart';
 import 'features/shell/app_shell.dart';
 
 class JianxiReaderApp extends StatelessWidget {
-  const JianxiReaderApp({super.key, this.documentService, this.settings});
+  const JianxiReaderApp({super.key, this.documentService});
 
   final DocumentLibraryService? documentService;
-  final AppSettingsController? settings;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AppSettingsController>(
-          create: (_) => settings ?? (AppSettingsController()..load()),
+          create: (_) => AppSettingsController()..load(),
         ),
         ChangeNotifierProvider<LibraryController>(
           create: (_) => LibraryController(
