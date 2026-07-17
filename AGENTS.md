@@ -10,6 +10,7 @@ Flutter mobile reader for Markdown and HTML documents. Library management, readi
 - **Design tokens singleton**: `AppColors` (static colors), palette via `BuildContext` extension (`context.palette`)
 - **Cards**: `AppCard` widget in `lib/core/widgets/app_card.dart`
 - **File service**: `DocumentFileService` in `lib/core/document_file_service.dart` (scan, import, rename, remove, metadata)
+- **JSON metadata**: `MetadataFileStore` serializes mutations and atomically replaces identity, bookmark, and history files
 - **Android permissions**: `INTERNET` required in `AndroidManifest.xml` for release builds (debug manifest has it, main manifest does not by default)
 - **TLS**: Update checks use the platform trust store; never bypass certificate validation
 
@@ -67,13 +68,13 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
 
 ## Version
-- `pubspec.yaml`: `2.4.1+141` (versionName = 2.4.1, versionCode = 141)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=141`
+- `pubspec.yaml`: `2.8.4+184` (versionName = 2.8.4, versionCode = 184)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=184`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
-- **IMPORTANT**: When bumping version, also update the in-app version display (`settings_page.dart`) AND the update check URL query param (`?request&local=N`) — all three must match. Also bump the `build` count in commit messages.
+- **IMPORTANT**: When bumping version, also update `_fallbackBuildNumber` in `about_settings.dart`; the displayed version and update URL otherwise come from `PackageInfo`. Also bump the `build` count in commit messages.
 - If the user requests code changes but does not explicitly specify `versionName`, increment the patch version by one while keeping the build number monotonic as requested or inferred. Example: after `2.0.1+102`, the next unspecified versionName should be `2.0.2`, not another `2.0.1` build.
 
 ## GitHub
@@ -165,6 +166,7 @@ import 'dart:io';
 - Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
 - `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
 - Update APKs are stored under the dedicated cache `updates/` directory; FileProvider exposes only that directory
+- Stable referenced-document IDs use deterministic FNV-1a hashes; never use Dart `hashCode` for persisted identifiers
 - `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
 - File hot-reload uses `Timer.periodic(3s)` in `_MarkdownViewerState` to poll `lastModifiedSync()`; `_checkFileChanged` now logs errors and guards against deleted files
 

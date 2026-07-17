@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+import 'metadata_file_store.dart';
 
 /// A single reading event: document opened at a point in time.
 class ReadingHistoryEvent {
@@ -42,29 +40,15 @@ class ReadingHistoryService {
   static List<ReadingHistoryEvent>? _cache;
   static Future<List<ReadingHistoryEvent>>? _loadFuture;
 
-  static Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
-    final metadataDir = Directory('${dir.path}/metadata');
-    if (!metadataDir.existsSync()) {
-      await metadataDir.create(recursive: true);
-    }
-    return File('${metadataDir.path}/$_fileName');
-  }
-
   static Future<List<ReadingHistoryEvent>> loadAll() async {
     return _loadFuture ??= () async {
-      final file = await _file;
+      final file = await MetadataFileStore.file(_fileName);
       if (await file.exists()) {
-        try {
-          final raw = await file.readAsString();
-          final list = jsonDecode(raw) as List;
-          _cache = list
-              .map((e) => ReadingHistoryEvent.fromJson(e as Map<String, dynamic>))
-              .toList();
-        } catch (e) {
-          debugPrint('[ReadingHistoryService] load failed: $e');
-          _cache = [];
-        }
+        final raw = await file.readAsString();
+        final list = jsonDecode(raw) as List;
+        _cache = list
+            .map((e) => ReadingHistoryEvent.fromJson(e as Map<String, dynamic>))
+            .toList();
       } else {
         _cache = [];
       }
@@ -75,19 +59,22 @@ class ReadingHistoryService {
   static Future<void> record({
     required String documentId,
     double? progressRatio,
-  }) async {
-    final events = await loadAll();
-    final event = ReadingHistoryEvent(
-      documentId: documentId,
-      openedAtMillis: DateTime.now().millisecondsSinceEpoch,
-      progressRatio: progressRatio,
-    );
-    events.add(event);
-    // Trim to max events (keep most recent).
-    if (events.length > _maxEvents) {
-      events.removeRange(0, events.length - _maxEvents);
-    }
-    await _save(events);
+  }) {
+    return MetadataFileStore.serialize(_fileName, () async {
+      final events = await loadAll();
+      final next = [
+        ...events,
+        ReadingHistoryEvent(
+          documentId: documentId,
+          openedAtMillis: DateTime.now().millisecondsSinceEpoch,
+          progressRatio: progressRatio,
+        ),
+      ];
+      if (next.length > _maxEvents) {
+        next.removeRange(0, next.length - _maxEvents);
+      }
+      await _replaceAll(events, next);
+    });
   }
 
   static Future<List<ReadingHistoryEvent>> recentEvents({int limit = 50}) async {
@@ -97,25 +84,32 @@ class ReadingHistoryService {
     return sorted.take(limit).toList();
   }
 
-  static Future<void> removeForDocument(String documentId) async {
-    final events = await loadAll();
-    events.removeWhere((e) => e.documentId == documentId);
-    await _save(events);
+  static Future<void> removeForDocument(String documentId) {
+    return MetadataFileStore.serialize(_fileName, () async {
+      final events = await loadAll();
+      await _replaceAll(
+        events,
+        events.where((event) => event.documentId != documentId).toList(),
+      );
+    });
   }
 
-  static Future<void> clearAll() async {
-    _cache = [];
-    await _save([]);
+  static Future<void> clearAll() {
+    return MetadataFileStore.serialize(_fileName, () async {
+      final events = await loadAll();
+      await _replaceAll(events, []);
+    });
   }
 
-  static Future<void> _save(List<ReadingHistoryEvent> events) async {
-    try {
-      final file = await _file;
-      final json = events.map((e) => e.toJson()).toList();
-      await file.writeAsString(jsonEncode(json));
-    } catch (e) {
-      debugPrint('[ReadingHistoryService] save failed: $e');
-    }
+  static Future<void> _replaceAll(
+    List<ReadingHistoryEvent> current,
+    List<ReadingHistoryEvent> next,
+  ) async {
+    final json = next.map((event) => event.toJson()).toList();
+    await MetadataFileStore.writeJson(_fileName, json);
+    current
+      ..clear()
+      ..addAll(next);
   }
 
   static void clearCache() {

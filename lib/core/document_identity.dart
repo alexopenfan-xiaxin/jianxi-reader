@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+import 'metadata_file_store.dart';
 
 /// Manages stable document identifiers that survive renames and mirror migrations.
 ///
@@ -14,35 +12,22 @@ class DocumentIdentityService {
   DocumentIdentityService._();
 
   static const _idMapFileName = 'id_map.json';
+  static final _random = Random.secure();
   static Map<String, String>? _idMap;
   static Future<Map<String, String>>? _idMapFuture;
 
   static Future<Map<String, String>> _loadIdMap() async {
     return _idMapFuture ??= () async {
-      final file = await _idMapFile;
+      final file = await MetadataFileStore.file(_idMapFileName);
       if (await file.exists()) {
-        try {
-          final raw = await file.readAsString();
-          final decoded = jsonDecode(raw) as Map<String, dynamic>;
-          _idMap = decoded.map((k, v) => MapEntry(k, v.toString()));
-        } catch (e) {
-          debugPrint('[DocumentIdentity] load id map failed: $e');
-          _idMap = {};
-        }
+        final raw = await file.readAsString();
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        _idMap = decoded.map((k, v) => MapEntry(k, v.toString()));
       } else {
         _idMap = {};
       }
       return _idMap!;
     }();
-  }
-
-  static Future<File> get _idMapFile async {
-    final dir = await getApplicationDocumentsDirectory();
-    final metadataDir = Directory('${dir.path}/metadata');
-    if (!metadataDir.existsSync()) {
-      await metadataDir.create(recursive: true);
-    }
-    return File('${metadataDir.path}/$_idMapFileName');
   }
 
   /// Get or create a stable document ID for the given path.
@@ -52,26 +37,30 @@ class DocumentIdentityService {
   static Future<String> getOrCreateId({
     required String path,
     String? sourceUri,
-  }) async {
-    final map = await _loadIdMap();
+  }) {
+    return MetadataFileStore.serialize(_idMapFileName, () async {
+      final map = await _loadIdMap();
+      final existing = map[path];
+      if (existing != null) return existing;
 
-    // Check if we already have an ID for this path.
-    final existing = map[path];
-    if (existing != null) return existing;
+      final id = sourceUri != null && sourceUri.isNotEmpty
+          ? sourceIdFor(sourceUri)
+          : 'doc_${DateTime.now().microsecondsSinceEpoch}_'
+              '${_random.nextInt(1 << 32).toRadixString(16)}';
+      final next = Map<String, String>.from(map)..[path] = id;
+      await MetadataFileStore.writeJson(_idMapFileName, next);
+      _replaceMap(map, next);
+      return id;
+    });
+  }
 
-    // For referenced docs, derive ID from sourceUri.
-    String id;
-    if (sourceUri != null && sourceUri.isNotEmpty) {
-      id = 'ref_${sourceUri.hashCode.abs().toRadixString(36)}';
-    } else {
-      // Check if any existing entry has the same sourceUri-derived ID.
-      final rng = Random();
-      id = 'doc_${DateTime.now().microsecondsSinceEpoch}_${rng.nextInt(999999)}';
+  static String sourceIdFor(String sourceUri) {
+    var hash = 0xcbf29ce484222325;
+    for (final byte in utf8.encode(sourceUri)) {
+      hash ^= byte;
+      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
     }
-
-    map[path] = id;
-    await _saveIdMap(map);
-    return id;
+    return 'ref_${hash.toRadixString(16).padLeft(16, '0')}';
   }
 
   /// Get the existing ID for a path, or null if not registered.
@@ -81,30 +70,37 @@ class DocumentIdentityService {
   }
 
   /// Update the path mapping when a document is renamed or moved.
-  static Future<void> movePath(String oldPath, String newPath) async {
-    final map = await _loadIdMap();
-    final id = map.remove(oldPath);
-    if (id != null) {
-      map[newPath] = id;
-      await _saveIdMap(map);
-    }
+  static Future<void> movePath(String oldPath, String newPath) {
+    return MetadataFileStore.serialize(_idMapFileName, () async {
+      final map = await _loadIdMap();
+      final id = map[oldPath];
+      if (id == null) return;
+      final next = Map<String, String>.from(map)
+        ..remove(oldPath)
+        ..[newPath] = id;
+      await MetadataFileStore.writeJson(_idMapFileName, next);
+      _replaceMap(map, next);
+    });
   }
 
   /// Remove a path from the identity map.
-  static Future<void> removePath(String path) async {
-    final map = await _loadIdMap();
-    if (map.remove(path) != null) {
-      await _saveIdMap(map);
-    }
+  static Future<void> removePath(String path) {
+    return MetadataFileStore.serialize(_idMapFileName, () async {
+      final map = await _loadIdMap();
+      if (!map.containsKey(path)) return;
+      final next = Map<String, String>.from(map)..remove(path);
+      await MetadataFileStore.writeJson(_idMapFileName, next);
+      _replaceMap(map, next);
+    });
   }
 
-  static Future<void> _saveIdMap(Map<String, String> map) async {
-    try {
-      final file = await _idMapFile;
-      await file.writeAsString(jsonEncode(map));
-    } catch (e) {
-      debugPrint('[DocumentIdentity] save id map failed: $e');
-    }
+  static void _replaceMap(
+    Map<String, String> current,
+    Map<String, String> next,
+  ) {
+    current
+      ..clear()
+      ..addAll(next);
   }
 
   /// Clear the in-memory cache (for testing).

@@ -4,16 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
-import 'core/metadata_migration.dart';
 
 void main() {
   runZonedGuarded(
     () {
       WidgetsFlutterBinding.ensureInitialized();
-      // Run one-time metadata migration to stable document IDs.
-      MetadataMigration.runIfNeeded().catchError((e) {
-        debugPrint('[Main] metadata migration error: $e');
-      });
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
         debugPrint('[GlobalError] ${details.exceptionAsString()}');
