@@ -286,7 +286,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('书架'));
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await tester.tap(find.text('首页'));
     await tester.pumpAndSettle();
@@ -386,7 +386,7 @@ void main() {
     expect(find.text('移出'), findsOneWidget);
   });
 
-  testWidgets('opens shelf document actions with a long press', (tester) async {
+  testWidgets('enters shelf selection with a long press', (tester) async {
     SharedPreferences.setMockInitialValues({
       'settings.libraryViewMode': 'shelf',
     });
@@ -403,9 +403,7 @@ void main() {
     await tester.longPress(find.text('article.md'));
     await tester.pumpAndSettle();
 
-    expect(find.text('重命名'), findsOneWidget);
-    expect(find.text('设置标签'), findsOneWidget);
-    expect(find.text('移出'), findsOneWidget);
+    expect(find.text('已选择 1 个'), findsOneWidget);
   });
 
   testWidgets('removes a document from the visible list', (tester) async {

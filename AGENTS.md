@@ -74,8 +74,8 @@ enforces the lockfile, formatting, analysis, and the full Flutter test suite.
 Third-party actions are pinned to immutable commit SHAs.
 
 ## Version
-- `pubspec.yaml`: `2.8.14+194` (versionName = 2.8.14, versionCode = 194)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=194`
+- `pubspec.yaml`: `2.8.15+195` (versionName = 2.8.15, versionCode = 195)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=195`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing

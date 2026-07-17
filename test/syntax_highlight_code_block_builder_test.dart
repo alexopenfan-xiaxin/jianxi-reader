@@ -37,7 +37,7 @@ const _languageSamples = {
   'protobuf': 'message User { string name = 1; }',
   'r': 'value <- c(1, 2)',
   'scala': 'val value: Int = 1',
-  'shell': 'echo "\$HOME"',
+  'shell': 'if true; then echo "\$HOME"; fi',
   'postgresql': 'SELECT now();',
   'serverpod_protocol': 'class: User\nfields:\n  name: String',
   'c': '#include <stdio.h>\nint main() { return 0; }',

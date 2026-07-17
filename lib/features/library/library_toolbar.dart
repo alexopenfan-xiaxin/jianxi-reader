@@ -424,81 +424,94 @@ class _SortSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LibraryController>(
-      builder: (context, controller, _) {
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '文档排序',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            for (final mode in LibrarySortMode.values)
-              _SortOptionTile(
-                mode: mode,
-                selected: controller.sortMode == mode,
-                onTap: () {
-                  controller.updateSortMode(mode);
-                  Navigator.of(context).pop();
-                },
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                '取消',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.85,
+      minChildSize: 0.45,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Consumer<LibraryController>(
+          builder: (context, controller, _) {
+            final content = Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '文档排序',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-            ),
-          ],
-        );
+                const SizedBox(height: AppSpacing.lg),
+                for (final mode in LibrarySortMode.values)
+                  _SortOptionTile(
+                    mode: mode,
+                    selected: controller.sortMode == mode,
+                    onTap: () {
+                      controller.updateSortMode(mode);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    '取消',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            );
 
-        if (liquidGlassEnabled(context)) {
-          return LiquidGlassSheetPanel(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.xl,
-              AppSpacing.xl,
-              AppSpacing.md,
-            ),
-            borderRadius: BorderRadius.circular(42),
-            child: content,
-          );
-        }
+            final scrollableContent = SingleChildScrollView(
+              controller: scrollController,
+              child: content,
+            );
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.palette.card,
-              borderRadius: BorderRadius.circular(42),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
+            if (liquidGlassEnabled(context)) {
+              return LiquidGlassSheetPanel(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl,
                   AppSpacing.xl,
                   AppSpacing.xl,
                   AppSpacing.md,
                 ),
-                child: content,
+                borderRadius: BorderRadius.circular(42),
+                child: scrollableContent,
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.lg,
               ),
-            ),
-          ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.palette.card,
+                  borderRadius: BorderRadius.circular(42),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                    ),
+                    child: scrollableContent,
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
