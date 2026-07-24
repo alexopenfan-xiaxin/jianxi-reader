@@ -2,9 +2,34 @@ name: Test Dispatch
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (default test)'
+        required: false
+        default: 'test'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-dispatch-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - run: echo "hello"
+      - name: Read version
+        id: version
+        run: |
+          LINE=$(grep -E '^version:' pubspec.yaml | head -1)
+          echo "version_str=$LINE" >> "$GITHUB_OUTPUT"
+      - name: Step with env
+        env:
+          FOO: ${{ secrets.UPDATE_SERVER_KEY }}
+        run: |
+          if [ -z "$FOO" ]; then
+            echo "no secret"
+          fi
+          echo "done"
