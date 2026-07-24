@@ -1,10 +1,10 @@
-name: Release
+name: Build Release
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: '分支或提交 SHA（默认 test）'
+        description: 'Git ref (default test)'
         required: false
         default: 'test'
 
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
+  group: build-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +40,6 @@ jobs:
       - name: Read version info
         id: version
         run: |
-          # pubspec.yaml: version: 2.9.1+191
           LINE=$(grep -E '^version:' pubspec.yaml | head -1)
           VERSION_STR=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//')
           VERSION_NAME=$(echo "$VERSION_STR" | cut -d '+' -f 1)
@@ -96,12 +95,10 @@ EOF
           UPDATE_KEY: ${{ secrets.UPDATE_SERVER_KEY }}
         run: |
           if [ -z "$UPDATE_KEY" ]; then
-            echo "::error::Secret UPDATE_SERVER_KEY is not set. Add it in repo Settings > Secrets and Variables > Actions."
+            echo "::error::Secret UPDATE_SERVER_KEY is not set."
             exit 1
           fi
           echo "Uploading APK with version (build number) = $BUILD_NUMBER ..."
-          # 更新服务器证书链不完整，使用 --insecure 跳过校验
-          # （服务器可信，与客户端 badCertificateCallback 处理一致）
           RESPONSE=$(curl -sS -X POST \
             -F "apk=@artifacts/app-arm64-v8a-release.apk" \
             -F "version=$BUILD_NUMBER" \
@@ -159,6 +156,5 @@ EOF
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --no-tags
-          # test 为整理后的历史，与 main 无法 fast-forward，按设计 force push 同步。
           git push --force origin HEAD:main
           echo "Pushed HEAD to main."
