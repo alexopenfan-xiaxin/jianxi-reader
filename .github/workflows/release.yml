@@ -139,5 +139,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --no-tags
-          git push origin HEAD:main
+          # test 为整理后的历史，与 main 无法 fast-forward，按设计 force push 同步。
+          git push --force origin HEAD:main
           echo "Pushed HEAD to main."
