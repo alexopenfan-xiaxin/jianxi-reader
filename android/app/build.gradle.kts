@@ -34,9 +34,9 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val keystoreFile = rootProject.file("key.properties")
-            if (keystoreFile.exists()) {
+        val keystoreFile = rootProject.file("key.properties")
+        if (keystoreFile.exists()) {
+            create("release") {
                 val props = Properties()
                 props.load(FileInputStream(keystoreFile))
                 storeFile = rootProject.file(props.getProperty("storeFile"))
@@ -49,6 +49,7 @@ android {
 
     buildTypes {
         release {
+            // 无 key.properties 时回退到 debug 签名（用于 CI）。
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
