@@ -67,6 +67,7 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
+  static const _updateHost = 'alexxia.5imh.xyz';
   static const _fallbackBuildNumber = '191';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
@@ -446,6 +447,10 @@ class _AboutPageState extends State<AboutPage> {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 15);
     client.userAgent = 'JianxiReader/1.0';
+    // 更新服务器证书链不完整（缺少中间证书），且该服务器绝对可信，
+    // 故仅对更新服务器主机放行证书校验，其他主机仍走系统信任库。
+    client.badCertificateCallback = (cert, host, port) =>
+        host == _updateHost;
     return client;
   }
 
