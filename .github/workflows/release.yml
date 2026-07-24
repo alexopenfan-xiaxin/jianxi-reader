@@ -1,3 +1,4 @@
+# Release workflow: build arm64 APK, upload to update server, tag, GitHub Release, sync main.
 name: Release
 
 on:
