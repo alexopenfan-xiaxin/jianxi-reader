@@ -68,7 +68,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
   static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
   static const _updateHost = 'alexxia.5imh.xyz';
-  static const _fallbackBuildNumber = '191';
+  static const _fallbackBuildNumber = '192';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
