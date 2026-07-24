@@ -115,3 +115,29 @@ jobs:
             git push origin "$TAG"
             echo "Created and pushed tag $TAG"
           fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          TAG="v${VERSION_NAME}+${BUILD_NUMBER}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping."
+          else
+            echo "Creating release $TAG ..."
+            gh release create "$TAG" \
+              --title "v$VERSION_NAME+$BUILD_NUMBER" \
+              --generate-notes \
+              artifacts/app-arm64-v8a-release.apk
+            echo "Release $TAG created."
+          fi
+
+      - name: Sync test to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --no-tags
+          git push origin HEAD:main
+          echo "Pushed HEAD to main."
