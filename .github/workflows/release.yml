@@ -50,6 +50,26 @@ jobs:
           echo "version_str=$VERSION_STR" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION_STR (name=$VERSION_NAME, build=$BUILD_NUMBER)"
 
+      - name: Configure release signing
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
+            cat > android/key.properties <<EOF
+storePassword=$STORE_PASSWORD
+keyPassword=$KEY_PASSWORD
+keyAlias=$KEY_ALIAS
+storeFile=app/release-keystore.jks
+EOF
+            echo "Release signing configured."
+          else
+            echo "::warning::RELEASE_KEYSTORE secret not set — APK will be signed with debug key."
+          fi
+
       - name: Build release APK (arm64)
         run: |
           flutter build apk --release \
