@@ -4,30 +4,61 @@ import 'package:provider/provider.dart';
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 
-PageRouteBuilder<T> appPageRoute<T>({required WidgetBuilder builder}) {
-  return PageRouteBuilder<T>(
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return _EdgeSwipeBackPage(child: builder(context));
-    },
-    transitionDuration: AppMotion.normal,
-    reverseTransitionDuration: AppMotion.fast,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final primary = CurvedAnimation(
-        parent: animation,
-        curve: AppMotion.enter,
-        reverseCurve: AppMotion.exit,
-      );
-      final incomingOffset = Tween<Offset>(
-        begin: const Offset(0.028, 0),
-        end: Offset.zero,
-      ).animate(primary);
-
-      return FadeTransition(
-        opacity: primary,
-        child: SlideTransition(position: incomingOffset, child: child),
-      );
-    },
+PageRoute<T> appPageRoute<T>({required WidgetBuilder builder}) {
+  return AppPageRoute<T>(
+    builder: (context) => _EdgeSwipeBackPage(child: builder(context)),
   );
+}
+
+/// A [MaterialPageRoute] that consults the theme's [PageTransitionsTheme].
+///
+/// When predictive back is enabled, transitions defer to the theme's
+/// [PredictiveBackPageTransitionsBuilder] (the Flutter 3.44 Android default),
+/// which renders the system predictive back peek animation along with the
+/// gesture. When disabled, the app's signature fade + subtle slide transition
+/// is used and the custom left-edge swipe back gesture ([_EdgeSwipeBackPage])
+/// takes over.
+class AppPageRoute<T> extends MaterialPageRoute<T> {
+  AppPageRoute({required super.builder});
+
+  @override
+  Duration get transitionDuration => AppMotion.normal;
+
+  @override
+  Duration get reverseTransitionDuration => AppMotion.fast;
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final predictiveBackEnabled = context.select<AppSettingsController, bool>(
+      (settings) => settings.predictiveBackEnabled,
+    );
+    if (predictiveBackEnabled) {
+      return super.buildTransitions(
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
+    final primary = CurvedAnimation(
+      parent: animation,
+      curve: AppMotion.enter,
+      reverseCurve: AppMotion.exit,
+    );
+    final incomingOffset = Tween<Offset>(
+      begin: const Offset(0.028, 0),
+      end: Offset.zero,
+    ).animate(primary);
+    return FadeTransition(
+      opacity: primary,
+      child: SlideTransition(position: incomingOffset, child: child),
+    );
+  }
 }
 
 class _EdgeSwipeBackPage extends StatefulWidget {
