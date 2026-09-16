@@ -149,28 +149,14 @@ class _GlassTrack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     if (liquidGlass) {
       return LiquidGlassSurface(
-        blurSigma: LiquidGlassTokens.effectBlurSigma,
         color: liquidGlassContainerColor(context),
-        borderColor: dark
-            ? Colors.white.withValues(alpha: 0.34)
-            : Colors.transparent,
-        chromaticEdge: dark,
-        edgeHighlight: dark,
-        innerHighlight: dark,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.10 : 0.03),
-            blurRadius: dark ? 22 : 12,
-            offset: Offset(0, dark ? 10 : 5),
-          ),
-        ],
         child: const SizedBox.expand(),
       );
     }
 
+    final palette = this.palette;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -201,26 +187,17 @@ class _GlassThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    // A tinted capsule over the glass track: nesting a second glass surface
+    // inside the track would double-blur the backdrop beneath it.
     if (liquidGlass) {
-      return LiquidGlassSurface(
-        blurSigma: LiquidGlassTokens.effectBlurSigma,
-        color: AppColors.primary.withValues(alpha: 0.10),
-        borderColor: dark
-            ? AppColors.primary.withValues(alpha: 0.22)
-            : Colors.transparent,
-        tintPrimary: dark,
-        chromaticEdge: dark,
-        edgeHighlight: dark,
-        innerHighlight: dark,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: dark ? 0.18 : 0.08),
-            blurRadius: dark ? 18 : 10,
-            offset: Offset(0, dark ? 7 : 4),
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.22),
           ),
-        ],
-        child: const SizedBox.expand(),
+        ),
       );
     }
 

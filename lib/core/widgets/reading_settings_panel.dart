@@ -296,7 +296,6 @@ class _ReadingPreviewPanel extends StatelessWidget {
     );
 
     if (liquidGlassEnabled) {
-      final dark = Theme.of(context).brightness == Brightness.dark;
       return LiquidGlassSurface(
         padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding,
@@ -304,19 +303,6 @@ class _ReadingPreviewPanel extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
         color: readingPalette.background.withValues(alpha: 0.42),
-        borderColor: dark
-            ? readingPalette.border.withValues(alpha: 0.55)
-            : Colors.transparent,
-        chromaticEdge: dark,
-        edgeHighlight: dark,
-        innerHighlight: dark,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.12 : 0.03),
-            blurRadius: dark ? 22 : 12,
-            offset: Offset(0, dark ? 10 : 5),
-          ),
-        ],
         child: content,
       );
     }

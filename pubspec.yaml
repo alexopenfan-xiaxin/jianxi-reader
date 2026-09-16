@@ -18,6 +18,7 @@ dependencies:
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.2.3
   highlight: ^0.7.0
+  liquid_glass_widgets: ^0.30.2
   path: ^1.9.1
   package_info_plus: ^8.3.1
   path_provider: ^2.1.5

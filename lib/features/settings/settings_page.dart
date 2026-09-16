@@ -101,15 +101,7 @@ class _FixedSettingsHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withValues(alpha: 0.16),
-        blurSigma: LiquidGlassTokens.effectBlurSigma,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        quality: GlassQuality.premium,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
@@ -172,15 +164,7 @@ class _LiquidSettingsAppBar extends StatelessWidget
     return LiquidGlassSurface(
       borderRadius: BorderRadius.circular(24),
       color: liquidGlassHeaderColor(context),
-      borderColor: Colors.white.withValues(alpha: 0.16),
-      blurSigma: LiquidGlassTokens.effectBlurSigma,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
-        ),
-      ],
+      quality: GlassQuality.premium,
       child: SafeArea(
         bottom: false,
         child: DecoratedBox(

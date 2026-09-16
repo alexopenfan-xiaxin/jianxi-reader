@@ -443,16 +443,8 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
               children: [
                 Positioned.fill(
                   child: LiquidGlassSurface(
-                    blurSigma: LiquidGlassTokens.effectBlurSigma,
                     color: liquidGlassContainerColor(context),
-                    borderColor: Colors.white.withValues(alpha: 0.34),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.10),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    quality: GlassQuality.premium,
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -466,18 +458,21 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                   child: Transform.scale(
                     scaleX: 1 + dragProgress * 0.20,
                     scaleY: 1 - dragProgress * 0.06,
-                    child: LiquidGlassSurface(
-                      blurSigma: LiquidGlassTokens.effectBlurSigma,
-                      color: indicatorColor,
-                      borderColor: indicatorBorder,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                      child: const SizedBox.expand(),
+                    // A tinted capsule over the glass panel: nesting a second
+                    // glass surface here would double-blur the backdrop.
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: indicatorColor,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        border: Border.all(color: indicatorBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

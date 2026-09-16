@@ -27,6 +27,8 @@ lib/
 │   ├── app_settings_controller.dart  # ThemeMode, ReadingFontSize, ReadingLineHeight
 │   └── widgets/
 │       ├── app_card.dart        # Reusable card (Material + InkWell)
+│       ├── liquid_glass.dart    # Liquid glass adapter over liquid_glass_widgets
+│       ├── glass_segmented_control.dart  # Segmented control (glass + classic)
 │       ├── reading_settings_panel.dart  # Shared font-size/line-height settings
 │       ├── palette.dart         # PaletteProvider + context.palette extension
 │       └── app_icon.dart
@@ -79,10 +81,13 @@ Third-party actions are pinned to immutable commit SHAs.
 
 ## Version
 - `pubspec.yaml`: `2.9.2+192` (versionName = 2.9.2, versionCode = 192)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=192`
+- Update check URL: `https://blog.openfan.dpdns.org/update/index.php?request&local=192`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
+  - Update server host moved from `alexxia.5imh.xyz` to `blog.openfan.dpdns.org`
+    (build 192); `_updateEndpoint`/`_updateHost` in `about_settings.dart` and
+    the `publish.yml` push URL all point at the new host.
 - **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
 - **IMPORTANT**: When bumping version, also update `_fallbackBuildNumber` in `about_settings.dart`; the displayed version and update URL otherwise come from `PackageInfo`. Also bump the `build` count in commit messages.
 - If the user requests code changes but does not explicitly specify `versionName`, increment the patch version by one while keeping the build number monotonic as requested or inferred. Example: after `2.0.1+102`, the next unspecified versionName should be `2.0.2`, not another `2.0.1` build.
@@ -155,6 +160,9 @@ import 'dart:io';
 - Removed key from IndexedStack (Bug 1: dynamic key destroyed tab state)
 - Font family is single `'Inter'` not CSS stack (Bug 2: Flutter ignores CSS stacks)
 - Extracted `ReadingSettingsPanel` to share between settings page and reader sheet
+- Liquid glass reworked on `liquid_glass_widgets` (0.30.2, build 192): the hand-rolled BackdropFilter + rainbow "metal FX" overlay implementation was deleted; `LiquidGlassSurface`/`LiquidGlassPanel`/`LiquidGlassSheetPanel`/`LiquidGlassTextFieldFrame`/`LiquidGlassChip`/`LiquidGlassDialog` are now thin adapters over the package's `AdaptiveGlass` shader pipeline; `main()` awaits `LiquidGlassWidgets.initialize()` and wraps the app via `LiquidGlassWidgets.wrap(brightnessResolver: Theme.maybeBrightnessOf)`
+- Glass quality tiers: static chrome (app bars, bottom nav, dialogs, sheets, panels) uses `GlassQuality.premium`; everything in scrollable lists (cards, chips, segmented control, import button, text fields) stays on `GlassQuality.standard`
+- Glass-over-glass nesting removed: the bottom-nav selection capsule and segmented-control thumb are tinted `DecoratedBox`es over the glass track/panel (a second glass layer would double-blur the backdrop)
 - Large-markdown virtualization (build 201): `MarkdownDocument.load` parses the whole file once in a background isolate (sections split at h1/h2 boundaries, force-split at ~6000 chars / 60 nodes; TOC + plain-text search projection built in the same pass) — the UI thread never re-parses
 - `MarkdownViewer` renders only sections within ±2000px of the viewport (`MarkdownRenderer.render` per section); other sections are `SizedBox` height placeholders (TextPainter-based estimates), far built sections recycle back to placeholders keeping their measured height so scrolling never jumps
 - When a placeholder's real height differs, sections entirely above the viewport get their delta applied to the scroll offset (anchored correction) so the reading position stays visually stable
@@ -261,6 +269,6 @@ Create a temporary Dart script with:
 
 ### 8. Upload to Update Server
 ```
-curl.exe -X POST -F "apk=@<apk_path>" -F "version=<build_number>" "https://alexxia.5imh.xyz/update/index.php?push&key=4NxP5oxQB4gBMSHAXOOzgjfWTr9QEDXF" --ssl-no-revoke --connect-timeout 30
+curl.exe -X POST -F "apk=@<apk_path>" -F "version=<build_number>" "https://blog.openfan.dpdns.org/update/index.php?push&key=4NxP5oxQB4gBMSHAXOOzgjfWTr9QEDXF" --ssl-no-revoke --connect-timeout 30
 ```
 Expected: `{"success":true}`

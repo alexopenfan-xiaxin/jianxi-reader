@@ -65,7 +65,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
         context.select<AppSettingsController, bool>(
           (s) => s.liquidGlassEnabled,
         );
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final radius = liquidGlass ? 14.0 : AppRadii.lg;
     final borderRadius = BorderRadius.circular(radius);
 
@@ -77,20 +76,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
           ? LiquidGlassSurface(
               borderRadius: borderRadius,
               color: liquidGlassCardColor(context),
-              borderColor: dark
-                  ? Colors.white.withValues(alpha: 0.18)
-                  : Colors.transparent,
-              blurSigma: LiquidGlassTokens.effectBlurSigma,
-              chromaticEdge: dark,
-              edgeHighlight: dark,
-              innerHighlight: dark,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.18 : 0.04),
-                  blurRadius: dark ? 24 : 16,
-                  offset: Offset(0, dark ? 12 : 8),
-                ),
-              ],
               child: Material(
                 color: Colors.transparent,
                 borderRadius: borderRadius,

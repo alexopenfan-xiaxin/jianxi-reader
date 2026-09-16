@@ -65,15 +65,7 @@ class _FixedLibraryHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withValues(alpha: 0.16),
-        blurSigma: LiquidGlassTokens.effectBlurSigma,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        quality: GlassQuality.premium,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
@@ -194,8 +186,7 @@ class _SelectionHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        borderColor: Colors.white.withValues(alpha: 0.16),
-        blurSigma: LiquidGlassTokens.effectBlurSigma,
+        quality: GlassQuality.premium,
         child: content,
       );
     }
@@ -403,9 +394,7 @@ class _FloatingImportButton extends StatelessWidget {
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.circular(30),
                 color: AppColors.primary.withValues(alpha: fillOpacity),
-                borderColor: Colors.white.withValues(alpha: 0.34),
-                blurSigma: LiquidGlassTokens.effectBlurSigma,
-                tintPrimary: true,
+                interactive: true,
                 child: button,
               )
             : ClipOval(

@@ -297,11 +297,7 @@ class _ReaderPageState extends State<ReaderPage> {
                 color: readingPalette.background.withValues(
                   alpha: settings.liquidGlassEnabled ? 0.42 : 0.80,
                 ),
-                borderColor: Colors.transparent,
-                blurSigma: settings.liquidGlassEnabled
-                    ? LiquidGlassTokens.effectBlurSigma
-                    : 18,
-                innerHighlight: settings.liquidGlassEnabled,
+                quality: GlassQuality.premium,
                 child: const SizedBox.expand(),
               )
             : null,

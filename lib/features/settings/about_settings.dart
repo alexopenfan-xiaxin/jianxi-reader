@@ -66,8 +66,9 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   static const _channel = MethodChannel('com.jianxi.reader/apk_install');
-  static const _updateEndpoint = 'https://alexxia.5imh.xyz/update/index.php';
-  static const _updateHost = 'alexxia.5imh.xyz';
+  static const _updateEndpoint =
+      'https://blog.openfan.dpdns.org/update/index.php';
+  static const _updateHost = 'blog.openfan.dpdns.org';
   static const _fallbackBuildNumber = '192';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
@@ -745,20 +746,8 @@ class _AboutActionButton extends StatelessWidget {
         child: LiquidGlassSurface(
           borderRadius: BorderRadius.circular(AppRadii.pill),
           color: liquidGlassContainerColor(context, alpha: dark ? 0 : 0.26),
-          borderColor: dark
-              ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.28)
-              : AppColors.primary.withValues(alpha: 0.24),
-          blurSigma: LiquidGlassTokens.effectBlurSigma,
-          boxShadow: [
-            BoxShadow(
-              color: dark
-                  ? LiquidGlassTokens.metalFxCyan.withValues(alpha: 0.09)
-                  : AppColors.primary.withValues(alpha: 0.10),
-              blurRadius: 20,
-              spreadRadius: dark ? -8 : 0,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          borderColor: AppColors.primary.withValues(alpha: 0.24),
+          interactive: true,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadii.pill),

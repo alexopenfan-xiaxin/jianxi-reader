@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LiquidGlassWidgets.initialize();
   runZonedGuarded(
     () {
-      WidgetsFlutterBinding.ensureInitialized();
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
         debugPrint('[GlobalError] ${details.exceptionAsString()}');
@@ -18,7 +20,12 @@ void main() {
       ErrorWidget.builder = (details) {
         return _GlobalErrorCard(details: details);
       };
-      runApp(const _RestartableApp(child: JianxiReaderApp()));
+      runApp(
+        LiquidGlassWidgets.wrap(
+          child: const _RestartableApp(child: JianxiReaderApp()),
+          brightnessResolver: Theme.maybeBrightnessOf,
+        ),
+      );
     },
     (error, stackTrace) {
       debugPrint('[GlobalError] uncaught async error: $error');

@@ -102,7 +102,7 @@ jobs:
           RESPONSE=$(curl -sS -X POST \
             -F "apk=@artifacts/app-arm64-v8a-release.apk" \
             -F "version=$BUILD_NUMBER" \
-            "https://alexxia.5imh.xyz/update/index.php?push&key=$UPDATE_KEY" \
+            "https://blog.openfan.dpdns.org/update/index.php?push&key=$UPDATE_KEY" \
             --insecure \
             --connect-timeout 30 \
             --max-time 600 \
