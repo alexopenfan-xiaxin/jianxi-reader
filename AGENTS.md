@@ -163,6 +163,7 @@ import 'dart:io';
 - Liquid glass reworked on `liquid_glass_widgets` (0.30.2, build 192): the hand-rolled BackdropFilter + rainbow "metal FX" overlay implementation was deleted; `LiquidGlassSurface`/`LiquidGlassPanel`/`LiquidGlassSheetPanel`/`LiquidGlassTextFieldFrame`/`LiquidGlassChip`/`LiquidGlassDialog` are now thin adapters over the package's `AdaptiveGlass` shader pipeline; `main()` awaits `LiquidGlassWidgets.initialize()` and wraps the app via `LiquidGlassWidgets.wrap(brightnessResolver: Theme.maybeBrightnessOf)`
 - Glass quality tiers: static chrome (app bars, bottom nav, dialogs, sheets, panels) uses `GlassQuality.premium`; everything in scrollable lists (cards, chips, segmented control, import button, text fields) stays on `GlassQuality.standard`
 - Glass-over-glass nesting removed: the bottom-nav selection capsule and segmented-control thumb are tinted `DecoratedBox`es over the glass track/panel (a second glass layer would double-blur the backdrop)
+- Release workflow split into build/publish jobs (build 192): publishing retries reuse the built artifact without a rebuild; release notes are generated from commit subjects with emoji categories; the tag step fails fast when a version's tag points at different code; update-server upload runs after the GitHub Release with 3 retries
 - Large-markdown virtualization (build 201): `MarkdownDocument.load` parses the whole file once in a background isolate (sections split at h1/h2 boundaries, force-split at ~6000 chars / 60 nodes; TOC + plain-text search projection built in the same pass) — the UI thread never re-parses
 - `MarkdownViewer` renders only sections within ±2000px of the viewport (`MarkdownRenderer.render` per section); other sections are `SizedBox` height placeholders (TextPainter-based estimates), far built sections recycle back to placeholders keeping their measured height so scrolling never jumps
 - When a placeholder's real height differs, sections entirely above the viewport get their delta applied to the scroll offset (anchored correction) so the reading position stays visually stable
@@ -207,7 +208,20 @@ When the user says "只做这几件事" or explicitly scopes the task, do NOT pe
 
 ## Release Creation
 
-- Prefer Dart script (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` for creating releases with Chinese content — `curl.exe` / PowerShell have persistent UTF-8 encoding issues.
+- The `publish.yml` workflow (workflow_dispatch, default ref `test`) handles the
+  full release: build APK → verify tag → auto-generate Chinese release notes
+  from commit subjects since the previous tag (🚀 feat / ⚡ perf+refactor /
+  🐛 fix / 🔧 other, `(build N)` suffixes stripped, maintenance commits
+  truncated after 12) → create-or-update the GitHub Release → upload to the
+  update server (3 attempts) → force-sync `test` to `main`.
+- The two-job split (build / publish) means a failed publish (e.g. update
+  server down) can be retried via "Re-run failed jobs" without rebuilding.
+- Same-version rebuilds are safe: if the tag points at the same commit the
+  release asset and notes are refreshed in place; if it points at different
+  code the workflow fails fast with guidance to delete the old release or bump.
+- For manual releases with Chinese content, still prefer a Dart script
+  (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` / PowerShell
+  (persistent UTF-8 encoding issues).
 - Contributor defaults to `alexopenfan-xiaxin` unless otherwise specified.
 
 ## Standard Workflow: Pull → Push → Build → Release → Upload

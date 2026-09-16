@@ -11,21 +11,26 @@ on:
 permissions:
   contents: write
 
+# One release pipeline at a time; the update server keeps a single APK.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  build-and-upload:
-    name: Build APK and upload to update server
+  build-apk:
+    name: Build APK (arm64)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-
+    outputs:
+      sha: ${{ github.sha }}
+      version_name: ${{ steps.version.outputs.version_name }}
+      build_number: ${{ steps.version.outputs.build_number }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.inputs.ref || 'test' }}
+          fetch-depth: 1
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -46,7 +51,6 @@ jobs:
           BUILD_NUMBER=$(echo "$VERSION_STR" | cut -d '+' -f 2)
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "version_str=$VERSION_STR" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION_STR (name=$VERSION_NAME, build=$BUILD_NUMBER)"
 
       - name: Configure release signing
@@ -83,48 +87,50 @@ jobs:
           ls -lh artifacts/
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-arm64-v8a-release
           path: artifacts/app-arm64-v8a-release.apk
           retention-days: 14
 
-      - name: Upload to update server
-        env:
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
-          UPDATE_KEY: ${{ secrets.UPDATE_SERVER_KEY }}
-        run: |
-          if [ -z "$UPDATE_KEY" ]; then
-            echo "::error::Secret UPDATE_SERVER_KEY is not set."
-            exit 1
-          fi
-          echo "Uploading APK with version (build number) = $BUILD_NUMBER ..."
-          RESPONSE=$(curl -sS -X POST \
-            -F "apk=@artifacts/app-arm64-v8a-release.apk" \
-            -F "version=$BUILD_NUMBER" \
-            "https://blog.openfan.dpdns.org/update/index.php?push&key=$UPDATE_KEY" \
-            --insecure \
-            --connect-timeout 30 \
-            --max-time 600 \
-            -w "\nHTTP_STATUS:%{http_code}")
-          HTTP_CODE=$(echo "$RESPONSE" | grep -oE 'HTTP_STATUS:[0-9]+' | cut -d ':' -f 2)
-          BODY=$(echo "$RESPONSE" | sed -E 's/HTTP_STATUS:[0-9]+$//')
-          echo "HTTP status: $HTTP_CODE"
-          echo "Response body: $BODY"
-          if [ "$HTTP_CODE" != "200" ] || ! echo "$BODY" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
-            echo "::error::Upload failed. HTTP=$HTTP_CODE, body=$BODY"
-            exit 1
-          fi
-          echo "Upload succeeded."
+  publish-release:
+    name: Publish tag, release notes and update server
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERSION_NAME: ${{ needs.build-apk.outputs.version_name }}
+      BUILD_NUMBER: ${{ needs.build-apk.outputs.build_number }}
+      TAG: v${{ needs.build-apk.outputs.version_name }}+${{ needs.build-apk.outputs.build_number }}
+    steps:
+      # Pinned to the exact commit that was built, so publishing can never
+      # race ahead of the branch.
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build-apk.outputs.sha }}
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Create git tag
-        env:
-          VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+      - name: Download built APK
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: app-arm64-v8a-release
+          path: artifacts
+
+      # Guard against reusing a version whose tag points at different code:
+      # silently skipping would leave a stale release page and a fresh APK on
+      # the update server under the same version.
+      - name: Verify tag points at the built commit
         run: |
-          TAG="v${VERSION_NAME}+${BUILD_NUMBER}"
+          HEAD_COMMIT=$(git rev-parse HEAD)
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "Tag $TAG already exists, skipping tag creation."
+            TAG_COMMIT=$(git rev-parse "$TAG^{commit}")
+            if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+              echo "::error::Tag $TAG already exists but points at $TAG_COMMIT, while this build is $HEAD_COMMIT. Delete the old release/tag or bump the version in pubspec.yaml."
+              exit 1
+            fi
+            echo "Tag $TAG already points at this build, skipping tag creation."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -133,28 +139,128 @@ jobs:
             echo "Created and pushed tag $TAG"
           fi
 
-      - name: Create GitHub Release
+      - name: Build release notes from commit history
+        run: |
+          LAST_TAG=$(git tag --list 'v*' --sort=-v:refname | grep -Fxv "$TAG" | head -1 || true)
+          echo "Previous tag: ${LAST_TAG:-<none>}"
+          if [ -n "$LAST_TAG" ]; then
+            git log --no-merges --pretty=format:%s "$LAST_TAG..HEAD" > /tmp/raw.txt
+          else
+            git log --no-merges --pretty=format:%s -30 > /tmp/raw.txt
+          fi
+          sed -E 's/ ?\((build [0-9]+)\)$//' /tmp/raw.txt | awk '!seen[$0]++' > /tmp/subjects.txt
+
+          grep -E '^feat' /tmp/subjects.txt > /tmp/feat.txt || true
+          grep -E '^(perf|refactor|style)' /tmp/subjects.txt > /tmp/perf.txt || true
+          grep -E '^fix' /tmp/subjects.txt > /tmp/fix.txt || true
+          grep -vE '^(feat|perf|refactor|style|fix)' /tmp/subjects.txt \
+            | grep -vE '^Merge (branch|pull request)' > /tmp/other.txt || true
+
+          OTHER_COUNT=$(wc -l < /tmp/other.txt)
+          OTHER_EXTRA=0
+          if [ "$OTHER_COUNT" -gt 12 ]; then
+            head -10 /tmp/other.txt > /tmp/other_show.txt
+            OTHER_EXTRA=$((OTHER_COUNT - 10))
+          else
+            cp /tmp/other.txt /tmp/other_show.txt
+          fi
+
+          {
+            echo "本更新包含以下变化："
+            echo
+            if [ -s /tmp/feat.txt ]; then
+              echo "### 🚀 新功能"
+              sed 's/^/- /' /tmp/feat.txt
+              echo
+            fi
+            if [ -s /tmp/perf.txt ]; then
+              echo "### ⚡ 体验优化"
+              sed 's/^/- /' /tmp/perf.txt
+              echo
+            fi
+            if [ -s /tmp/fix.txt ]; then
+              echo "### 🐛 问题修复"
+              sed 's/^/- /' /tmp/fix.txt
+              echo
+            fi
+            if [ -s /tmp/other_show.txt ]; then
+              echo "### 🔧 其他"
+              sed 's/^/- /' /tmp/other_show.txt
+              if [ "$OTHER_EXTRA" -gt 0 ]; then
+                echo "- …另有 $OTHER_EXTRA 条构建与维护提交"
+              fi
+              echo
+            fi
+            if [ -n "$LAST_TAG" ]; then
+              echo "---"
+              echo "完整变更：$LAST_TAG → $TAG"
+            fi
+          } > body.md
+          cat body.md
+
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
         run: |
-          TAG="v${VERSION_NAME}+${BUILD_NUMBER}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists, skipping."
-          else
-            echo "Creating release $TAG ..."
-            gh release create "$TAG" \
+            echo "Release $TAG exists, refreshing asset and notes."
+            gh release upload "$TAG" artifacts/app-arm64-v8a-release.apk --clobber
+            gh release edit "$TAG" \
               --title "v$VERSION_NAME+$BUILD_NUMBER" \
-              --generate-notes \
-              artifacts/app-arm64-v8a-release.apk
+              --notes-file body.md
+          else
+            gh release create "$TAG" artifacts/app-arm64-v8a-release.apk \
+              --title "v$VERSION_NAME+$BUILD_NUMBER" \
+              --notes-file body.md
             echo "Release $TAG created."
           fi
+
+      # Placed after the release step on purpose: a server outage must not
+      # cost the GitHub release. Re-running this job skips tag/release and
+      # only retries the upload.
+      - name: Upload to update server
+        env:
+          UPDATE_KEY: ${{ secrets.UPDATE_SERVER_KEY }}
+        run: |
+          if [ -z "$UPDATE_KEY" ]; then
+            echo "::error::Secret UPDATE_SERVER_KEY is not set."
+            exit 1
+          fi
+          SUCCESS=0
+          for ATTEMPT in 1 2 3; do
+            echo "Upload attempt $ATTEMPT (version=$BUILD_NUMBER)..."
+            set +e
+            RESPONSE=$(curl -sS -X POST \
+              -F "apk=@artifacts/app-arm64-v8a-release.apk" \
+              -F "version=$BUILD_NUMBER" \
+              "https://blog.openfan.dpdns.org/update/index.php?push&key=$UPDATE_KEY" \
+              --insecure \
+              --connect-timeout 30 \
+              --max-time 600 \
+              -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+            CURL_EXIT=$?
+            set -e
+            HTTP_CODE=$(printf '%s' "$RESPONSE" | grep -oE 'HTTP_STATUS:[0-9]+' | cut -d ':' -f 2)
+            BODY=$(printf '%s' "$RESPONSE" | sed -E 's/HTTP_STATUS:[0-9]+$//')
+            echo "Attempt $ATTEMPT result: exit=$CURL_EXIT HTTP=$HTTP_CODE body=$BODY"
+            if [ "$CURL_EXIT" = "0" ] && [ "$HTTP_CODE" = "200" ] \
+              && printf '%s' "$BODY" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
+              SUCCESS=1
+              break
+            fi
+            if [ "$ATTEMPT" -lt 3 ]; then
+              sleep 5
+            fi
+          done
+          if [ "$SUCCESS" != "1" ]; then
+            echo "::error::Upload to update server failed after 3 attempts."
+            exit 1
+          fi
+          echo "Upload succeeded."
 
       - name: Sync test to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main --no-tags
-          git push --force origin HEAD:main
+          git push --force origin "HEAD:main"
           echo "Pushed HEAD to main."
