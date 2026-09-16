@@ -38,9 +38,13 @@ lib/
 │   │   ├── document_entry.dart  # DocumentEntry model (path, name, type, size, dates, isReferenced)
 │   │   └── document_actions.dart  # Rename dialog, remove confirmation
 │   ├── reader/
-│   │   ├── reader_page.dart     # AppBar + LinearProgressIndicator + DraggableScrollableSheet
-│   │   ├── markdown_viewer.dart # SmoothMarkdown (selectable: true, code highlight, Mermaid)
-│   │   └── html_document_view.dart
+│   │   ├── reader_page.dart     # AppBar + progress bar + TOC drawer + settings sheet
+│   │   ├── markdown_viewer.dart # Barrel → markdown/markdown_viewer.dart
+│   │   ├── html_document_view.dart
+│   │   └── markdown/
+│   │       ├── markdown_viewer.dart  # Virtualized section rendering (lazy build + placeholders)
+│   │       ├── markdown_document.dart  # Background-isolate parse: sections + TOC + search text
+│   │       └── section_height_estimator.dart  # Placeholder height estimation
 │   └── settings/
 │       └── settings_page.dart   # Theme, reading, about card + check update button
 ```
@@ -49,7 +53,7 @@ lib/
 - No CSS-style font-family strings — use single font name (`'Inter'`)
 - `IndexedStack` must NOT have a `key` parameter (preserves tab state)
 - Modal bottom sheets should use `DraggableScrollableSheet` + `isScrollControlled: true`
-- `SmoothMarkdown` uses `selectable: true` for text selection
+- Markdown reading view does NOT use `SmoothMarkdown`; `MarkdownViewer` renders parsed sections via `MarkdownRenderer` inside one shared `SelectionArea` (selectable: text selection works across sections)
 - All navigation uses `PageRouteBuilder` with 300ms `easeOutCubic` slide
 - HTTP requests use `dart:io` `HttpClient` with normal platform certificate validation
 - Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
@@ -74,8 +78,8 @@ enforces the lockfile, formatting, analysis, and the full Flutter test suite.
 Third-party actions are pinned to immutable commit SHAs.
 
 ## Version
-- `pubspec.yaml`: `2.8.20+200` (versionName = 2.8.20, versionCode = 200)
-- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=200`
+- `pubspec.yaml`: `2.8.21+201` (versionName = 2.8.21, versionCode = 201)
+- Update check URL: `https://alexxia.5imh.xyz/update/index.php?request&local=201`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
@@ -151,7 +155,13 @@ import 'dart:io';
 - Removed key from IndexedStack (Bug 1: dynamic key destroyed tab state)
 - Font family is single `'Inter'` not CSS stack (Bug 2: Flutter ignores CSS stacks)
 - Extracted `ReadingSettingsPanel` to share between settings page and reader sheet
-- `selectable: true` on SmoothMarkdown enables long-press copy
+- Large-markdown virtualization (build 201): `MarkdownDocument.load` parses the whole file once in a background isolate (sections split at h1/h2 boundaries, force-split at ~6000 chars / 60 nodes; TOC + plain-text search projection built in the same pass) — the UI thread never re-parses
+- `MarkdownViewer` renders only sections within ±2000px of the viewport (`MarkdownRenderer.render` per section); other sections are `SizedBox` height placeholders (TextPainter-based estimates), far built sections recycle back to placeholders keeping their measured height so scrolling never jumps
+- When a placeholder's real height differs, sections entirely above the viewport get their delta applied to the scroll offset (anchored correction) so the reading position stays visually stable
+- TOC jumps always animate: build the destination area first, `animateTo` the estimated offset, then a short `Scrollable.ensureVisible(alignment: 0.08)` correction after landing; the old "expand all sections then jump" path (`_loadAllSections`) is gone
+- Search match indices are claimed per section via `DocumentSearchController.beginSectionPass(sectionMatchBase)` because sections render lazily and out of order; full-document match counting is unchanged
+- The `SelectionArea` + Ctrl/Cmd+C NBSP clipboard filter moved from the package's `SmoothMarkdown` into `MarkdownViewerState` (replicated `_SelectionCopyFilter`) since the reading pane renders sections directly
+- `selectable: true` in `MarkdownRenderContext` keeps long-press copy working
 - `FocusManager.instance.primaryFocus?.unfocus()` before navigation dismisses keyboard
 - Removed `isReferenced` check in `renameDocument` to allow renaming external files
 - Update downloads use normal TLS certificate validation and a 15-second connection timeout

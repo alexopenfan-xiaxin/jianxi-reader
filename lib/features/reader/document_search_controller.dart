@@ -7,22 +7,25 @@ class DocumentSearchController extends ChangeNotifier {
   int _matchCount = 0;
   int _currentIndex = 0;
   int _pulseToken = 0;
-  int _buildMatchCursor = 0;
+  int _sectionMatchCursor = 0;
 
   String get query => _query;
   String get normalizedQuery => _query.trim();
-  int get matchCount => _matchCount;
+  String get matchCount => _matchCount;
   int get currentIndex => _matchCount == 0 ? 0 : _currentIndex;
   int get pulseToken => _pulseToken;
   bool get hasQuery => normalizedQuery.isNotEmpty;
   bool get hasMatches => _matchCount > 0;
 
-  void beginBuildPass() {
-    _buildMatchCursor = 0;
+  /// Starts a build pass for one section whose first match carries the global
+  /// index [base]. Sections build lazily and out of order, so indices cannot
+  /// be claimed with a document-wide build cursor.
+  void beginSectionPass(int base) {
+    _sectionMatchCursor = base;
   }
 
   int claimBuildMatchIndex() {
-    return _buildMatchCursor++;
+    return _sectionMatchCursor++;
   }
 
   void updateQuery(String query) {
