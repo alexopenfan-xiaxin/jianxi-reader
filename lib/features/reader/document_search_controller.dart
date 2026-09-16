@@ -11,7 +11,7 @@ class DocumentSearchController extends ChangeNotifier {
 
   String get query => _query;
   String get normalizedQuery => _query.trim();
-  String get matchCount => _matchCount;
+  int get matchCount => _matchCount;
   int get currentIndex => _matchCount == 0 ? 0 : _currentIndex;
   int get pulseToken => _pulseToken;
   bool get hasQuery => normalizedQuery.isNotEmpty;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
+import 'builders/mindmap_builder.dart';
 import 'markdown_document.dart';
 
 /// Estimates the rendered height of a markdown section from its node tree.

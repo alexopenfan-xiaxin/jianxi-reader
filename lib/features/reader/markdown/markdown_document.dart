@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
 import '../../../core/file_rules.dart';
+import '../toc_service.dart';
 import 'builders/mindmap_builder.dart';
 import 'markdown_preprocessor.dart';
 import 'plugins/bare_url_plugin.dart';
