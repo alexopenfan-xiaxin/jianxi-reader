@@ -554,9 +554,6 @@ class _SortOptionTile extends StatelessWidget {
           color: selected
               ? AppColors.primary.withValues(alpha: 0.10)
               : liquidGlassContainerColor(context, alpha: 0.18),
-          borderColor: selected
-              ? AppColors.primary.withValues(alpha: 0.22)
-              : Colors.white.withValues(alpha: 0.28),
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(18),

@@ -77,9 +77,11 @@ class LiquidGlassSurface extends StatelessWidget {
         (quality == GlassQuality.premium
             ? LiquidGlassTokens.chromeBlur
             : LiquidGlassTokens.controlBlur);
+    // Package shapes take a single radius; callers use circular radii.
+    final radius = borderRadius.topLeft.x;
     return AdaptiveGlass(
       shape: LiquidRoundedSuperellipse(
-        borderRadius: borderRadius,
+        borderRadius: radius,
         side: borderColor == null
             ? BorderSide.none
             : BorderSide(color: borderColor!, width: 1),
