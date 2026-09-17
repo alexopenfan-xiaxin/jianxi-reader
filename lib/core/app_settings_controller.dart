@@ -443,10 +443,9 @@ class AppSettingsController extends ChangeNotifier {
   }
 
   Future<void> setLiquidGlassIntensity(double value) async {
-    final clamped = value.clamp(
-      liquidGlassIntensityMin,
-      liquidGlassIntensityMax,
-    ).toDouble();
+    final clamped = value
+        .clamp(liquidGlassIntensityMin, liquidGlassIntensityMax)
+        .toDouble();
     if ((_liquidGlassIntensity - clamped).abs() < 0.001) {
       return;
     }

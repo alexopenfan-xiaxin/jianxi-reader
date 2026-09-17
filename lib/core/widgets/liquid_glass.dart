@@ -113,11 +113,13 @@ class LiquidGlassSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final intensity = intensityOverride ??
+    final intensity =
+        intensityOverride ??
         context.select<AppSettingsController, double>(
           (settings) => settings.liquidGlassIntensityValue,
         );
-    final baseBlur = blur ??
+    final baseBlur =
+        blur ??
         (quality == GlassQuality.premium
             ? LiquidGlassTokens.chromeBlur
             : LiquidGlassTokens.controlBlur);

@@ -236,10 +236,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _staggerItem(
-          widget.showPreview ? 6 : 5,
-          _buildResetButton(settings),
-        ),
+        _staggerItem(widget.showPreview ? 6 : 5, _buildResetButton(settings)),
       ],
     );
   }
