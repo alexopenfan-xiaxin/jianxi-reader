@@ -16,7 +16,7 @@ void main() {
       home: Center(
         child: PressScale(
           enabled: enabled,
-          child: Container(key: boxKey, width: 100, height: 100),
+              child: SizedBox(key: boxKey, width: 100, height: 100),
         ),
       ),
     );

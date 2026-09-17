@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_settings_controller.dart';

@@ -193,6 +193,7 @@ class _TabEntranceState extends State<_TabEntrance>
   Widget build(BuildContext context) {
     return SharedAxisTransition(
       animation: _controller,
+      secondaryAnimation: kAlwaysDismissedAnimation,
       transitionType: SharedAxisTransitionType.horizontal,
       fillColor: Colors.transparent,
       child: widget.child,

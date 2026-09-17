@@ -1,4 +1,5 @@
 import 'package:jianxi_reader/core/document_file_service.dart';
+import 'package:jianxi_reader/core/file_rules.dart';
 import 'package:jianxi_reader/features/library/document_entry.dart';
 
 /// In-memory [DocumentLibraryService] shared by widget tests.

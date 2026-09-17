@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jianxi_reader/features/reader/markdown/markdown_document.dart';
