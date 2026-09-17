@@ -238,16 +238,27 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
         const SizedBox(height: AppSpacing.lg),
         _staggerItem(
           widget.showPreview ? 6 : 5,
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: settings.resetReadingSettings,
-              icon: const Icon(Icons.restart_alt_rounded),
-              label: const Text('恢复默认阅读设置'),
-            ),
-          ),
+          _buildResetButton(settings),
         ),
       ],
+    );
+  }
+
+  Widget _buildResetButton(AppSettingsController settings) {
+    final reset = settings.resetReadingSettings;
+    if (liquidGlassEnabled(context)) {
+      return SizedBox(
+        width: double.infinity,
+        child: _GlassResetButton(onPressed: reset),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: reset,
+        icon: const Icon(Icons.restart_alt_rounded),
+        label: const Text('恢复默认阅读设置'),
+      ),
     );
   }
 }
@@ -353,6 +364,9 @@ class _ReadingValueSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final liquidGlass = context.select<AppSettingsController, bool>(
+      (settings) => settings.liquidGlassEnabled,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -389,6 +403,14 @@ class _ReadingValueSlider extends StatelessWidget {
           runSpacing: AppSpacing.xs,
           children: presets.map((preset) {
             final selected = (preset.value - value).abs() < 0.02;
+            if (liquidGlass) {
+              return LiquidGlassChip(
+                label: preset.label,
+                selected: selected,
+                icon: selected ? Icons.check_rounded : null,
+                onTap: () => onChanged(preset.value),
+              );
+            }
             return ActionChip(
               label: Text(preset.label),
               avatar: selected
@@ -419,5 +441,56 @@ class _SettingLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text, style: Theme.of(context).textTheme.titleMedium);
+  }
+}
+
+/// Glass counterpart of the outlined "reset reading settings" button.
+class _GlassResetButton extends StatelessWidget {
+  const _GlassResetButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return LiquidGlassSurface(
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+      color: liquidGlassContainerColor(context, alpha: dark ? 0.12 : 0.26),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: AppColors.primary.withValues(alpha: 0.06),
+          hoverColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.restart_alt_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  '恢复默认阅读设置',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

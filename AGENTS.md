@@ -24,12 +24,13 @@ lib/
 │   ├── emoji_service.dart        # Loads gemoji DB into Map<String,String> via rootBundle
 │   ├── file_rules.dart          # DocumentType, extension validation, baseName validation
 │   ├── document_file_service.dart  # DocumentLibraryService interface + DocumentFileService impl
-│   ├── app_settings_controller.dart  # ThemeMode, ReadingFontSize, ReadingLineHeight
+│   ├── app_settings_controller.dart  # ThemeMode, reading + visual settings, liquid glass intensity
 │   └── widgets/
 │       ├── app_card.dart        # Reusable card (Material + InkWell)
 │       ├── app_page_route.dart  # appPageRoute + AppPageRoute (SharedAxis / FadeThrough)
-│       ├── liquid_glass.dart    # Liquid glass adapter over liquid_glass_widgets
+│       ├── liquid_glass.dart    # Liquid glass adapters + LiquidGlassIntensity/tokens
 │       ├── glass_segmented_control.dart  # Segmented control (glass + classic)
+│       ├── glass_intensity_slider.dart  # GlassIntensitySlider + live glass preview
 │       ├── press_scale.dart     # PressScale: press-down scale + spring release
 │       ├── entrance.dart        # StaggeredEntrance / StateShell (flutter_animate)
 │       ├── shimmer_skeleton.dart  # ShimmerBlock / LibrarySkeletonCard (one-shot)
@@ -61,7 +62,7 @@ lib/
 - `IndexedStack` must NOT have a `key` parameter (preserves tab state)
 - Modal bottom sheets should use `DraggableScrollableSheet` + `isScrollControlled: true`
 - Markdown reading view does NOT use `SmoothMarkdown`; `MarkdownViewer` renders parsed sections via `MarkdownRenderer` inside one shared `SelectionArea` (selectable: text selection works across sections)
-- All navigation uses `appPageRoute` (`AppPageRoute`); pushes use `SharedAxisTransition` horizontal, pops use `FadeThroughTransition`; root-level pages pass `transition: AppPageTransition.fadeThrough`. Predictive back and the left-edge swipe back (`_EdgeSwipeBackPage`) are retained and take priority when enabled
+- All navigation uses `appPageRoute` (`AppPageRoute`); pushes use `SharedAxisTransition` horizontal, pops use `FadeThroughTransition`; root-level pages pass `transition: AppPageTransition.fadeThrough`. The left-edge swipe back (`_EdgeSwipeBackPage`) handles the return gesture; the system predictive back animation is not used (the setting and its route branch were removed in build 193)
 - All animations are **one-shot / terminating** (never `repeat` / infinite loops): `pumpAndSettle` across the widget tests would time out otherwise. The only looping animations (`CircularProgressIndicator`) live in trees no test pumps
 - `flutter_animate` is used via the declarative effect-list form (`child.animate(effects: [...])` / `Animate(effects: [...])`) rather than long chained `.fadeIn().moveY()...` calls, because split method chains have formatter output that is hard to predict by hand (CI enforces `dart format`)
 - Hero tags `doc_badge_${path}` / `doc_title_${path}` belong only to list tiles, shelf cards, and the reader app bar; recent-reading cards deliberately carry no Hero (the same document can appear in the recent sliver and the main list at once)
@@ -169,8 +170,12 @@ import 'dart:io';
 - Font family is single `'Inter'` not CSS stack (Bug 2: Flutter ignores CSS stacks)
 - Extracted `ReadingSettingsPanel` to share between settings page and reader sheet
 - Liquid glass reworked on `liquid_glass_widgets` (0.30.2, build 192): the hand-rolled BackdropFilter + rainbow "metal FX" overlay implementation was deleted; `LiquidGlassSurface`/`LiquidGlassPanel`/`LiquidGlassSheetPanel`/`LiquidGlassTextFieldFrame`/`LiquidGlassChip`/`LiquidGlassDialog` are now thin adapters over the package's `AdaptiveGlass` shader pipeline; `main()` awaits `LiquidGlassWidgets.initialize()` and wraps the app via `LiquidGlassWidgets.wrap(brightnessResolver: Theme.maybeBrightnessOf)`
-- Glass quality tiers: static chrome (app bars, bottom nav, dialogs, sheets, panels) uses `GlassQuality.premium`; everything in scrollable lists (cards, chips, segmented control, import button, text fields) stays on `GlassQuality.standard`
-- Glass-over-glass nesting removed: the bottom-nav selection capsule and segmented-control thumb are tinted `DecoratedBox`es over the glass track/panel (a second glass layer would double-blur the backdrop)
+- Glass quality tiers: **static** chrome only (app bars, bottom nav, dialogs) uses `GlassQuality.premium`; **anything that moves or scrolls** (sheets, sort tiles, list cards, chips, segmented control, import button, text fields) stays on `GlassQuality.standard`. This is enforced by defaults: `LiquidGlassSheetPanel` and its tiles default to standard — premium re-captures the backdrop texture via `toImageSync` every frame a surface moves, which was the root cause of the severe sort-sheet jank on open/drag/dismiss in 2.9.2 (build 193 fix)
+- Glass-over-glass: the segmented-control thumb and the intensity-slider thumb are real `LiquidGlassSurface` lenses over their glass track (standard tier, cheap to animate); only the bottom-nav selection capsule stays a tinted `DecoratedBox` because it rides on the premium nav panel
+- Liquid glass intensity (build 193): `AppSettingsController.liquidGlassIntensityMode` (`standard`/`custom`) + `liquidGlassIntensity` (0.0–1.0, persisted); `liquidGlassIntensityValue` resolves standard mode to the curated default `0.72` so a stray custom value never changes the curated look. `LiquidGlassIntensity.scaleBlur`/`scaleTint` scale blur and tint alpha around the token base (blur floors at 30% scale, tint alpha at 20%, so weak glass reads nearly clear). `LiquidGlassSurface` selects the value via Provider; `intensityOverride` lets `GlassIntensitySlider`'s preview render a candidate value live — the value is only committed on drag/tap end so the app does not rebuild mid-gesture
+- Default glass look retuned toward iOS liquid glass (build 193): tokens `chromeBlur 24→20`, `panelBlur 18→14`, `controlBlur 12→8`, `thickness 14→7`; `LiquidGlassSettings` `refractiveIndex 1.15→1.12`, `chromaticAberration 0.008→0.006`, `lightIntensity 0.38/0.52→0.30/0.40`, `saturation 1.4→1.12`
+- Missed glass materials completed (build 193): reading preset `ActionChip`s → `LiquidGlassChip`, the "恢复默认阅读设置" `OutlinedButton` → `_GlassResetButton` glass pill, the library/settings header icon tiles → `LiquidGlassIconTile`, the segmented-control thumb → glass lens
+- Predictive back removed entirely (build 193): the `预测性返回手势` switch, `predictiveBackEnabled` field/setter/persistence, and both `predictiveBackEnabled` branches in `app_page_route.dart` are gone; no `enableOnBackInvokedCallback` manifest flag exists, so the system back stays instant and the left-edge swipe back is the interactive gesture
 - Release workflow split into build/publish jobs (build 192): publishing retries reuse the built artifact without a rebuild; release notes are generated from commit subjects with emoji categories; the tag step fails fast when a version's tag points at different code; update-server upload runs after the GitHub Release with 3 retries
 - Large-markdown virtualization (build 201): `MarkdownDocument.load` parses the whole file once in a background isolate (sections split at h1/h2 boundaries, force-split at ~6000 chars / 60 nodes; TOC + plain-text search projection built in the same pass) — the UI thread never re-parses
 - `MarkdownViewer` renders only sections within ±2000px of the viewport (`MarkdownRenderer.render` per section); other sections are `SizedBox` height placeholders (TextPainter-based estimates), far built sections recycle back to placeholders keeping their measured height so scrolling never jumps

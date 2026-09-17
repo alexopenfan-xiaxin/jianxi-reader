@@ -35,6 +35,17 @@ class _AppearanceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassIconTile(
+        size: 40,
+        radius: AppRadii.sm,
+        child: const Icon(
+          Icons.palette_outlined,
+          size: 21,
+          color: AppColors.primary,
+        ),
+      );
+    }
     return Container(
       width: 40,
       height: 40,
@@ -74,7 +85,8 @@ class AppearancePage extends StatelessWidget {
             AppFontFamily appFontFamily,
             ThemeMode themeMode,
             LibraryViewMode libraryViewMode,
-            bool predictiveBackEnabled,
+            LiquidGlassIntensityMode liquidGlassIntensityMode,
+            double liquidGlassIntensity,
           })
         >(
           (settings) => (
@@ -82,7 +94,8 @@ class AppearancePage extends StatelessWidget {
             appFontFamily: settings.appFontFamily,
             themeMode: settings.themeMode,
             libraryViewMode: settings.libraryViewMode,
-            predictiveBackEnabled: settings.predictiveBackEnabled,
+            liquidGlassIntensityMode: settings.liquidGlassIntensityMode,
+            liquidGlassIntensity: settings.liquidGlassIntensityValue,
           ),
         );
     final settings = context.read<AppSettingsController>();
@@ -225,18 +238,46 @@ class AppearancePage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  AppCard(
-                    child: SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: values.predictiveBackEnabled,
-                      onChanged: settings.setPredictiveBackEnabled,
-                      secondary: const Icon(Icons.swipe_rounded),
-                      title: const Text('预测性返回手势'),
-                      subtitle: const Text(
-                        'Android 13 及以上使用系统预测返回；关闭后保留应用左侧边缘返回。',
+                  if (values.visualMode == AppVisualMode.liquidGlass)
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _CardTitle(
+                            icon: Icons.blur_on_rounded,
+                            title: '玻璃强度',
+                            subtitle: '默认已按 iOS 液态玻璃调校，自定义可调节模糊与通透程度。',
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          GlassSegmentedControl<LiquidGlassIntensityMode>(
+                            segments: const [
+                              GlassSegment(
+                                value: LiquidGlassIntensityMode.standard,
+                                label: '默认',
+                                icon: Icons.auto_awesome_rounded,
+                                selectedIcon: Icons.check_rounded,
+                              ),
+                              GlassSegment(
+                                value: LiquidGlassIntensityMode.custom,
+                                label: '自定义',
+                                icon: Icons.tune_rounded,
+                                selectedIcon: Icons.check_rounded,
+                              ),
+                            ],
+                            value: values.liquidGlassIntensityMode,
+                            onChanged: settings.setLiquidGlassIntensityMode,
+                          ),
+                          if (values.liquidGlassIntensityMode ==
+                              LiquidGlassIntensityMode.custom) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            GlassIntensitySlider(
+                              value: values.liquidGlassIntensity,
+                              onChanged: settings.setLiquidGlassIntensity,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
                 ],
               ),
             ],

@@ -62,6 +62,16 @@ enum AppVisualMode {
   final String label;
 }
 
+/// How strongly the liquid-glass material is rendered.
+enum LiquidGlassIntensityMode {
+  standard('默认'),
+  custom('自定义');
+
+  const LiquidGlassIntensityMode(this.label);
+
+  final String label;
+}
+
 enum AppFontFamily {
   system('默认', null),
   lxgw('落霞孤鹜', 'LXGWWenKai');
@@ -137,7 +147,16 @@ class AppSettingsController extends ChangeNotifier {
   static const _visualModeKey = 'settings.visualMode';
   static const _readingFontFamilyKey = 'settings.readingFontFamily';
   static const _appFontFamilyKey = 'settings.appFontFamily';
-  static const _predictiveBackEnabledKey = 'settings.predictiveBackEnabled';
+  static const _liquidGlassIntensityModeKey =
+      'settings.liquidGlassIntensityMode';
+  static const _liquidGlassIntensityKey = 'settings.liquidGlassIntensity';
+
+  /// Default intensity for [LiquidGlassIntensityMode.standard], tuned to read
+  /// like iOS liquid glass: visible blur and refraction without a heavy
+  /// frosted tint. Custom intensity scales around the same token base.
+  static const double liquidGlassIntensityDefault = 0.72;
+  static const double liquidGlassIntensityMin = 0.0;
+  static const double liquidGlassIntensityMax = 1.0;
 
   SharedPreferences? _prefs;
 
@@ -150,7 +169,9 @@ class AppSettingsController extends ChangeNotifier {
   AppVisualMode _visualMode = AppVisualMode.classic;
   ReadingFontFamily _readingFontFamily = ReadingFontFamily.system;
   AppFontFamily _appFontFamily = AppFontFamily.system;
-  bool _predictiveBackEnabled = false;
+  LiquidGlassIntensityMode _liquidGlassIntensityMode =
+      LiquidGlassIntensityMode.standard;
+  double _liquidGlassIntensity = liquidGlassIntensityDefault;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -174,9 +195,26 @@ class AppSettingsController extends ChangeNotifier {
 
   String? get appFontFamilyValue => _appFontFamily.fontFamily;
 
-  bool get predictiveBackEnabled => _predictiveBackEnabled;
+  LiquidGlassIntensityMode get liquidGlassIntensityMode =>
+      _liquidGlassIntensityMode;
+
+  double get liquidGlassIntensity => _liquidGlassIntensity;
 
   bool get liquidGlassEnabled => _visualMode == AppVisualMode.liquidGlass;
+
+  /// The intensity (0.0–1.0) glass surfaces should render at. Custom mode
+  /// honours the stored slider value; standard mode always resolves to the
+  /// tuned default so a stray custom value never changes the curated look.
+  double get liquidGlassIntensityValue {
+    if (_liquidGlassIntensityMode != LiquidGlassIntensityMode.custom) {
+      return liquidGlassIntensityDefault;
+    }
+    final clamped = _liquidGlassIntensity.clamp(
+      liquidGlassIntensityMin,
+      liquidGlassIntensityMax,
+    );
+    return clamped.toDouble();
+  }
 
   double get readingFontSizeValue => _readingFontSize;
 
@@ -275,8 +313,12 @@ class AppSettingsController extends ChangeNotifier {
     _appFontFamily = _appFontFamilyFromName(
       preferences.getString(_appFontFamilyKey),
     );
-    _predictiveBackEnabled =
-        preferences.getBool(_predictiveBackEnabledKey) ?? false;
+    _liquidGlassIntensityMode = _liquidGlassIntensityModeFromName(
+      preferences.getString(_liquidGlassIntensityModeKey),
+    );
+    _liquidGlassIntensity = _liquidGlassIntensityFromStored(
+      preferences.get(_liquidGlassIntensityKey),
+    );
     notifyListeners();
   }
 
@@ -389,15 +431,36 @@ class AppSettingsController extends ChangeNotifier {
     await _persist(_appFontFamilyKey, fontFamily.name);
   }
 
-  Future<void> setPredictiveBackEnabled(bool enabled) async {
-    if (_predictiveBackEnabled == enabled) {
+  Future<void> setLiquidGlassIntensityMode(
+    LiquidGlassIntensityMode mode,
+  ) async {
+    if (_liquidGlassIntensityMode == mode) {
       return;
     }
-    _predictiveBackEnabled = enabled;
+    _liquidGlassIntensityMode = mode;
     notifyListeners();
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    await prefs.setBool(_predictiveBackEnabledKey, enabled);
+    await _persist(_liquidGlassIntensityModeKey, mode.name);
+  }
+
+  Future<void> setLiquidGlassIntensity(double value) async {
+    final clamped = value.clamp(
+      liquidGlassIntensityMin,
+      liquidGlassIntensityMax,
+    ).toDouble();
+    if ((_liquidGlassIntensity - clamped).abs() < 0.001) {
+      return;
+    }
+    _liquidGlassIntensity = clamped;
+    // Moving the slider is itself the choice to customise.
+    if (_liquidGlassIntensityMode != LiquidGlassIntensityMode.custom) {
+      _liquidGlassIntensityMode = LiquidGlassIntensityMode.custom;
+      await _persist(
+        _liquidGlassIntensityModeKey,
+        _liquidGlassIntensityMode.name,
+      );
+    }
+    notifyListeners();
+    await _persistDouble(_liquidGlassIntensityKey, clamped);
   }
 
   static ThemeMode _themeModeFromName(String? name) {
@@ -499,5 +562,27 @@ class AppSettingsController extends ChangeNotifier {
       (family) => family.name == name,
       orElse: () => AppFontFamily.system,
     );
+  }
+
+  static LiquidGlassIntensityMode _liquidGlassIntensityModeFromName(
+    String? name,
+  ) {
+    return LiquidGlassIntensityMode.values.firstWhere(
+      (mode) => mode.name == name,
+      orElse: () => LiquidGlassIntensityMode.standard,
+    );
+  }
+
+  static double _liquidGlassIntensityFromStored(Object? value) {
+    final parsed = switch (value) {
+      double stored => stored,
+      int stored => stored.toDouble(),
+      _ => liquidGlassIntensityDefault,
+    };
+    final clamped = parsed.clamp(
+      liquidGlassIntensityMin,
+      liquidGlassIntensityMax,
+    );
+    return clamped.toDouble();
   }
 }

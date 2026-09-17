@@ -12,15 +12,17 @@ export 'package:liquid_glass_widgets/types/glass_quality.dart'
 ///
 /// Glass visuals (blur, refraction, lighting, shadows) are rendered by the
 /// `liquid_glass_widgets` shader pipeline; these tokens only pin the blur
-/// budget per surface class and shared layout metrics.
+/// budget per surface class and shared layout metrics. Values are tuned so
+/// the default intensity reads like iOS liquid glass: soft blur, gentle
+/// refraction and a near-neutral tint rather than a heavy frosted wash.
 class LiquidGlassTokens {
-  // Glass blur presets per surface class.
-  static const double chromeBlur = 24.0;
-  static const double panelBlur = 18.0;
-  static const double controlBlur = 12.0;
+  // Glass blur presets per surface class, before intensity scaling.
+  static const double chromeBlur = 20.0;
+  static const double panelBlur = 14.0;
+  static const double controlBlur = 8.0;
 
   // Shared glass thickness (drives refraction depth).
-  static const double thickness = 14.0;
+  static const double thickness = 7.0;
 
   // Floating bottom navigation layout.
   static const bottomBarHeight = 58.0;
@@ -30,6 +32,39 @@ class LiquidGlassTokens {
   static const floatingBottomBarItemWidth = 76.0;
   static const floatingBottomBarIndicatorHeight = 56.0;
   static const floatingBottomBarPanelOffsetMax = 5.0;
+}
+
+/// Scales glass blur and tint by the user's intensity preference (0.0–1.0).
+///
+/// iOS liquid glass stays legible at low intensity: blur eases off gently
+/// while the tint fades faster, so weak glass reads nearly clear instead of
+/// collapsing into a flat frosted box.
+class LiquidGlassIntensity {
+  const LiquidGlassIntensity._();
+
+  static const double _minBlurScale = 0.30;
+  static const double _minAlphaScale = 0.20;
+  static const double _minBlur = 1.0;
+
+  static double blurScale(double intensity) {
+    final t = intensity.clamp(0.0, 1.0).toDouble();
+    return _minBlurScale + (1 - _minBlurScale) * t;
+  }
+
+  static double alphaScale(double intensity) {
+    final t = intensity.clamp(0.0, 1.0).toDouble();
+    return _minAlphaScale + (1 - _minAlphaScale) * t;
+  }
+
+  static double scaleBlur(double baseBlur, double intensity) {
+    final scaled = baseBlur * blurScale(intensity);
+    return scaled < _minBlur ? _minBlur : scaled;
+  }
+
+  static Color scaleTint(Color color, double intensity) {
+    final scaled = color.a * alphaScale(intensity);
+    return color.withValues(alpha: scaled.clamp(0.0, 1.0).toDouble());
+  }
 }
 
 /// A real liquid-glass surface backed by [AdaptiveGlass].
@@ -50,6 +85,7 @@ class LiquidGlassSurface extends StatelessWidget {
     this.blur,
     this.quality = GlassQuality.standard,
     this.interactive = false,
+    this.intensityOverride,
   });
 
   final Widget child;
@@ -70,14 +106,26 @@ class LiquidGlassSurface extends StatelessWidget {
   /// Marks press-scale surfaces so the fallback path skips backdrop relayout.
   final bool interactive;
 
+  /// Bypasses the stored intensity setting, used by the intensity slider's
+  /// live preview so it can render a candidate value before it is committed.
+  final double? intensityOverride;
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final effectiveBlur =
-        blur ??
+    final intensity = intensityOverride ??
+        context.select<AppSettingsController, double>(
+          (settings) => settings.liquidGlassIntensityValue,
+        );
+    final baseBlur = blur ??
         (quality == GlassQuality.premium
             ? LiquidGlassTokens.chromeBlur
             : LiquidGlassTokens.controlBlur);
+    final effectiveBlur = LiquidGlassIntensity.scaleBlur(baseBlur, intensity);
+    final tint = LiquidGlassIntensity.scaleTint(
+      color ?? liquidGlassContainerColor(context),
+      intensity,
+    );
     // Package shapes take a single radius; callers use circular radii.
     final radius = borderRadius.topLeft.x;
     return AdaptiveGlass(
@@ -90,11 +138,11 @@ class LiquidGlassSurface extends StatelessWidget {
       settings: LiquidGlassSettings(
         blur: effectiveBlur,
         thickness: LiquidGlassTokens.thickness,
-        glassColor: color ?? liquidGlassContainerColor(context),
-        refractiveIndex: 1.15,
-        chromaticAberration: 0.008,
-        lightIntensity: dark ? 0.38 : 0.52,
-        saturation: 1.4,
+        glassColor: tint,
+        refractiveIndex: 1.12,
+        chromaticAberration: 0.006,
+        lightIntensity: dark ? 0.30 : 0.40,
+        saturation: 1.12,
       ),
       quality: quality,
       isInteractive: interactive,
@@ -145,6 +193,11 @@ bool readLiquidGlassEnabled(BuildContext context) {
 }
 
 /// Elevated glass panel used by dialogs, sheets and popovers.
+///
+/// Defaults to [GlassQuality.premium], which suits static chrome. Pass
+/// [GlassQuality.standard] for anything that moves or scrolls — a dragged
+/// sheet re-captures its backdrop every frame, and the premium path is far
+/// too expensive to pay per frame.
 class LiquidGlassPanel extends StatelessWidget {
   const LiquidGlassPanel({
     required this.child,
@@ -152,12 +205,14 @@ class LiquidGlassPanel extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.borderRadius = const BorderRadius.all(Radius.circular(30)),
     this.color,
+    this.quality = GlassQuality.premium,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final BorderRadius borderRadius;
   final Color? color;
+  final GlassQuality quality;
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +221,16 @@ class LiquidGlassPanel extends StatelessWidget {
       padding: padding,
       color: color ?? liquidGlassCardColor(context),
       blur: LiquidGlassTokens.panelBlur,
-      quality: GlassQuality.premium,
+      quality: quality,
       child: child,
     );
   }
 }
 
 /// Floating glass sheet container for modal bottom sheets.
+///
+/// Sheets are dragged, so callers should pass [GlassQuality.standard] (the
+/// default here) unless the sheet is fully static.
 class LiquidGlassSheetPanel extends StatelessWidget {
   const LiquidGlassSheetPanel({
     required this.child,
@@ -185,12 +243,14 @@ class LiquidGlassSheetPanel extends StatelessWidget {
       AppSpacing.lg,
     ),
     this.borderRadius = const BorderRadius.all(Radius.circular(30)),
+    this.quality = GlassQuality.standard,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
   final BorderRadius borderRadius;
+  final GlassQuality quality;
 
   @override
   Widget build(BuildContext context) {
@@ -199,10 +259,43 @@ class LiquidGlassSheetPanel extends StatelessWidget {
       child: LiquidGlassPanel(
         padding: padding,
         borderRadius: borderRadius,
+        quality: quality,
         child: SafeArea(
           top: false,
           child: Material(type: MaterialType.transparency, child: child),
         ),
+      ),
+    );
+  }
+}
+
+/// Glass replacement for the small tinted icon tiles used in headers and
+/// settings cards. The classic variant is a flat primary-tinted box; glass
+/// mode keeps the same silhouette with a real translucent surface.
+class LiquidGlassIconTile extends StatelessWidget {
+  const LiquidGlassIconTile({
+    required this.child,
+    super.key,
+    this.size = 48,
+    this.radius = 13,
+    this.tint,
+  });
+
+  final Widget child;
+  final double size;
+  final double radius;
+  final Color? tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: LiquidGlassSurface(
+        borderRadius: BorderRadius.circular(radius),
+        color: tint ?? AppColors.primary.withValues(alpha: 0.10),
+        borderColor: AppColors.primary.withValues(alpha: 0.20),
+        child: Center(child: child),
       ),
     );
   }

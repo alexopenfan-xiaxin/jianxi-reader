@@ -1,8 +1,6 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 
 /// Page transition styles. Pushes travel along the horizontal axis
@@ -21,15 +19,11 @@ PageRoute<T> appPageRoute<T>({
   );
 }
 
-/// A [MaterialPageRoute] that consults the theme's [PageTransitionsTheme].
-///
-/// When predictive back is enabled, transitions defer to the theme's
-/// [PredictiveBackPageTransitionsBuilder] (the Flutter 3.44 Android default),
-/// which renders the system predictive back peek animation along with the
-/// gesture. When disabled, the app's signature motion is used: incoming
-/// pages slide in along the horizontal axis ([SharedAxisTransition]) while
-/// outgoing pages fade through; the custom left-edge swipe back gesture
-/// ([_EdgeSwipeBackPage]) takes over.
+/// A [MaterialPageRoute] with the app's signature motion: incoming pages
+/// slide in along the horizontal axis ([SharedAxisTransition]) while outgoing
+/// pages fade through. The custom left-edge swipe back gesture
+/// ([_EdgeSwipeBackPage]) handles the return gesture; the system predictive
+/// back peek animation is intentionally not used.
 class AppPageRoute<T> extends MaterialPageRoute<T> {
   AppPageRoute({
     required super.builder,
@@ -51,17 +45,6 @@ class AppPageRoute<T> extends MaterialPageRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final predictiveBackEnabled = context.select<AppSettingsController, bool>(
-      (settings) => settings.predictiveBackEnabled,
-    );
-    if (predictiveBackEnabled) {
-      return super.buildTransitions(
-        context,
-        animation,
-        secondaryAnimation,
-        child,
-      );
-    }
     // The route rebuilds this subtree on every animation frame, so the
     // status can be consulted to give pushes and pops distinct motion.
     if (animation.status == AnimationStatus.reverse ||
@@ -139,12 +122,6 @@ class _EdgeSwipeBackPageState extends State<_EdgeSwipeBackPage> {
 
   @override
   Widget build(BuildContext context) {
-    final predictiveBackEnabled = context.select<AppSettingsController, bool>(
-      (settings) => settings.predictiveBackEnabled,
-    );
-    if (predictiveBackEnabled) {
-      return PopScope(canPop: true, child: widget.child);
-    }
     return PopScope(
       canPop: true,
       child: Stack(

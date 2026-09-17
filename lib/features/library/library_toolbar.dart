@@ -217,6 +217,16 @@ class _LibraryHomeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final painter = CustomPaint(
+      painter: _DocumentTypeIconPainter(
+        primary: AppColors.primary,
+        paper: palette.card,
+        line: palette.ink,
+      ),
+    );
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassIconTile(child: painter);
+    }
     return Container(
       width: 48,
       height: 48,
@@ -232,13 +242,7 @@ class _LibraryHomeIcon extends StatelessWidget {
           ),
         ],
       ),
-      child: CustomPaint(
-        painter: _DocumentTypeIconPainter(
-          primary: AppColors.primary,
-          paper: palette.card,
-          line: palette.ink,
-        ),
-      ),
+      child: painter,
     );
   }
 }
@@ -448,8 +452,12 @@ class _SortSheet extends StatelessWidget {
       minChildSize: 0.45,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
-        return Consumer<LibraryController>(
-          builder: (context, controller, _) {
+        // Only the selection matters here; a full Consumer would rebuild the
+        // whole sheet (and every glass surface in it) on each library change.
+        return Selector<LibraryController, LibrarySortMode>(
+          selector: (context, controller) => controller.sortMode,
+          builder: (context, sortMode, _) {
+            final controller = context.read<LibraryController>();
             final content = Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -464,7 +472,7 @@ class _SortSheet extends StatelessWidget {
                 for (final mode in LibrarySortMode.values)
                   _SortOptionTile(
                     mode: mode,
-                    selected: controller.sortMode == mode,
+                    selected: sortMode == mode,
                     onTap: () {
                       controller.updateSortMode(mode);
                       Navigator.of(context).pop();
@@ -491,6 +499,9 @@ class _SortSheet extends StatelessWidget {
             );
 
             if (liquidGlassEnabled(context)) {
+              // The sheet both drags and scrolls, so it stays on standard
+              // quality: premium re-captures the backdrop texture every frame
+              // and was the cause of the severe jank on open, drag, dismiss.
               return LiquidGlassSheetPanel(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl,
@@ -581,6 +592,8 @@ class _SortOptionTile extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: PressScale(
           child: LiquidGlassPanel(
+            // Tiles ride inside a dragged sheet; standard keeps them cheap.
+            quality: GlassQuality.standard,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             borderRadius: BorderRadius.circular(18),
             color: selected

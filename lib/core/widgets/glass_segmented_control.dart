@@ -187,15 +187,15 @@ class _GlassThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // A tinted capsule over the glass track: nesting a second glass surface
-    // inside the track would double-blur the backdrop beneath it.
+    // A real glass lens over the track: it refracts the blurred backdrop
+    // beneath it like an iOS segmented capsule, instead of reading as a flat
+    // tinted box. Standard quality keeps the animated thumb cheap to move.
     if (liquidGlass) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
-        ),
+      return LiquidGlassSurface(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        color: AppColors.primary.withValues(alpha: 0.14),
+        borderColor: AppColors.primary.withValues(alpha: 0.30),
+        child: const SizedBox.expand(),
       );
     }
 

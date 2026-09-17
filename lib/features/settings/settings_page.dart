@@ -14,6 +14,7 @@ import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_page_route.dart';
+import '../../core/widgets/glass_intensity_slider.dart';
 import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
@@ -208,6 +209,15 @@ class _SettingsHomeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final painter = CustomPaint(
+      painter: _SettingsHomeIconPainter(
+        primary: AppColors.primary,
+        line: palette.ink,
+      ),
+    );
+    if (liquidGlassEnabled(context)) {
+      return LiquidGlassIconTile(child: painter);
+    }
     return Container(
       width: 48,
       height: 48,
@@ -223,12 +233,7 @@ class _SettingsHomeIcon extends StatelessWidget {
           ),
         ],
       ),
-      child: CustomPaint(
-        painter: _SettingsHomeIconPainter(
-          primary: AppColors.primary,
-          line: palette.ink,
-        ),
-      ),
+      child: painter,
     );
   }
 }
