@@ -30,11 +30,7 @@ class StaggeredEntrance extends StatelessWidget {
     if (index >= maxIndex) {
       return child;
     }
-    return _StaggeredEntranceBody(
-      index: index,
-      rise: rise,
-      child: child,
-    );
+    return _StaggeredEntranceBody(index: index, rise: rise, child: child);
   }
 }
 
@@ -123,10 +119,8 @@ class _StateShellState extends State<StateShell>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: AppMotion.normal,
-      vsync: this,
-    )..forward();
+    _controller = AnimationController(duration: AppMotion.normal, vsync: this)
+      ..forward();
     _progress = CurvedAnimation(
       parent: _controller,
       curve: AppMotion.emphasized,
