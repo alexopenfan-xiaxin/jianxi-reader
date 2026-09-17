@@ -73,7 +73,8 @@ class LiquidGlassSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final effectiveBlur = blur ??
+    final effectiveBlur =
+        blur ??
         (quality == GlassQuality.premium
             ? LiquidGlassTokens.chromeBlur
             : LiquidGlassTokens.controlBlur);
@@ -266,9 +267,7 @@ class LiquidGlassChip extends StatelessWidget {
       color: selected
           ? AppColors.primary.withValues(alpha: dark ? 0.16 : 0.12)
           : liquidGlassContainerColor(context, alpha: dark ? 0.12 : 0.28),
-      borderColor: selected
-          ? AppColors.primary.withValues(alpha: 0.26)
-          : null,
+      borderColor: selected ? AppColors.primary.withValues(alpha: 0.26) : null,
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadii.pill),

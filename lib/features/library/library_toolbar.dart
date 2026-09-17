@@ -608,9 +608,7 @@ class _SortOptionTile extends StatelessWidget {
         child: Container(
           height: 72,
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: context.palette.hairline),
-            ),
+            border: Border(bottom: BorderSide(color: context.palette.hairline)),
           ),
           child: row,
         ),

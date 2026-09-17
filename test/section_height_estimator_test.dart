@@ -14,10 +14,7 @@ void main() {
     );
     final short = MarkdownDocument.parseContent('# 标题\n\n短正文。\n', const {});
     final long = MarkdownDocument.parseContent(
-      List.generate(
-        40,
-        (i) => '这是第$i段比较长的正文内容，用来验证估算器随内容增长。',
-      ).join('\n\n'),
+      List.generate(40, (i) => '这是第$i段比较长的正文内容，用来验证估算器随内容增长。').join('\n\n'),
       const {},
     );
 

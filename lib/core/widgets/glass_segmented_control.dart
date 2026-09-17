@@ -194,9 +194,7 @@ class _GlassThumb extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.22),
-          ),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
         ),
       );
     }

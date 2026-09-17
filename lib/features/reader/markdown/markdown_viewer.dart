@@ -707,14 +707,16 @@ class MarkdownViewerState extends State<MarkdownViewer>
     return BuilderRegistry()
       ..register(
         'header',
-        TocHeaderBuilder(keyForHeading: (node) {
-          if (node.level > 4 || node.content.trim().isEmpty) {
-            return null;
-          }
-          final globalIndex = section.headingBase + headingOrdinal;
-          headingOrdinal++;
-          return _headingKeys.putIfAbsent(globalIndex, () => GlobalKey());
-        }),
+        TocHeaderBuilder(
+          keyForHeading: (node) {
+            if (node.level > 4 || node.content.trim().isEmpty) {
+              return null;
+            }
+            final globalIndex = section.headingBase + headingOrdinal;
+            headingOrdinal++;
+            return _headingKeys.putIfAbsent(globalIndex, () => GlobalKey());
+          },
+        ),
       )
       ..register(
         'text',

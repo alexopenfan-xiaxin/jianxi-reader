@@ -21,14 +21,16 @@ void main() {
         120,
         (i) => '段落文字内容示例$i，用于凑足章节的实际长度。',
       ).join('\n\n');
-      final data = '# One\n\n$chapter\n\n## Two\n\n$chapter\n\n## Three\n\n$chapter\n';
+      final data =
+          '# One\n\n$chapter\n\n## Two\n\n$chapter\n\n## Three\n\n$chapter\n';
       final doc = MarkdownDocument.parseContent(data, const {});
 
       expect(doc.sections.length, greaterThanOrEqualTo(2));
-      expect(
-        doc.tocEntries.map((e) => e.title).toList(),
-        ['One', 'Two', 'Three'],
-      );
+      expect(doc.tocEntries.map((e) => e.title).toList(), [
+        'One',
+        'Two',
+        'Three',
+      ]);
       for (var global = 0; global < doc.tocEntries.length; global++) {
         final sectionIndex = doc.sectionIndexForHeading(global);
         expect(sectionIndex, greaterThanOrEqualTo(0));

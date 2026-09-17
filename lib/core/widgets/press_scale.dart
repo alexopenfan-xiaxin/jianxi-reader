@@ -33,13 +33,11 @@ class _PressScaleState extends State<PressScale>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: AppMotion.fast,
-      vsync: this,
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: widget.scale).animate(
-      CurvedAnimation(parent: _controller, curve: AppMotion.press),
-    );
+    _controller = AnimationController(duration: AppMotion.fast, vsync: this);
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: widget.scale,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.press));
   }
 
   @override

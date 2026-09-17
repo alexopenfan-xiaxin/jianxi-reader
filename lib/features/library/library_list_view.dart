@@ -37,9 +37,7 @@ class _LibraryAnimatedContent extends StatelessWidget {
       );
     }
     if (controller.allDocuments.isEmpty) {
-      return const SliverToBoxAdapter(
-        child: StateShell(child: _EmptyState()),
-      );
+      return const SliverToBoxAdapter(child: StateShell(child: _EmptyState()));
     }
     if (controller.documents.isEmpty) {
       return const SliverToBoxAdapter(

@@ -171,10 +171,8 @@ class _TabEntranceState extends State<_TabEntrance>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: AppMotion.slow,
-      vsync: this,
-    )..forward();
+    _controller = AnimationController(duration: AppMotion.slow, vsync: this)
+      ..forward();
   }
 
   @override

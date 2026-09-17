@@ -112,11 +112,7 @@ class _SuccessCheckPainter extends CustomPainter {
       ..color = color.withValues(alpha: 0.45 * circle)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
-    canvas.drawCircle(
-      center,
-      radius * (0.72 + 0.28 * circle),
-      ring,
-    );
+    canvas.drawCircle(center, radius * (0.72 + 0.28 * circle), ring);
 
     if (check <= 0) {
       return;
@@ -184,10 +180,7 @@ class _SuccessToastState extends State<_SuccessToast>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: AppMotion.slow,
-      vsync: this,
-    );
+    _controller = AnimationController(duration: AppMotion.slow, vsync: this);
     _fade = CurvedAnimation(
       parent: _controller,
       curve: AppMotion.emphasized,
@@ -253,9 +246,7 @@ class _SuccessToastState extends State<_SuccessToast>
                         ),
                         decoration: BoxDecoration(
                           color: palette.card.withValues(alpha: 0.88),
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.pill,
-                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
                           border: Border.all(color: palette.hairline),
                         ),
                         child: Row(

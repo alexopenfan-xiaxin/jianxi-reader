@@ -208,10 +208,7 @@ class _ShakeBoxState extends State<_ShakeBox>
         final decay = 1 - t;
         final angle = t * math.pi * 2 * _cycles;
         final offset = math.sin(angle) * _travel * decay;
-        return Transform.translate(
-          offset: Offset(offset, 0),
-          child: child,
-        );
+        return Transform.translate(offset: Offset(offset, 0), child: child);
       },
       child: widget.child,
     );

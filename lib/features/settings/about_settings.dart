@@ -495,8 +495,7 @@ class _AboutPageState extends State<AboutPage> {
     client.userAgent = 'JianxiReader/1.0';
     // 更新服务器证书链不完整（缺少中间证书），且该服务器绝对可信，
     // 故仅对更新服务器主机放行证书校验，其他主机仍走系统信任库。
-    client.badCertificateCallback = (cert, host, port) =>
-        host == _updateHost;
+    client.badCertificateCallback = (cert, host, port) => host == _updateHost;
     return client;
   }
 
