@@ -20,9 +20,12 @@ class _AboutEntry extends StatelessWidget {
   }
 
   void _openAboutPage(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(appPageRoute<void>(builder: (context) => const AboutPage()));
+    Navigator.of(context).push(
+      appPageRoute<void>(
+        transition: AppPageTransition.fadeThrough,
+        builder: (context) => const AboutPage(),
+      ),
+    );
   }
 }
 
@@ -57,6 +60,40 @@ class _AboutEntryText extends StatelessWidget {
   }
 }
 
+/// App logo with a single one-shot shimmer sweep on mount.
+class _AboutLogo extends StatelessWidget {
+  const _AboutLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = AppColors.primary.withValues(alpha: 0.10);
+    final border = AppColors.primary.withValues(alpha: 0.12);
+    return Animate(
+      effects: [
+        ShimmerEffect(
+          duration: const Duration(milliseconds: 1600),
+          delay: const Duration(milliseconds: 250),
+          color: Colors.white.withValues(alpha: 0.55),
+        ),
+      ],
+      child: Container(
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          color: tint,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          border: Border.all(color: border),
+        ),
+        child: const Icon(
+          Icons.auto_stories_rounded,
+          color: AppColors.primary,
+          size: 29,
+        ),
+      ),
+    );
+  }
+}
+
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
@@ -69,7 +106,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '192';
+  static const _fallbackBuildNumber = '193';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -133,9 +170,8 @@ class _AboutPageState extends State<AboutPage> {
         if (!_isNewerBuildResponse(response)) {
           await response.drain<void>();
           if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('已是最新版本')));
+          setState(() => _isChecking = false);
+          showSuccessFeedback(context, '已是最新版本');
           return;
         }
         final newVersion = response.headers.value('x-apk-version');
@@ -224,7 +260,13 @@ class _AboutPageState extends State<AboutPage> {
             builder: (ctx, value, _) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                LinearProgressIndicator(value: value),
+                if (value >= 1.0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: SuccessCheck(size: 44),
+                  )
+                else
+                  LinearProgressIndicator(value: value),
                 const SizedBox(height: 16),
                 Text(
                   value >= 1.0
@@ -256,9 +298,7 @@ class _AboutPageState extends State<AboutPage> {
         await response.drain<void>();
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('已是最新版本')));
+          showSuccessFeedback(context, '已是最新版本');
         }
         return;
       }
@@ -320,6 +360,11 @@ class _AboutPageState extends State<AboutPage> {
       progress.dispose();
     }
 
+    if (mounted) {
+      // Let the completed state (and its check animation) settle briefly
+      // before handing off to the system installer.
+      await Future.delayed(const Duration(milliseconds: 700));
+    }
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -562,28 +607,7 @@ class _AboutPageState extends State<AboutPage> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.10,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.sm,
-                                ),
-                                border: Border.all(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.auto_stories_rounded,
-                                color: AppColors.primary,
-                                size: 29,
-                              ),
-                            ),
+                            const _AboutLogo(),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
@@ -738,41 +762,68 @@ class _AboutActionButton extends StatelessWidget {
     final palette = context.palette;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final foreground = busy ? palette.muted : AppColors.primary;
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: Opacity(
-        opacity: busy ? 0.72 : 1,
-        child: LiquidGlassSurface(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          color: liquidGlassContainerColor(context, alpha: dark ? 0 : 0.26),
-          borderColor: AppColors.primary.withValues(alpha: 0.24),
-          interactive: true,
-          child: Material(
-            color: Colors.transparent,
+    return PressScale(
+      enabled: !busy,
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: AnimatedOpacity(
+          opacity: busy ? 0.72 : 1,
+          duration: AppMotion.fast,
+          curve: AppMotion.emphasized,
+          child: LiquidGlassSurface(
             borderRadius: BorderRadius.circular(AppRadii.pill),
-            child: InkWell(
-              onTap: busy ? null : onPressed,
+            color: liquidGlassContainerColor(context, alpha: dark ? 0 : 0.26),
+            borderColor: AppColors.primary.withValues(alpha: 0.24),
+            interactive: true,
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              splashFactory: NoSplash.splashFactory,
-              highlightColor: AppColors.primary.withValues(alpha: 0.05),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    busy
-                        ? _ButtonProgressIcon(color: foreground)
-                        : Icon(icon, color: foreground, size: 20),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      busy ? busyLabel : label,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
+              child: InkWell(
+                onTap: busy ? null : onPressed,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: AppColors.primary.withValues(alpha: 0.05),
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.fast,
+                    switchInCurve: AppMotion.emphasized,
+                    switchOutCurve: AppMotion.exit,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: animation,
+                          curve: AppMotion.emphasized,
+                        ),
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.3),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Row(
+                      key: ValueKey(busy),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        busy
+                            ? _ButtonProgressIcon(color: foreground)
+                            : Icon(icon, color: foreground, size: 20),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          busy ? busyLabel : label,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: foreground,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0,
+                              ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

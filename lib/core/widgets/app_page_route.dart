@@ -1,11 +1,22 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../app_settings_controller.dart';
 import '../design_tokens.dart';
 
-PageRoute<T> appPageRoute<T>({required WidgetBuilder builder}) {
+/// Page transition styles. Pushes travel along the horizontal axis
+/// ([SharedAxisTransition], matching the app's previous slide feel); pops
+/// fade through. Root-level destinations can opt into a pure fade through
+/// via [AppPageTransition.fadeThrough].
+enum AppPageTransition { sharedAxis, fadeThrough }
+
+PageRoute<T> appPageRoute<T>({
+  required WidgetBuilder builder,
+  AppPageTransition transition = AppPageTransition.sharedAxis,
+}) {
   return AppPageRoute<T>(
+    transition: transition,
     builder: (context) => _EdgeSwipeBackPage(child: builder(context)),
   );
 }
@@ -15,11 +26,17 @@ PageRoute<T> appPageRoute<T>({required WidgetBuilder builder}) {
 /// When predictive back is enabled, transitions defer to the theme's
 /// [PredictiveBackPageTransitionsBuilder] (the Flutter 3.44 Android default),
 /// which renders the system predictive back peek animation along with the
-/// gesture. When disabled, the app's signature fade + subtle slide transition
-/// is used and the custom left-edge swipe back gesture ([_EdgeSwipeBackPage])
-/// takes over.
+/// gesture. When disabled, the app's signature motion is used: incoming
+/// pages slide in along the horizontal axis ([SharedAxisTransition]) while
+/// outgoing pages fade through; the custom left-edge swipe back gesture
+/// ([_EdgeSwipeBackPage]) takes over.
 class AppPageRoute<T> extends MaterialPageRoute<T> {
-  AppPageRoute({required super.builder});
+  AppPageRoute({
+    required super.builder,
+    this.transition = AppPageTransition.sharedAxis,
+  });
+
+  final AppPageTransition transition;
 
   @override
   Duration get transitionDuration => AppMotion.normal;
@@ -45,18 +62,23 @@ class AppPageRoute<T> extends MaterialPageRoute<T> {
         child,
       );
     }
-    final primary = CurvedAnimation(
-      parent: animation,
-      curve: AppMotion.enter,
-      reverseCurve: AppMotion.exit,
-    );
-    final incomingOffset = Tween<Offset>(
-      begin: const Offset(0.028, 0),
-      end: Offset.zero,
-    ).animate(primary);
-    return FadeTransition(
-      opacity: primary,
-      child: SlideTransition(position: incomingOffset, child: child),
+    // The route rebuilds this subtree on every animation frame, so the
+    // status can be consulted to give pushes and pops distinct motion.
+    if (animation.status == AnimationStatus.reverse ||
+        transition == AppPageTransition.fadeThrough) {
+      return FadeThroughTransition(
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        fillColor: Colors.transparent,
+        child: child,
+      );
+    }
+    return SharedAxisTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
+      transitionType: SharedAxisTransitionType.horizontal,
+      fillColor: Colors.transparent,
+      child: child,
     );
   }
 }

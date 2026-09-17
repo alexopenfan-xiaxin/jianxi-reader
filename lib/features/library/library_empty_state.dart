@@ -1,30 +1,5 @@
 part of 'library_page.dart';
 
-class _AnimatedStateShell extends StatelessWidget {
-  const _AnimatedStateShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: AppMotion.normal,
-      curve: AppMotion.enter,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 12 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-}
-
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message});
 
@@ -56,11 +31,16 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.xxl),
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+    return const Column(
+      children: [
+        LibrarySkeletonCard(),
+        SizedBox(height: AppSpacing.sm),
+        LibrarySkeletonCard(),
+        SizedBox(height: AppSpacing.sm),
+        LibrarySkeletonCard(),
+        SizedBox(height: AppSpacing.sm),
+        LibrarySkeletonCard(),
+      ],
     );
   }
 }

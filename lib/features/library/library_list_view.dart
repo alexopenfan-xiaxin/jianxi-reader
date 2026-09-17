@@ -1,44 +1,9 @@
 part of 'library_page.dart';
 
-class _StaggeredFadeIn extends StatelessWidget {
-  const _StaggeredFadeIn({
-    required this.index,
-    required this.controller,
-    required this.child,
-  });
-
-  final int index;
-  final AnimationController controller;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (index >= 12) {
-      return child;
-    }
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        final delay = index * 0.06;
-        final t = ((controller.value - delay) / (1 - delay)).clamp(0.0, 1.0);
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 10 * (1 - t)),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-}
-
 class _LibraryAnimatedContent extends StatelessWidget {
   const _LibraryAnimatedContent({
     required this.controller,
     required this.viewMode,
-    required this.staggerController,
     required this.selectedPaths,
     required this.onToggleSelection,
     required this.onStartSelection,
@@ -46,7 +11,6 @@ class _LibraryAnimatedContent extends StatelessWidget {
 
   final LibraryController controller;
   final LibraryViewMode viewMode;
-  final AnimationController staggerController;
   final Set<String> selectedPaths;
   final ValueChanged<DocumentEntry> onToggleSelection;
   final ValueChanged<DocumentEntry> onStartSelection;
@@ -69,17 +33,17 @@ class _LibraryAnimatedContent extends StatelessWidget {
   Widget _buildContent() {
     if (controller.isLoading) {
       return const SliverToBoxAdapter(
-        child: _AnimatedStateShell(child: _LoadingState()),
+        child: StateShell(child: _LoadingState()),
       );
     }
     if (controller.allDocuments.isEmpty) {
       return const SliverToBoxAdapter(
-        child: _AnimatedStateShell(child: _EmptyState()),
+        child: StateShell(child: _EmptyState()),
       );
     }
     if (controller.documents.isEmpty) {
       return const SliverToBoxAdapter(
-        child: _AnimatedStateShell(child: _NoResultsState()),
+        child: StateShell(child: _NoResultsState()),
       );
     }
     if (viewMode == LibraryViewMode.shelf) {
@@ -104,7 +68,6 @@ class _LibraryAnimatedContent extends StatelessWidget {
           _RecentReadingSliver(documents: controller.recentDocuments),
         _AnimatedDocumentSliverList(
           documents: controller.documents,
-          staggerController: staggerController,
           selectedPaths: selectedPaths,
           onToggleSelection: onToggleSelection,
           onStartSelection: onStartSelection,
@@ -299,14 +262,12 @@ class _LibrarySliverTransitionState extends State<_LibrarySliverTransition> {
 class _AnimatedDocumentSliverList extends StatefulWidget {
   const _AnimatedDocumentSliverList({
     required this.documents,
-    required this.staggerController,
     required this.selectedPaths,
     required this.onToggleSelection,
     required this.onStartSelection,
   });
 
   final List<DocumentEntry> documents;
-  final AnimationController staggerController;
   final Set<String> selectedPaths;
   final ValueChanged<DocumentEntry> onToggleSelection;
   final ValueChanged<DocumentEntry> onStartSelection;
@@ -418,9 +379,8 @@ class _AnimatedDocumentSliverListState
       ),
     );
 
-    return _StaggeredFadeIn(
+    return StaggeredEntrance(
       index: index,
-      controller: widget.staggerController,
       child: FadeTransition(
         opacity: curve,
         child: SizeTransition(
@@ -554,13 +514,16 @@ class _DocumentTileState extends State<_DocumentTile>
                                       ),
                                     ),
                                   Flexible(
-                                    child: Text(
-                                      widget.document.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
+                                    child: Hero(
+                                      tag: 'doc_title_${widget.document.path}',
+                                      child: Text(
+                                        widget.document.name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
                                     ),
                                   ),
                                 ],

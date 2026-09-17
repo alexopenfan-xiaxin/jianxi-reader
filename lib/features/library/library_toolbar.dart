@@ -98,7 +98,10 @@ class _FixedLibraryHeader extends StatelessWidget {
 
   void _openSearchPage(BuildContext context) {
     Navigator.of(context).push(
-      appPageRoute<void>(builder: (context) => const _LibrarySearchPage()),
+      appPageRoute<void>(
+        transition: AppPageTransition.fadeThrough,
+        builder: (context) => const _LibrarySearchPage(),
+      ),
     );
   }
 
@@ -358,15 +361,41 @@ class _FloatingImportButton extends StatelessWidget {
           width: 60,
           height: 60,
           child: Center(
-            child: importing
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
+            child: AnimatedSwitcher(
+              duration: AppMotion.fast,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: AppMotion.emphasized,
+                  ),
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.7, end: 1.0).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: AppMotion.release,
+                      ),
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+              child: importing
+                  ? const SizedBox.square(
+                      key: ValueKey('import_spinner'),
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(
+                      key: ValueKey('import_icon'),
+                      Icons.add_rounded,
+                      size: 32,
                       color: Colors.white,
                     ),
-                  )
-                : const Icon(Icons.add_rounded, size: 32, color: Colors.white),
+            ),
           ),
         ),
       ),
@@ -531,7 +560,9 @@ class _SortOptionTile extends StatelessWidget {
             ),
           ),
         ),
-        Container(
+        AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.emphasized,
           width: 28,
           height: 28,
           decoration: BoxDecoration(
@@ -548,35 +579,41 @@ class _SortOptionTile extends StatelessWidget {
     if (liquidGlassEnabled(context)) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: LiquidGlassPanel(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          borderRadius: BorderRadius.circular(18),
-          color: selected
-              ? AppColors.primary.withValues(alpha: 0.10)
-              : liquidGlassContainerColor(context, alpha: 0.18),
-          child: Material(
-            color: Colors.transparent,
+        child: PressScale(
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             borderRadius: BorderRadius.circular(18),
-            child: InkWell(
-              onTap: onTap,
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.10)
+                : liquidGlassContainerColor(context, alpha: 0.18),
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(18),
-              splashFactory: NoSplash.splashFactory,
-              child: SizedBox(height: 62, child: row),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(18),
+                splashFactory: NoSplash.splashFactory,
+                child: SizedBox(height: 62, child: row),
+              ),
             ),
           ),
         ),
       );
     }
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      child: Container(
-        height: 72,
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: context.palette.hairline)),
+    return PressScale(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: context.palette.hairline),
+            ),
+          ),
+          child: row,
         ),
-        child: row,
       ),
     );
   }

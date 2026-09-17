@@ -326,16 +326,19 @@ class _ReaderPageState extends State<ReaderPage> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        _document.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: readingPalette.foreground,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0,
-                            ),
+                      child: Hero(
+                        tag: 'doc_title_${_document.path}',
+                        child: Text(
+                          _document.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: readingPalette.foreground,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0,
+                              ),
+                        ),
                       ),
                     ),
                   ],

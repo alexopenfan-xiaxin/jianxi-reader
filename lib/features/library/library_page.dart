@@ -11,7 +11,11 @@ import '../../core/haptic_service.dart';
 import '../../core/reading_progress_service.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_page_route.dart';
+import '../../core/widgets/entrance.dart';
 import '../../core/widgets/liquid_glass.dart';
+import '../../core/widgets/press_scale.dart';
+import '../../core/widgets/shimmer_skeleton.dart';
+import '../../core/widgets/success_check.dart';
 import '../reader/reader_page.dart';
 import 'document_actions.dart';
 import 'document_entry.dart';
@@ -34,28 +38,10 @@ class LibraryPage extends StatefulWidget {
   State<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends State<LibraryPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _staggerController;
-  bool _hasPlayedInitialListAnimation = false;
+class _LibraryPageState extends State<LibraryPage> {
   final Set<String> _selectedPaths = {};
 
   bool get _selectionActive => _selectedPaths.isNotEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    _staggerController = AnimationController(
-      duration: AppMotion.slow,
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    _staggerController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,16 +54,6 @@ class _LibraryPageState extends State<LibraryPage>
               .select<AppSettingsController, LibraryViewMode>(
                 (s) => s.libraryViewMode,
               );
-          if (!_hasPlayedInitialListAnimation &&
-              controller.documents.isNotEmpty) {
-            _hasPlayedInitialListAnimation = true;
-            _staggerController.reset();
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _staggerController.forward();
-              }
-            });
-          }
           return Stack(
             children: [
               Positioned.fill(
@@ -110,7 +86,6 @@ class _LibraryPageState extends State<LibraryPage>
                         sliver: _LibraryAnimatedContent(
                           controller: controller,
                           viewMode: settings,
-                          staggerController: _staggerController,
                           selectedPaths: _selectedPaths,
                           onToggleSelection: _toggleSelection,
                           onStartSelection: _startSelection,
@@ -124,27 +99,56 @@ class _LibraryPageState extends State<LibraryPage>
                 top: 0,
                 left: 0,
                 right: 0,
-                child: _selectionActive
-                    ? _SelectionHeader(
-                        selectedCount: _selectedPaths.length,
-                        onClose: _clearSelection,
-                        onTags: () => _showBatchTagEditor(context, controller),
-                        onRefresh: () => _runBatchRefresh(context, controller),
-                        onClearProgress: () =>
-                            _confirmClearProgress(context, controller),
-                        onRemove: () =>
-                            _confirmBatchRemove(context, controller),
-                      )
-                    : _FixedLibraryHeader(controller: controller),
+                child: AnimatedSwitcher(
+                  duration: AppMotion.normal,
+                  switchInCurve: AppMotion.emphasized,
+                  switchOutCurve: AppMotion.exit,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: animation,
+                        curve: AppMotion.emphasized,
+                      ),
+                      child: SizeTransition(
+                        sizeFactor: animation,
+                        axisAlignment: 0,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _selectionActive
+                      ? KeyedSubtree(
+                          key: const ValueKey('selection_header'),
+                          child: _SelectionHeader(
+                            selectedCount: _selectedPaths.length,
+                            onClose: _clearSelection,
+                            onTags: () =>
+                                _showBatchTagEditor(context, controller),
+                            onRefresh: () =>
+                                _runBatchRefresh(context, controller),
+                            onClearProgress: () =>
+                                _confirmClearProgress(context, controller),
+                            onRemove: () =>
+                                _confirmBatchRemove(context, controller),
+                          ),
+                        )
+                      : KeyedSubtree(
+                          key: const ValueKey('fixed_header'),
+                          child: _FixedLibraryHeader(controller: controller),
+                        ),
+                ),
               ),
               if (!_selectionActive)
                 Positioned(
                   right: AppSpacing.lg,
                   bottom: landscape ? AppSpacing.lg : 86,
-                  child: _FloatingImportButton(
-                    key: const ValueKey('import_button'),
-                    importing: controller.isImporting,
-                    onPressed: () => _importDocuments(context, controller),
+                  child: PressScale(
+                    enabled: !controller.isImporting,
+                    child: _FloatingImportButton(
+                      key: const ValueKey('import_button'),
+                      importing: controller.isImporting,
+                      onPressed: () => _importDocuments(context, controller),
+                    ),
                   ),
                 ),
             ],
@@ -417,9 +421,7 @@ Future<void> _importAndMaybeOpen(
   }
   HapticService.lightImpact();
   if (documents.length > 1) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('已导入 ${documents.length} 个文档')));
+    showSuccessFeedback(context, '已导入 ${documents.length} 个文档');
     return;
   }
   await _openReader(context, documents.single);
@@ -445,7 +447,7 @@ Future<void> _importFolderAndShowResult(
   final message = suffix.isEmpty
       ? '已导入 ${result.documents.length} 个文档'
       : '已导入 ${result.documents.length} 个文档，$suffix';
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  showSuccessFeedback(context, message);
   if (result.documents.length == 1) {
     await _openReader(context, result.documents.single);
     if (context.mounted) {

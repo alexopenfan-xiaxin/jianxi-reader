@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:animations/animations.dart';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -108,19 +109,8 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final landscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
-    final content = AnimatedSwitcher(
-      duration: AppMotion.slow,
-      switchInCurve: AppMotion.emphasized,
-      switchOutCurve: AppMotion.exit,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: AppMotion.emphasized,
-          ),
-          child: child,
-        );
-      },
+    final content = _TabEntrance(
+      currentIndex: _currentIndex,
       child: IndexedStack(
         index: _currentIndex,
         children: const [LibraryPage(), SettingsPage()],
@@ -155,6 +145,59 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Plays a one-shot shared-axis entrance whenever the active tab changes.
+///
+/// The wrapped [IndexedStack] keeps its identity across switches (it must
+/// stay free of a `key`), so both tabs preserve their state; only an
+/// entrance animation is layered on top of the newly selected content.
+class _TabEntrance extends StatefulWidget {
+  const _TabEntrance({required this.currentIndex, required this.child});
+
+  final int currentIndex;
+  final Widget child;
+
+  @override
+  State<_TabEntrance> createState() => _TabEntranceState();
+}
+
+class _TabEntranceState extends State<_TabEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: AppMotion.slow,
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TabEntrance oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SharedAxisTransition(
+      animation: _controller,
+      transitionType: SharedAxisTransitionType.horizontal,
+      fillColor: Colors.transparent,
+      child: widget.child,
     );
   }
 }
@@ -293,7 +336,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
                 const Positioned.fill(child: _NavGlassBase()),
                 AnimatedPositioned(
                   duration: _isDragging ? Duration.zero : AppMotion.normal,
-                  curve: AppMotion.release,
+                  curve: SpringCurve.snappy,
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,
@@ -450,7 +493,7 @@ class _LiquidBottomNavState extends State<_LiquidBottomNav> {
                 ),
                 AnimatedPositioned(
                   duration: _isDragging ? Duration.zero : AppMotion.normal,
-                  curve: AppMotion.release,
+                  curve: SpringCurve.snappy,
                   left: selectedLeft,
                   top: _outerPadding,
                   width: _itemWidth,

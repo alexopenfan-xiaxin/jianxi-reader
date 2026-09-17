@@ -2,7 +2,7 @@ name: jianxi_reader
 description: "A quiet mobile reader for Markdown and HTML documents."
 publish_to: 'none'
 
-version: 2.9.2+192
+version: 2.9.3+193
 
 environment:
   sdk: ^3.8.0
@@ -12,8 +12,10 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  animations: ^2.2.0
   app_links: ^6.4.1
   file_picker: 10.3.8
+  flutter_animate: ^4.5.2
   flutter_smooth_markdown: ^0.7.2
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.2.3

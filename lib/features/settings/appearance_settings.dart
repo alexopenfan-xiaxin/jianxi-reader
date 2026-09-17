@@ -21,9 +21,12 @@ class _AppearanceEntry extends StatelessWidget {
   }
 
   void _openAppearancePage(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(appPageRoute<void>(builder: (context) => const AppearancePage()));
+    Navigator.of(context).push(
+      appPageRoute<void>(
+        transition: AppPageTransition.fadeThrough,
+        builder: (context) => const AppearancePage(),
+      ),
+    );
   }
 }
 

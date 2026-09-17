@@ -27,8 +27,13 @@ lib/
 │   ├── app_settings_controller.dart  # ThemeMode, ReadingFontSize, ReadingLineHeight
 │   └── widgets/
 │       ├── app_card.dart        # Reusable card (Material + InkWell)
+│       ├── app_page_route.dart  # appPageRoute + AppPageRoute (SharedAxis / FadeThrough)
 │       ├── liquid_glass.dart    # Liquid glass adapter over liquid_glass_widgets
 │       ├── glass_segmented_control.dart  # Segmented control (glass + classic)
+│       ├── press_scale.dart     # PressScale: press-down scale + spring release
+│       ├── entrance.dart        # StaggeredEntrance / StateShell (flutter_animate)
+│       ├── shimmer_skeleton.dart  # ShimmerBlock / LibrarySkeletonCard (one-shot)
+│       ├── success_check.dart   # SuccessCheck painter + showSuccessFeedback toast
 │       ├── reading_settings_panel.dart  # Shared font-size/line-height settings
 │       ├── palette.dart         # PaletteProvider + context.palette extension
 │       └── app_icon.dart
@@ -56,7 +61,10 @@ lib/
 - `IndexedStack` must NOT have a `key` parameter (preserves tab state)
 - Modal bottom sheets should use `DraggableScrollableSheet` + `isScrollControlled: true`
 - Markdown reading view does NOT use `SmoothMarkdown`; `MarkdownViewer` renders parsed sections via `MarkdownRenderer` inside one shared `SelectionArea` (selectable: text selection works across sections)
-- All navigation uses `PageRouteBuilder` with 300ms `easeOutCubic` slide
+- All navigation uses `appPageRoute` (`AppPageRoute`); pushes use `SharedAxisTransition` horizontal, pops use `FadeThroughTransition`; root-level pages pass `transition: AppPageTransition.fadeThrough`. Predictive back and the left-edge swipe back (`_EdgeSwipeBackPage`) are retained and take priority when enabled
+- All animations are **one-shot / terminating** (never `repeat` / infinite loops): `pumpAndSettle` across the widget tests would time out otherwise. The only looping animations (`CircularProgressIndicator`) live in trees no test pumps
+- `flutter_animate` is used via the declarative effect-list form (`child.animate(effects: [...])` / `Animate(effects: [...])`) rather than long chained `.fadeIn().moveY()...` calls, because split method chains have formatter output that is hard to predict by hand (CI enforces `dart format`)
+- Hero tags `doc_badge_${path}` / `doc_title_${path}` belong only to list tiles, shelf cards, and the reader app bar; recent-reading cards deliberately carry no Hero (the same document can appear in the recent sliver and the main list at once)
 - HTTP requests use `dart:io` `HttpClient` with normal platform certificate validation
 - Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
 - After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
@@ -80,8 +88,8 @@ enforces the lockfile, formatting, analysis, and the full Flutter test suite.
 Third-party actions are pinned to immutable commit SHAs.
 
 ## Version
-- `pubspec.yaml`: `2.9.2+192` (versionName = 2.9.2, versionCode = 192)
-- Update check URL: `https://blog.openfan.dpdns.org/update/index.php?request&local=192`
+- `pubspec.yaml`: `2.9.3+193` (versionName = 2.9.3, versionCode = 193)
+- Update check URL: `https://blog.openfan.dpdns.org/update/index.php?request&local=193`
   - 200 APK stream → new version available, download and install
   - 200 JSON → already latest or server message
   - 404 JSON → no APK available or file missing
@@ -195,6 +203,16 @@ import 'dart:io';
 - Android document mirrors are copied to a size-limited sibling temporary file, flushed, then atomically replaced with `Os.rename`
 - `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
 - Markdown hot-reload uses `File.watch()` while the app is active, with a 15-second asynchronous stat poll as a foreground-only fallback; file switches rebind the watcher and stale reads cannot replace the current document
+
+### Animation system (build 193)
+- `animations: ^2.2.0` (pinned, not 3.0.0 — 3.0.0 pulls `material_ui` and complicates the hand-locked lockfile) + `flutter_animate: ^4.5.2` (transitive: `flutter_shaders 0.1.3`, satisfied by existing `vector_math 2.2.0`); all three sha256s verified against pub.dev archives
+- Page transitions: pushes slide via `SharedAxisTransition` horizontal, pops fade via `FadeThroughTransition`; `animation.status == AnimationStatus.reverse` is consulted inside `buildTransitions` (routes rebuild per frame, and both transitions are identity at value 1, so the switch is safe). Root-level pages opt into pure fade through with `transition: AppPageTransition.fadeThrough`
+- Tab switching: `_TabEntrance` plays a one-shot `SharedAxisTransition` on index change while wrapping the **same keyless `IndexedStack`** (never remounted), so both tabs keep full state
+- `PressScale` uses a raw `Listener(HitTestBehavior.translucent)` rather than a gesture recognizer so it composes with `InkWell` without competing in the gesture arena; release is a `SpringSimulation(mass: 1, stiffness: 420, damping: 28)` — the same constants the old shelf-card press logic used
+- `SuccessCheck` is a `CustomPainter` (circle pop + check stroke via `extractPath`), not Lottie/Rive — zero asset dependency. `showSuccessFeedback` hosts a self-dismissing `OverlayEntry` on the root overlay
+- Skeleton loading uses one-shot `ShimmerEffect` sweeps (never repeating); the loading state swapped the spinner for `LibrarySkeletonCard`s
+- Rename-dialog invalid input shakes the field via `_ShakeBox` (`Transform.translate` with a decaying sine) plus `HapticService.mediumImpact`, without remounting the `TextField` (focus/text preserved)
+- Bottom-nav capsule travel uses `SpringCurve.snappy` on the existing `AnimatedPositioned`
 
 ## Operation Boundaries
 

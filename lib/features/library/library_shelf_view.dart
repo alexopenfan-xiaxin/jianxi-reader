@@ -69,7 +69,7 @@ class _ShelfGrid extends StatelessWidget {
   }
 }
 
-class _ShelfDocumentCard extends StatefulWidget {
+class _ShelfDocumentCard extends StatelessWidget {
   const _ShelfDocumentCard({
     required this.document,
     required this.selected,
@@ -86,69 +86,24 @@ class _ShelfDocumentCard extends StatefulWidget {
   final ValueChanged<DocumentEntry> onStartSelection;
 
   @override
-  State<_ShelfDocumentCard> createState() => _ShelfDocumentCardState();
-}
-
-class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pressController;
-  late final Animation<double> _pressAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pressController = AnimationController(
-      duration: AppMotion.fast,
-      vsync: this,
-    );
-    _pressAnimation = Tween<double>(begin: 1.0, end: 0.975).animate(
-      CurvedAnimation(parent: _pressController, curve: AppMotion.press),
-    );
-  }
-
-  void _springBack() {
-    _pressController.animateWith(
-      SpringSimulation(
-        const SpringDescription(mass: 1, stiffness: 420, damping: 28),
-        _pressController.value,
-        0,
-        0,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pressController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final cover = _CoverStyle.forDocument(widget.document);
+    final cover = _CoverStyle.forDocument(document);
     return Semantics(
-      label: widget.document.name,
-      hint: widget.selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
+      label: document.name,
+      hint: selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
       button: true,
-      selected: widget.selected,
+      selected: selected,
       child: RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: _pressAnimation,
-          builder: (context, child) {
-            return Transform.scale(scale: _pressAnimation.value, child: child);
-          },
+        child: PressScale(
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadii.lg),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: widget.selectionActive
-                  ? () => widget.onToggleSelection(widget.document)
+              onTap: selectionActive
+                  ? () => onToggleSelection(document)
                   : () => _openDocument(context),
               onLongPress: () => _handleLongPress(context),
-              onTapDown: (_) => _pressController.forward(),
-              onTapUp: (_) => _springBack(),
-              onTapCancel: _springBack,
               splashFactory: NoSplash.splashFactory,
               child: Ink(
                 decoration: BoxDecoration(
@@ -185,8 +140,11 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                         children: [
                           Row(
                             children: [
-                              _ShelfTypeMark(document: widget.document),
-                              if (widget.document.pinned) ...[
+                              Hero(
+                                tag: 'doc_badge_${document.path}',
+                                child: _ShelfTypeMark(document: document),
+                              ),
+                              if (document.pinned) ...[
                                 const SizedBox(width: AppSpacing.xs),
                                 const Icon(
                                   Icons.push_pin_rounded,
@@ -197,31 +155,34 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
                             ],
                           ),
                           const Spacer(),
-                          Text(
-                            widget.document.name,
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: cover.foreground,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0,
-                                ),
+                          Hero(
+                            tag: 'doc_title_${document.path}',
+                            child: Text(
+                              document.name,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: cover.foreground,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0,
+                                  ),
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           _DocumentMetaRow(
-                            tags: widget.document.tags,
-                            summary: _documentSummary(widget.document),
+                            tags: document.tags,
+                            summary: _documentSummary(document),
                           ),
                         ],
                       ),
                     ),
-                    if (widget.selectionActive)
+                    if (selectionActive)
                       Positioned(
                         right: AppSpacing.sm,
                         top: AppSpacing.sm,
                         child: Icon(
-                          widget.selected
+                          selected
                               ? Icons.check_circle_rounded
                               : Icons.radio_button_unchecked_rounded,
                           color: Colors.white,
@@ -240,20 +201,19 @@ class _ShelfDocumentCardState extends State<_ShelfDocumentCard>
   Future<void> _openDocument(BuildContext context) async {
     FocusManager.instance.primaryFocus?.unfocus();
     final controller = context.read<LibraryController>();
-    await _openReader(context, widget.document);
+    await _openReader(context, document);
     if (context.mounted) {
       await controller.loadDocuments();
     }
   }
 
   void _handleLongPress(BuildContext context) {
-    if (widget.selectionActive) {
-      widget.onToggleSelection(widget.document);
+    if (selectionActive) {
+      onToggleSelection(document);
       return;
     }
     HapticService.mediumImpact();
-    widget.onStartSelection(widget.document);
-    _springBack();
+    onStartSelection(document);
   }
 }
 
