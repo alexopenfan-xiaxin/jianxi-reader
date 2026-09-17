@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -173,6 +174,7 @@ class _SuccessToastState extends State<_SuccessToast>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<Offset> _rise;
+  Timer? _holdTimer;
   bool _dismissed = false;
 
   static const _holdDuration = Duration(milliseconds: 1300);
@@ -192,7 +194,10 @@ class _SuccessToastState extends State<_SuccessToast>
     ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.release));
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Future.delayed(_holdDuration, () {
+        // A cancellable Timer (not Future.delayed): dispose must be able to
+        // retract it, or a toast removed mid-hold leaves the pending timer
+        // behind and trips the widget-test timersPending invariant.
+        _holdTimer = Timer(_holdDuration, () {
           if (mounted && !_dismissed) {
             _controller.reverse();
           }
@@ -214,6 +219,7 @@ class _SuccessToastState extends State<_SuccessToast>
 
   @override
   void dispose() {
+    _holdTimer?.cancel();
     _dismiss();
     _controller.dispose();
     super.dispose();

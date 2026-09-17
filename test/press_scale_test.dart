@@ -31,8 +31,10 @@ void main() {
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(boxKey)),
     );
-    // A bare pump() runs a frame without advancing the clock, so the spring
-    // would still read value 0; advance real time to let the scale apply.
+    // The ticker anchors its start time on the first tick, so the frame
+    // after the gesture reports elapsed zero; the second pump is the one
+    // that actually advances the spring.
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
     expect(scaleX(tester), lessThan(1.0));
 
