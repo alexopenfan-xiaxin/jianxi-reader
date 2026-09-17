@@ -1,7 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../design_tokens.dart';
+
+/// Translates a highlight band across [child] once, then stops.
+///
+/// Driven by an [AnimationController] with the optional [delay] baked into
+/// the curve interval, so no [Timer] is ever scheduled and the sweep stays
+/// `pumpAndSettle`-safe in widget tests.
+class OneShotShimmer extends StatefulWidget {
+  const OneShotShimmer({
+    super.key,
+    required this.child,
+    required this.color,
+    this.duration = const Duration(milliseconds: 1400),
+    this.delay = Duration.zero,
+  });
+
+  final Widget child;
+  final Color color;
+  final Duration duration;
+  final Duration delay;
+
+  @override
+  State<OneShotShimmer> createState() => _OneShotShimmerState();
+}
+
+class _OneShotShimmerState extends State<OneShotShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    final total = widget.delay + widget.duration;
+    _controller = AnimationController(duration: total, vsync: this)..forward();
+    _progress = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(
+        widget.delay.inMilliseconds / total.inMilliseconds,
+        1.0,
+        curve: AppMotion.emphasized,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _progress,
+      builder: (context, child) {
+        // The gradient midpoint travels from off-screen left (-1.5) to
+        // off-screen right (1.5); the band itself is invisible at both
+        // ends, so the sweep fades in and out instead of popping.
+        final center = -1.5 + 3.0 * _progress.value;
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(center - 0.5, 0.0),
+              end: Alignment(center + 0.5, 0.0),
+              colors: [Colors.transparent, widget.color, Colors.transparent],
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.srcOver,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
 
 /// A placeholder block used by skeleton loading states.
 ///
@@ -29,15 +103,17 @@ class ShimmerBlock extends StatelessWidget {
     final highlight = (isDark ? Colors.white : Colors.black).withValues(
       alpha: isDark ? 0.16 : 0.09,
     );
-    final box = Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: base,
-        borderRadius: BorderRadius.circular(borderRadius),
+    return OneShotShimmer(
+      color: highlight,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: base,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
       ),
     );
-    return box.animate().shimmer(duration: 1400.ms, color: highlight);
   }
 }
 

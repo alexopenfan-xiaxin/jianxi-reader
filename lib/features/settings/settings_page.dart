@@ -4,7 +4,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +18,7 @@ import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/reading_settings_panel.dart';
+import '../../core/widgets/shimmer_skeleton.dart';
 import '../../core/widgets/success_check.dart';
 
 part 'appearance_settings.dart';

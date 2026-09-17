@@ -68,14 +68,10 @@ class _AboutLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final tint = AppColors.primary.withValues(alpha: 0.10);
     final border = AppColors.primary.withValues(alpha: 0.12);
-    return Animate(
-      effects: [
-        ShimmerEffect(
-          duration: const Duration(milliseconds: 1600),
-          delay: const Duration(milliseconds: 250),
-          color: Colors.white.withValues(alpha: 0.55),
-        ),
-      ],
+    return OneShotShimmer(
+      duration: const Duration(milliseconds: 1600),
+      delay: const Duration(milliseconds: 250),
+      color: Colors.white.withValues(alpha: 0.55),
       child: Container(
         width: 54,
         height: 54,

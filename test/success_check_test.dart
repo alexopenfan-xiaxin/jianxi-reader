@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:jianxi_reader/core/design_tokens.dart';
 import 'package:jianxi_reader/core/widgets/success_check.dart';
 
 void main() {
   testWidgets('SuccessCheck plays once and settles', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: Center(child: SuccessCheck(size: 64))),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(body: Center(child: SuccessCheck(size: 64))),
       ),
     );
     await tester.pumpAndSettle();
@@ -19,6 +21,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        // The toast resolves its colors via context.palette, which the app
+        // theme registers as a ThemeExtension.
+        theme: AppTheme.light(),
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(

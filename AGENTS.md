@@ -32,8 +32,8 @@ lib/
 │       ├── glass_segmented_control.dart  # Segmented control (glass + classic)
 │       ├── glass_intensity_slider.dart  # GlassIntensitySlider + live glass preview
 │       ├── press_scale.dart     # PressScale: press-down scale + spring release
-│       ├── entrance.dart        # StaggeredEntrance / StateShell (flutter_animate)
-│       ├── shimmer_skeleton.dart  # ShimmerBlock / LibrarySkeletonCard (one-shot)
+│       ├── entrance.dart        # StaggeredEntrance / StateShell (controller-driven)
+│       ├── shimmer_skeleton.dart  # OneShotShimmer / ShimmerBlock / LibrarySkeletonCard
 │       ├── success_check.dart   # SuccessCheck painter + showSuccessFeedback toast
 │       ├── reading_settings_panel.dart  # Shared font-size/line-height settings
 │       ├── palette.dart         # PaletteProvider + context.palette extension
@@ -64,7 +64,7 @@ lib/
 - Markdown reading view does NOT use `SmoothMarkdown`; `MarkdownViewer` renders parsed sections via `MarkdownRenderer` inside one shared `SelectionArea` (selectable: text selection works across sections)
 - All navigation uses `appPageRoute` (`AppPageRoute`); pushes use `SharedAxisTransition` horizontal, pops use `FadeThroughTransition`; root-level pages pass `transition: AppPageTransition.fadeThrough`. The left-edge swipe back (`_EdgeSwipeBackPage`) handles the return gesture; the system predictive back animation is not used (the setting and its route branch were removed in build 193)
 - All animations are **one-shot / terminating** (never `repeat` / infinite loops): `pumpAndSettle` across the widget tests would time out otherwise. The only looping animations (`CircularProgressIndicator`) live in trees no test pumps
-- `flutter_animate` is used via the declarative effect-list form (`child.animate(effects: [...])` / `Animate(effects: [...])`) rather than long chained `.fadeIn().moveY()...` calls, because split method chains have formatter output that is hard to predict by hand (CI enforces `dart format`)
+- `flutter_animate` was removed in build 193: its `Animate` widget schedules `Future.delayed(widget.delay, ...)` in `initState`, and under FakeAsync that zero/near-zero timer stays pending when a widget mounts in the final frame of a `pumpAndSettle`, tripping the binding's `!timersPending` invariant. Entrance/shimmer effects are now hand-rolled `AnimationController` widgets (`StaggeredEntrance`, `StateShell`, `OneShotShimmer`) — a controller started in the last frame keeps the pump loop alive through transient callbacks instead. Per-item stagger is baked into a single controller via `Interval`, never a `Timer`
 - Hero tags `doc_badge_${path}` / `doc_title_${path}` belong only to list tiles, shelf cards, and the reader app bar; recent-reading cards deliberately carry no Hero (the same document can appear in the recent sliver and the main list at once)
 - HTTP requests use `dart:io` `HttpClient` with normal platform certificate validation
 - Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
@@ -210,12 +210,12 @@ import 'dart:io';
 - Markdown hot-reload uses `File.watch()` while the app is active, with a 15-second asynchronous stat poll as a foreground-only fallback; file switches rebind the watcher and stale reads cannot replace the current document
 
 ### Animation system (build 193)
-- `animations: ^2.2.0` (pinned, not 3.0.0 — 3.0.0 pulls `material_ui` and complicates the hand-locked lockfile) + `flutter_animate: ^4.5.2` (transitive: `flutter_shaders 0.1.3`, satisfied by existing `vector_math 2.2.0`); all three sha256s verified against pub.dev archives
+- `animations: ^2.2.0` (pinned, not 3.0.0 — 3.0.0 pulls `material_ui` and complicates the hand-locked lockfile); sha256 verified against the pub.dev archive
 - Page transitions: pushes slide via `SharedAxisTransition` horizontal, pops fade via `FadeThroughTransition`; `animation.status == AnimationStatus.reverse` is consulted inside `buildTransitions` (routes rebuild per frame, and both transitions are identity at value 1, so the switch is safe). Root-level pages opt into pure fade through with `transition: AppPageTransition.fadeThrough`
 - Tab switching: `_TabEntrance` plays a one-shot `SharedAxisTransition` on index change while wrapping the **same keyless `IndexedStack`** (never remounted), so both tabs keep full state
 - `PressScale` uses a raw `Listener(HitTestBehavior.translucent)` rather than a gesture recognizer so it composes with `InkWell` without competing in the gesture arena; release is a `SpringSimulation(mass: 1, stiffness: 420, damping: 28)` — the same constants the old shelf-card press logic used
 - `SuccessCheck` is a `CustomPainter` (circle pop + check stroke via `extractPath`), not Lottie/Rive — zero asset dependency. `showSuccessFeedback` hosts a self-dismissing `OverlayEntry` on the root overlay
-- Skeleton loading uses one-shot `ShimmerEffect` sweeps (never repeating); the loading state swapped the spinner for `LibrarySkeletonCard`s
+- Skeleton loading uses one-shot `OneShotShimmer` sweeps (a `ShaderMask` whose highlight band travels once across the child, controller-driven, never repeating); the loading state swapped the spinner for `LibrarySkeletonCard`s
 - Rename-dialog invalid input shakes the field via `_ShakeBox` (`Transform.translate` with a decaying sine) plus `HapticService.mediumImpact`, without remounting the `TextField` (focus/text preserved)
 - Bottom-nav capsule travel uses `SpringCurve.snappy` on the existing `AnimatedPositioned`
 

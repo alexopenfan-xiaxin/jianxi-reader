@@ -45,7 +45,12 @@ void main() {
     // state (the IndexedStack below the tab entrance must not remount).
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('首页'));
+    expect(find.text('外观与动画'), findsOneWidget);
+
+    // The library tab is labelled '首页' on the portrait bottom nav and
+    // '文库' on the landscape rail; return via whichever this surface shows.
+    final portraitNav = find.text('首页').evaluate().isNotEmpty;
+    await tester.tap(portraitNav ? find.text('首页') : find.text('文库'));
     await tester.pumpAndSettle();
 
     expect(find.text('已选择 1 个'), findsOneWidget);

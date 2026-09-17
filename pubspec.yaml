@@ -15,7 +15,6 @@ dependencies:
   animations: ^2.2.0
   app_links: ^6.4.1
   file_picker: 10.3.8
-  flutter_animate: ^4.5.2
   flutter_smooth_markdown: ^0.7.2
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.2.3
