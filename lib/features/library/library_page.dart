@@ -110,7 +110,7 @@ class _LibraryPageState extends State<LibraryPage> {
                       ),
                       child: SizeTransition(
                         sizeFactor: animation,
-                        axisAlignment: 0,
+                        alignment: Alignment.center,
                         child: child,
                       ),
                     );

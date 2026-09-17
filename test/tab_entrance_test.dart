@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jianxi_reader/app.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
-import 'package:jianxi_reader/features/library/document_entry.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
