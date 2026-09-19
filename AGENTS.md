@@ -1,311 +1,42 @@
 # 简兮阅读器 — Agent Guide
 
-## Project Overview
-Flutter mobile reader for Markdown and HTML documents. Library management, reading settings, text selection, update check.
+## Scope and source of truth
 
-## Key Architecture
-- **State management**: Provider (`LibraryController` in `lib/features/library/`, `AppSettingsController` in `lib/core/`)
-- **Routing**: Direct `Navigator.push` (no routing library), `PageRouteBuilder` with slide transitions
-- **Theme**: `AppTheme` in `lib/core/design_tokens.dart` — `getLightPalette()` / `getDarkPalette()`, `AppColors`, `AppSpacing`, `AppRadii`
-- **Design tokens singleton**: `AppColors` (static colors), palette via `BuildContext` extension (`context.palette`)
-- **Cards**: `AppCard` widget in `lib/core/widgets/app_card.dart`
-- **File service**: `DocumentFileService` in `lib/core/document_file_service.dart` (scan, import, rename, remove, metadata)
-- **JSON metadata**: `MetadataFileStore` serializes mutations and atomically replaces identity, bookmark, and history files
-- **Android permissions**: `INTERNET` required in `AndroidManifest.xml` for release builds (debug manifest has it, main manifest does not by default)
-- **TLS**: Update checks use the platform trust store; never bypass certificate validation
+- This is a Flutter Markdown/HTML reader. Use the relevant source and tests for implementation details; this guide records durable constraints, not a history of every release.
+- A user's explicit task boundary takes precedence over defaults below. For a read-only review or diagnosis, do not edit, commit, push, build, or publish. Do not expand a narrowly scoped task to unrelated version, lint, encoding, changelog, or release work.
+- Do not ask for confirmation on routine, reversible work already within the request. Ask when a missing choice materially changes the result, credentials are required, or an operation would publish, overwrite, delete, or expose data beyond the user's authorization.
+- Preserve unrelated working-tree changes. Stage only task files; never use `git add -A` as a shortcut.
 
-## Project Structure
-```
-lib/
-├── main.dart
-├── app.dart                     # MultiProvider: AppSettingsController + LibraryController
-├── core/
-│   ├── design_tokens.dart       # Colors, spacing, radii, fontFamily, theme data
-│   ├── emoji_service.dart        # Loads gemoji DB into Map<String,String> via rootBundle
-│   ├── file_rules.dart          # DocumentType, extension validation, baseName validation
-│   ├── document_file_service.dart  # DocumentLibraryService interface + DocumentFileService impl
-│   ├── app_settings_controller.dart  # ThemeMode, reading + visual settings, liquid glass intensity
-│   └── widgets/
-│       ├── app_card.dart        # Reusable card (Material + InkWell)
-│       ├── app_page_route.dart  # appPageRoute + AppPageRoute (SharedAxis / FadeThrough)
-│       ├── liquid_glass.dart    # Liquid glass adapters + LiquidGlassIntensity/tokens
-│       ├── glass_segmented_control.dart  # Segmented control (glass + classic)
-│       ├── glass_intensity_slider.dart  # GlassIntensitySlider + live glass preview
-│       ├── press_scale.dart     # PressScale: press-down scale + spring release
-│       ├── entrance.dart        # StaggeredEntrance / StateShell (controller-driven)
-│       ├── shimmer_skeleton.dart  # OneShotShimmer / ShimmerBlock / LibrarySkeletonCard
-│       ├── success_check.dart   # SuccessCheck painter + showSuccessFeedback toast
-│       ├── reading_settings_panel.dart  # Shared font-size/line-height settings
-│       ├── palette.dart         # PaletteProvider + context.palette extension
-│       └── app_icon.dart
-├── features/
-│   ├── shell/app_shell.dart     # IndexedStack (no key) + FloatingBottomNav
-│   ├── library/
-│   │   ├── library_page.dart    # Library list, search, sort, empty/error states
-│   │   ├── library_controller.dart
-│   │   ├── document_entry.dart  # DocumentEntry model (path, name, type, size, dates, isReferenced)
-│   │   └── document_actions.dart  # Rename dialog, remove confirmation
-│   ├── reader/
-│   │   ├── reader_page.dart     # AppBar + progress bar + TOC drawer + settings sheet
-│   │   ├── markdown_viewer.dart # Barrel → markdown/markdown_viewer.dart
-│   │   ├── html_document_view.dart
-│   │   └── markdown/
-│   │       ├── markdown_viewer.dart  # Virtualized section rendering (lazy build + placeholders)
-│   │       ├── markdown_document.dart  # Background-isolate parse: sections + TOC + search text
-│   │       └── section_height_estimator.dart  # Placeholder height estimation
-│   └── settings/
-│       └── settings_page.dart   # Theme, reading, about card + check update button
-```
+## Project map
 
-## Conventions
-- No CSS-style font-family strings — use single font name (`'Inter'`)
-- `IndexedStack` must NOT have a `key` parameter (preserves tab state)
-- Modal bottom sheets should use `DraggableScrollableSheet` + `isScrollControlled: true`
-- Markdown reading view does NOT use `SmoothMarkdown`; `MarkdownViewer` renders parsed sections via `MarkdownRenderer` inside one shared `SelectionArea` (selectable: text selection works across sections)
-- All navigation uses `appPageRoute` (`AppPageRoute`); pushes use `SharedAxisTransition` horizontal, pops use `FadeThroughTransition`; root-level pages pass `transition: AppPageTransition.fadeThrough`. The left-edge swipe back (`_EdgeSwipeBackPage`) handles the return gesture; the system predictive back animation is not used (the setting and its route branch were removed in build 193)
-- All animations are **one-shot / terminating** (never `repeat` / infinite loops): `pumpAndSettle` across the widget tests would time out otherwise. The only looping animations (`CircularProgressIndicator`) live in trees no test pumps
-- `flutter_animate` was removed in build 193: its `Animate` widget schedules `Future.delayed(widget.delay, ...)` in `initState`, and under FakeAsync that zero/near-zero timer stays pending when a widget mounts in the final frame of a `pumpAndSettle`, tripping the binding's `!timersPending` invariant. Entrance/shimmer effects are now hand-rolled `AnimationController` widgets (`StaggeredEntrance`, `StateShell`, `OneShotShimmer`) — a controller started in the last frame keeps the pump loop alive through transient callbacks instead. Per-item stagger is baked into a single controller via `Interval`, never a `Timer`
-- Hero tags `doc_badge_${path}` / `doc_title_${path}` belong only to list tiles, shelf cards, and the reader app bar; recent-reading cards deliberately carry no Hero (the same document can appear in the recent sliver and the main list at once)
-- HTTP requests use `dart:io` `HttpClient` with normal platform certificate validation
-- Target Flutter compatibility is **Flutter 3.44** unless the user explicitly says otherwise. Do not use APIs introduced after that version.
-- After any manual Dart edit, especially in large Flutter widget trees such as `markdown_viewer.dart`, re-read the edited block and verify every comma is syntactically valid. A stray/trailing comma outside a valid argument list, collection literal, parameter list, or enum entry is a real syntax error; do not dismiss it as formatting. If `dart format` / `flutter analyze` is unavailable, perform this comma/bracket/parenthesis review manually before committing.
-- On this local machine, do not probe whether `dart` / `flutter` commands are available. Unless the user explicitly asks to run them, skip `dart format`, `flutter analyze`, builds, and Flutter tests here; rely on static review and state that these commands were skipped by local rule.
+- State: `LibraryController` in `lib/features/library/` and `AppSettingsController` in `lib/core/` via Provider.
+- Theme and tokens: `lib/core/design_tokens.dart`; use `context.palette`, `AppColors`, `AppSpacing`, and `AppRadii`. Shared card: `lib/core/widgets/app_card.dart`.
+- Files and metadata: `lib/core/document_file_service.dart`; `MetadataFileStore` serializes mutations and atomically replaces identity, bookmark, and history files.
+- UI: `lib/features/shell/app_shell.dart`, `lib/features/library/`, `lib/features/reader/`, and `lib/features/settings/`. Reuse the existing widgets in `lib/core/widgets/`.
+- Markdown: `lib/features/reader/markdown/` parses sections in a background isolate and renders a virtualized viewport inside one shared `SelectionArea`. Preserve cross-section selection, scroll anchoring, TOC correction, and per-section search indices when touching that path.
 
-## Build & Run
-```bash
-flutter clean
-flutter pub get --enforce-lockfile
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze --fatal-infos
-flutter test
-flutter build apk --release --target-platform android-arm64 --split-per-abi
-# Output: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk (~10MB)
-```
+## Implementation constraints
 
-Requires `INTERNET` permission in `android/app/src/main/AndroidManifest.xml`.
+- Target Flutter 3.44 unless the user specifies otherwise. Use a single font-family name such as `'Inter'`, not a CSS-style stack.
+- Keep the shell's `IndexedStack` keyless so tab state survives. Use `appPageRoute` for navigation. Pushes use horizontal `SharedAxisTransition`; pops use `FadeThroughTransition`; root-level pages may opt into `AppPageTransition.fadeThrough`. The left-edge swipe handles interactive back; do not reintroduce predictive-back branches by accident.
+- Modal bottom sheets use `DraggableScrollableSheet` with `isScrollControlled: true` when they need drag/scroll behavior.
+- Keep animations terminating; do not add repeating animations to widget-test trees. Stagger animations with controller `Interval`s rather than delayed timers. Cancel any hold timer in `dispose`.
+- Markdown reading uses `MarkdownRenderer`, not `SmoothMarkdown`; keep it selectable and links/images tappable. Persisted document IDs must be deterministic, never Dart `hashCode`.
+- Liquid glass uses `liquid_glass_widgets`. Reserve `GlassQuality.premium` for static chrome; moving or scrolling surfaces use `standard`. Preserve the curated intensity setting and avoid committing slider previews on every drag frame.
+- Android release builds need `INTERNET` permission in the main manifest. App update checks and downloads use normal platform TLS certificate validation; never add a certificate bypass.
 
-CI uses Flutter 3.44 on pushes to `main` / `test` and on pull requests. It
-enforces the lockfile, formatting, analysis, and the full Flutter test suite.
-Third-party actions are pinned to immutable commit SHAs.
+## Changes and validation
 
-## Version
-- `pubspec.yaml`: `2.9.3+193` (versionName = 2.9.3, versionCode = 193)
-- Update check URL: `https://blog.openfan.dpdns.org/update/index.php?request&local=193`
-  - 200 APK stream → new version available, download and install
-  - 200 JSON → already latest or server message
-  - 404 JSON → no APK available or file missing
-  - Update server host moved from `alexxia.5imh.xyz` to `blog.openfan.dpdns.org`
-    (build 192); `_updateEndpoint`/`_updateHost` in `about_settings.dart` and
-    the `publish.yml` push URL all point at the new host.
-- **Always bump version with every code change** (versionName = 1.X.Y, versionCode = monotonic integer)
-- **IMPORTANT**: When bumping version, also update `_fallbackBuildNumber` in `about_settings.dart`; the displayed version and update URL otherwise come from `PackageInfo`. Also bump the `build` count in commit messages.
-- If the user requests code changes but does not explicitly specify `versionName`, increment the patch version by one while keeping the build number monotonic as requested or inferred. Example: after `2.0.1+102`, the next unspecified versionName should be `2.0.2`, not another `2.0.1` build.
+- For application code changes, bump the patch version in `pubspec.yaml` unless the user gives a version. Increase its build number monotonically and sync `_fallbackBuildNumber` in `lib/features/settings/about_settings.dart`. Treat `pubspec.yaml` as the version source of truth; do not copy a current version or update URL into this guide. Include `(build N)` in a task commit subject.
+- Inspect the actual path and relevant tests before editing. After manual Dart edits, re-read edited blocks for syntax, brackets, and commas. Use `git diff --check` for changed repository files.
+- On this local machine, do not probe or run `dart`/`flutter` commands unless the user explicitly asks. Do not run `dart format`, `flutter analyze`, builds, or Flutter tests here by default. Report that local Flutter validation was skipped; CI runs lockfile, formatting, analysis, and tests on `main`/`test` and pull requests.
+- If the user explicitly requests a local Flutter validation or build, use Flutter 3.44 and the relevant checks: `flutter pub get --enforce-lockfile`, `dart format --output=none --set-exit-if-changed lib test`, `flutter analyze --fatal-infos`, `flutter test`, and the requested build target. Run only the checks needed for the request.
+- For an opaque bug, reproduce the smallest case, trace the relevant code path including error handling, and verify the root cause. Read dependency internals only for package-sourced failures. Add targeted diagnostic logging or a visible degradation indicator only when it helps that failure; remove temporary diagnostics unless useful to keep. Write an offline script only when package behavior cannot be verified more simply. Follow the local Flutter-command rule above.
 
-## GitHub
-- Remote: `https://github.com/alexopenfan-xiaxin/jianxi-reader.git`
-- Auth: Personal Access Token (via remote URL or GitHub API)
-- Tags: `v1.0.0` (asset `app-arm64-v8a-release.apk`), `v1.0.1` (asset `app-arm64-v8a-release.apk`), `v1.1.3` (asset `app-arm64-v8a-release.apk`), `v1.1.4` (asset `app-arm64-v8a-release.apk`)
+## Git and release boundaries
 
-## Task Completion
-- After completing a task that changes repository files, commit the completed changes and push them to `origin/test` unless the user explicitly requests another destination or says not to commit/push.
-- Never force-push. If `origin/test` has advanced, integrate the task commit on top of the latest remote branch before pushing.
-- Keep unrelated working-tree changes out of the task commit unless the user explicitly asks to include all changes.
-
-## Systematic Bug-Fixing Methodology
-
-When facing an opaque bug, follow this process:
-
-### 1. Reproduce & Isolate
-- Identify the exact minimal reproduction case (e.g. a markdown file with one code block)
-- Confirm the bug is **not** caused by test project errors (ignore pre-existing test failures in `test/`)
-
-### 2. Trace the Execution Path
-- Read the relevant source files end-to-end; don't skip `catch (_) {}` blocks
-- For package-sourced failures, read the package source at `%PUB_CACHE%/hosted/pub.dev/<package>-<version>/lib/src/`
-
-### 3. Add Diagnostic Logging
-Use `debugPrint('[Tag] ...')` at each stage:
-- Entry point / guard condition
-- Before and after every `await` / async call
-- Inside every `catch` block — silent catches are always suspicious
-
-### 4. Add Visual Error Indicators
-When a widget silently degrades (e.g. falls back from highlighted to plain text),
-add a subtle on-screen indicator (tooltip + icon) so the failure is visible on device.
-
-### 5. Write an Offline Verification Script
-For package-level issues that don't require Flutter's `rootBundle`, write a
-standalone `dart run` script that tests the package API directly:
-```dart
-import 'dart:convert';
-import 'dart:io';
-// Read JSON files from %PUB_CACHE%, parse, verify structure
-```
-
-### 6. Check Package Internals Against Usage
-- Does the package have the assets/resources we assume? (check `pubspec.yaml` assets section)
-- Does the version we depend on actually have the API surface we call?
-- For `rootBundle.loadString(assetPath)`: verify the file exists in the package's asset directory
-
-### 7. Fix Iteratively
-1. Fix the **root cause** (remove invalid language entries → init succeeds)
-2. Add **defensive code** (null-safe fallbacks) so future failures never produce
-   silent invisible output
-3. Verify with `flutter analyze` — only target zero new issues
-
-### Concrete Example: Syntax Highlighting Dead
-1. Symptom: code blocks display plain text, no error shown
-2. Traced `_doInitialize` → `catch (_) {}` swallowed exception
-3. Added `debugPrint` → saw `FlutterError: asset not found`
-4. Read `syntax_highlight` source → `initialize()` loads
-   `packages/syntax_highlight/grammars/$language.json` via `rootBundle`
-5. Checked `%PUB_CACHE%/syntax_highlight-0.5.0/grammars/` → `cpp.json`, `c.json`,
-   `ruby.json`, etc. don't exist
-6. Wrote offline script → confirmed 6 of 20 listed languages have no grammar file
-7. Fix: removed the 6 missing entries from `_supportedLanguages`; added logging;
-   added orange ⚠ icon when init fails
-
-## Key Decisions
-- Removed key from IndexedStack (Bug 1: dynamic key destroyed tab state)
-- Font family is single `'Inter'` not CSS stack (Bug 2: Flutter ignores CSS stacks)
-- Extracted `ReadingSettingsPanel` to share between settings page and reader sheet
-- Liquid glass reworked on `liquid_glass_widgets` (0.30.2, build 192): the hand-rolled BackdropFilter + rainbow "metal FX" overlay implementation was deleted; `LiquidGlassSurface`/`LiquidGlassPanel`/`LiquidGlassSheetPanel`/`LiquidGlassTextFieldFrame`/`LiquidGlassChip`/`LiquidGlassDialog` are now thin adapters over the package's `AdaptiveGlass` shader pipeline; `main()` awaits `LiquidGlassWidgets.initialize()` and wraps the app via `LiquidGlassWidgets.wrap(brightnessResolver: Theme.maybeBrightnessOf)`
-- Glass quality tiers: **static** chrome only (app bars, bottom nav, dialogs) uses `GlassQuality.premium`; **anything that moves or scrolls** (sheets, sort tiles, list cards, chips, segmented control, import button, text fields) stays on `GlassQuality.standard`. This is enforced by defaults: `LiquidGlassSheetPanel` and its tiles default to standard — premium re-captures the backdrop texture via `toImageSync` every frame a surface moves, which was the root cause of the severe sort-sheet jank on open/drag/dismiss in 2.9.2 (build 193 fix)
-- Glass-over-glass: the segmented-control thumb and the intensity-slider thumb are real `LiquidGlassSurface` lenses over their glass track (standard tier, cheap to animate); only the bottom-nav selection capsule stays a tinted `DecoratedBox` because it rides on the premium nav panel
-- Liquid glass intensity (build 193): `AppSettingsController.liquidGlassIntensityMode` (`standard`/`custom`) + `liquidGlassIntensity` (0.0–1.0, persisted); `liquidGlassIntensityValue` resolves standard mode to the curated default `0.72` so a stray custom value never changes the curated look. `LiquidGlassIntensity.scaleBlur`/`scaleTint` scale blur and tint alpha around the token base (blur floors at 30% scale, tint alpha at 20%, so weak glass reads nearly clear). `LiquidGlassSurface` selects the value via Provider; `intensityOverride` lets `GlassIntensitySlider`'s preview render a candidate value live — the value is only committed on drag/tap end so the app does not rebuild mid-gesture
-- Default glass look retuned toward iOS liquid glass (build 193): tokens `chromeBlur 24→20`, `panelBlur 18→14`, `controlBlur 12→8`, `thickness 14→7`; `LiquidGlassSettings` `refractiveIndex 1.15→1.12`, `chromaticAberration 0.008→0.006`, `lightIntensity 0.38/0.52→0.30/0.40`, `saturation 1.4→1.12`
-- Missed glass materials completed (build 193): reading preset `ActionChip`s → `LiquidGlassChip`, the "恢复默认阅读设置" `OutlinedButton` → `_GlassResetButton` glass pill, the library/settings header icon tiles → `LiquidGlassIconTile`, the segmented-control thumb → glass lens
-- Predictive back removed entirely (build 193): the `预测性返回手势` switch, `predictiveBackEnabled` field/setter/persistence, and both `predictiveBackEnabled` branches in `app_page_route.dart` are gone; no `enableOnBackInvokedCallback` manifest flag exists, so the system back stays instant and the left-edge swipe back is the interactive gesture
-- Release workflow split into build/publish jobs (build 192): publishing retries reuse the built artifact without a rebuild; release notes are generated from commit subjects with emoji categories; the tag step fails fast when a version's tag points at different code; update-server upload runs after the GitHub Release with 3 retries
-- Large-markdown virtualization (build 201): `MarkdownDocument.load` parses the whole file once in a background isolate (sections split at h1/h2 boundaries, force-split at ~6000 chars / 60 nodes; TOC + plain-text search projection built in the same pass) — the UI thread never re-parses
-- `MarkdownViewer` renders only sections within ±2000px of the viewport (`MarkdownRenderer.render` per section); other sections are `SizedBox` height placeholders (TextPainter-based estimates), far built sections recycle back to placeholders keeping their measured height so scrolling never jumps
-- When a placeholder's real height differs, sections entirely above the viewport get their delta applied to the scroll offset (anchored correction) so the reading position stays visually stable
-- TOC jumps always animate: build the destination area first, `animateTo` the estimated offset, then a short `Scrollable.ensureVisible(alignment: 0.08)` correction after landing; the old "expand all sections then jump" path (`_loadAllSections`) is gone
-- Search match indices are claimed per section via `DocumentSearchController.beginSectionPass(sectionMatchBase)` because sections render lazily and out of order; full-document match counting is unchanged
-- The `SelectionArea` + Ctrl/Cmd+C NBSP clipboard filter moved from the package's `SmoothMarkdown` into `MarkdownViewerState` (replicated `_SelectionCopyFilter`) since the reading pane renders sections directly
-- `selectable: true` in `MarkdownRenderContext` keeps long-press copy working
-- `FocusManager.instance.primaryFocus?.unfocus()` before navigation dismisses keyboard
-- Removed `isReferenced` check in `renameDocument` to allow renaming external files
-- Update downloads use normal TLS certificate validation and a 15-second connection timeout
-- `INTERNET` permission added to main `AndroidManifest.xml` (debug has it, release didn't)
-- APK ~10MB ARM64
-- `ClickableLinkBuilder` registered as the 'link' builder so links stay clickable inside `selectable: true` (wraps a `Text` in `GestureDetector` with `HitTestBehavior.opaque`; the package's `renderInline` keeps non-text widgets as a `WidgetSpan`, so the `GestureDetector` survives the unwrap step that strips a plain `Text`)
-- `TappableImageBuilder` registered as the 'image' builder (wraps cached network images or local assets in `GestureDetector` with `HitTestBehavior.opaque`; the package's inline renderer keeps it as a `WidgetSpan`, so the tap is captured even when the image is inline within a paragraph and `selectable: true` would otherwise route the gesture to the `SelectionArea`)
-- "重命名" popup menu item is now always shown (not just for non-referenced files), since the rename service already supports external paths
-- `BareUrlPlugin` registered as an inline parser plugin to autolink bare URLs (`http://`, `https://`, `ftp://`); trigger character is `h`, regex is `^(?:https?|ftp)://[^\s<>\[\]"`']+`; trailing `?!.,:*_~` is stripped per GFM autolink rule; returns a `LinkNode` so the existing `ClickableLinkBuilder` renders it as a tappable link
-- Library `ListView` is wrapped in a `GestureDetector` with `HitTestBehavior.translucent` so tapping outside the search field dismisses focus (`FocusManager.instance.primaryFocus?.unfocus()`)
-- Code highlighting uses `highlight` via custom `SyntaxHighlightCodeBlockBuilder`; `useEnhancedComponents: false` since all builders are registered manually
-- `flutter_svg` used in `TappableImageBuilder` to render SVG images; network images are downloaded with a 15s timeout and cached under the app temp image cache before rendering
-- `EmojiPlugin` from `flutter_smooth_markdown` registered for `:smile:` shortcode rendering; custom `EmojiBuilder` renders the resolved emoji character
-- `IndentedOrderedListPlugin` parses indented ordered lists before the package default list parser, because `flutter_smooth_markdown` 0.7.2 trims list lines and otherwise flattens nested ordered sublists
-- `flutter_highlight: ^0.7.0` and `highlight: ^0.7.0` are direct dependencies; the parser registers its bundled language grammars synchronously
-- Common Markdown fence aliases are normalized before highlighting (`sh`, `jsonc`, `postgresql`, `c++`, `csharp`, `ps1`, etc.)
-- `_codeTextStyle()` derives fallback text color from `codeBlockDecoration` background luminance (`#E0E0E0` for dark bg, `#1E1E1E` for light bg) to prevent invisible code when highlighting fails
-- Emoji shortcodes use `gemoji` database (`assets/emoji.json` from `github/gemoji`) with full aliases — loaded via `rootBundle.loadString` → `EmojiService.load()`; passed as `customEmojis` to the built-in `EmojiPlugin` constructor (which merges with defaults)
-- `assets/` directory now contains both `poster.png` and `emoji.json`; assets section must list both in `pubspec.yaml`
-- Update APKs are stored under the dedicated cache `updates/` directory; FileProvider exposes only that directory
-- Stable referenced-document IDs use deterministic FNV-1a hashes; never use Dart `hashCode` for persisted identifiers
-- Android document mirrors are copied to a size-limited sibling temporary file, flushed, then atomically replaced with `Os.rename`
-- `ScrollSafeMermaidBuilder` registered as `'mermaid'` builder; wraps `InteractiveViewer` in `Listener(HitTestBehavior.opaque)` so touch events inside the mermaid area do not propagate to the parent `SingleChildScrollView` — the `InteractiveViewer` handles pan/zoom without triggering page scroll
-- Markdown hot-reload uses `File.watch()` while the app is active, with a 15-second asynchronous stat poll as a foreground-only fallback; file switches rebind the watcher and stale reads cannot replace the current document
-
-### Animation system (build 193)
-- `animations: ^2.2.0` (pinned, not 3.0.0 — 3.0.0 pulls `material_ui` and complicates the hand-locked lockfile); sha256 verified against the pub.dev archive
-- Page transitions: pushes slide via `SharedAxisTransition` horizontal, pops fade via `FadeThroughTransition`; `animation.status == AnimationStatus.reverse` is consulted inside `buildTransitions` (routes rebuild per frame, and both transitions are identity at value 1, so the switch is safe). Root-level pages opt into pure fade through with `transition: AppPageTransition.fadeThrough`
-- Tab switching: `_TabEntrance` plays a one-shot `SharedAxisTransition` on index change while wrapping the **same keyless `IndexedStack`** (never remounted), so both tabs keep full state
-- `PressScale` uses a raw `Listener(HitTestBehavior.translucent)` rather than a gesture recognizer so it composes with `InkWell` without competing in the gesture arena; release is a `SpringSimulation(mass: 1, stiffness: 420, damping: 28)` — the same constants the old shelf-card press logic used
-- `SuccessCheck` is a `CustomPainter` (circle pop + check stroke via `extractPath`), not Lottie/Rive — zero asset dependency. `showSuccessFeedback` hosts a self-dismissing `OverlayEntry` on the root overlay; the hold-before-reverse must be a cancellable `Timer` cancelled in `dispose`, never `Future.delayed` — an overlay entry torn down mid-hold (e.g. at test end) would otherwise leave a pending timer and fail the `timersPending` invariant
-- Skeleton loading uses one-shot `OneShotShimmer` sweeps (a `ShaderMask` whose highlight band travels once across the child, controller-driven, never repeating); the loading state swapped the spinner for `LibrarySkeletonCard`s
-- Rename-dialog invalid input shakes the field via `_ShakeBox` (`Transform.translate` with a decaying sine) plus `HapticService.mediumImpact`, without remounting the `TextField` (focus/text preserved)
-- Bottom-nav capsule travel uses `SpringCurve.snappy` on the existing `AnimatedPositioned`
-
-## Operation Boundaries
-
-When the user says "只做这几件事" or explicitly scopes the task, do NOT perform any extra checks, fixes, or modifications beyond what was requested — even if you spot issues. This includes:
-
-- Version checks (pubspec vs in-app display vs update URL)
-- Code quality / linting / analysis
-- Encoding fixes
-- Changelog generation (only use user-provided changelog)
-- Any git operation not explicitly listed
-
-## Release Creation
-
-- The `publish.yml` workflow (workflow_dispatch, default ref `test`) handles the
-  full release: build APK → verify tag → auto-generate Chinese release notes
-  from commit subjects since the previous tag (🚀 feat / ⚡ perf+refactor /
-  🐛 fix / 🔧 other, `(build N)` suffixes stripped, maintenance commits
-  truncated after 12) → create-or-update the GitHub Release → upload to the
-  update server (3 attempts) → force-sync `test` to `main`.
-- The two-job split (build / publish) means a failed publish (e.g. update
-  server down) can be retried via "Re-run failed jobs" without rebuilding.
-- Same-version rebuilds are safe: if the tag points at the same commit the
-  release asset and notes are refreshed in place; if it points at different
-  code the workflow fails fast with guidance to delete the old release or bump.
-- For manual releases with Chinese content, still prefer a Dart script
-  (`dart:io` `HttpClient` + `jsonEncode`) over `curl.exe` / PowerShell
-  (persistent UTF-8 encoding issues).
-- Contributor defaults to `alexopenfan-xiaxin` unless otherwise specified.
-
-## Standard Workflow: Pull → Push → Build → Release → Upload
-
-When the user says "run" or "拉取远端test分支来更新本地项目（同时推送到远端main），然后打包为apk发布为发行版，并上传到更新服务器", execute:
-
-### 1. Fetch & Review
-```
-git fetch origin test
-git log --oneline HEAD..origin/test
-```
-Check version in `pubspec.yaml`.
-
-### 2. Pull & Merge
-```
-git pull origin test --no-edit
-```
-Resolve any merge conflicts (typically `pubspec.yaml` and `about_settings.dart` — take the incoming version).
-
-### 3. Bump Version (if not already bumped by remote)
-- `pubspec.yaml`: version line
-- `android/local.properties`: `flutter.versionName` + `flutter.versionCode`
-- `lib/features/settings/about_settings.dart`: `_fallbackBuildNumber`
-
-Convention: patch +1 per release (e.g. 2.7.7+177 → 2.7.8+178). If remote bumps minor, keep that.
-
-### 4. Commit & Push
-```
-git add -A
-git commit -m "feat/fix/chore: description (build NNN)"
-git push origin main
-git push origin HEAD:test
-```
-If push fails with `Invalid username or token`, ask user for a new PAT and update remote URL:
-```
-git remote set-url origin https://<token>@github.com/alexopenfan-xiaxin/jianxi-reader.git
-```
-
-### 5. Build APK
-```
-flutter build apk --release --target-platform android-arm64 --android-skip-build-dependency-validation
-```
-Output: `build/app/outputs/flutter-apk/app-release.apk` (~34.9MB).
-
-If build fails with Dart compilation error (`catch (Object error)` etc.), fix the syntax error and rebuild.
-
-### 6. Tag
-```
-git tag -a v<version> -m "v<version>+<build> <short summary>"
-git push origin v<version>
-```
-
-### 7. GitHub Release (Dart script)
-Create a temporary Dart script with:
-- Token from remote URL (or ask user)
-- Changelog in Chinese with emoji categories (🚀 ⚡ 🐛 🔧)
-- Tag name and APK asset upload (filename: `app-arm64-v8a-release.apk`)
-- Use `badCertificateCallback` for HTTPS
-
-### 8. Upload to Update Server
-```
-curl.exe -X POST -F "apk=@<apk_path>" -F "version=<build_number>" "https://blog.openfan.dpdns.org/update/index.php?push&key=4NxP5oxQB4gBMSHAXOOzgjfWTr9QEDXF" --ssl-no-revoke --connect-timeout 30
-```
-Expected: `{"success":true}`
+- For completed repository-file changes, commit only task files and push to `origin/test` by default, unless the user requests another destination or explicitly limits the task to local edits. Never force-push. If `origin/test` advanced, integrate before pushing and verify the requested remote state.
+- A short word such as “run” is not release authorization. Build, GitHub Release, update-server upload, and `main` synchronization require an explicit full-release request. Do not infer them from a normal code change or a push to `test`.
+- The normal full-release path is `.github/workflows/publish.yml` (dispatch defaults to `test`): it builds once, checks the `v<version>+<build>` tag, publishes notes and APK, uploads to the update server, then synchronizes `test` to `main`. Its branch synchronization is a workflow-specific behavior, not permission for an agent to force-push.
+- Use a manual release path only when the user explicitly requests it or the workflow is unavailable. Match the workflow's tag/artifact contract, use secrets from an approved credential source, and never put tokens or update-server keys in this guide, command output, or a remote URL. Do not bypass TLS verification to make an upload work; diagnose certificate failures instead.
+- If authentication blocks an explicitly requested push or release, explain the failure and ask for a safe credential path. Do not ask for credentials preemptively. Do not delete an existing release/tag or overwrite a divergent remote ref without explicit approval.
