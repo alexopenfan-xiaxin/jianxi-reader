@@ -11,18 +11,36 @@ export 'package:liquid_glass_widgets/types/glass_quality.dart'
 /// Liquid glass design constants.
 ///
 /// Glass visuals (blur, refraction, lighting, shadows) are rendered by the
-/// `liquid_glass_widgets` shader pipeline; these tokens only pin the blur
-/// budget per surface class and shared layout metrics. Values are tuned so
-/// the default intensity reads like iOS liquid glass: soft blur, gentle
-/// refraction and a near-neutral tint rather than a heavy frosted wash.
+/// `liquid_glass_widgets` shader pipeline; these tokens pin the per-surface
+/// blur budget and the refraction/highlight material, all of which the user
+/// intensity then scales. Refraction needs real depth to read at all: the 2D
+/// shader benchmarks its rim against a neutral thickness of 10 and the premium
+/// shader multiplies thickness by dpr/3, so values at or below ~7 render as a
+/// flat frosted lens with no visible bending or rim.
 class LiquidGlassTokens {
   // Glass blur presets per surface class, before intensity scaling.
   static const double chromeBlur = 20.0;
   static const double panelBlur = 14.0;
   static const double controlBlur = 8.0;
 
-  // Shared glass thickness (drives refraction depth).
-  static const double thickness = 7.0;
+  // Shared glass thickness (drives refraction depth and rim width).
+  static const double thickness = 16.0;
+
+  // Chromatic fringing along the refracted edge.
+  static const double chromaticAberration = 0.010;
+
+  // Specular light budget before intensity scaling.
+  static const double darkSpecular = 0.42;
+  static const double lightSpecular = 0.55;
+  static const double ambientStrength = 0.12;
+
+  // Full-perimeter edge highlight ring and meniscus rim darkening, before
+  // intensity scaling. The premium shader renders no ring at ambientRim 0;
+  // ~1.5–2 reads as a clearly visible but not gaudy highlight.
+  static const double edgeRim = 2.0;
+  static const double edgeAbsorption = 0.12;
+
+  static const double saturation = 1.12;
 
   // Floating bottom navigation layout.
   static const bottomBarHeight = 58.0;
@@ -34,11 +52,15 @@ class LiquidGlassTokens {
   static const floatingBottomBarPanelOffsetMax = 5.0;
 }
 
-/// Scales glass blur and tint by the user's intensity preference (0.0–1.0).
+/// Scales every glass material channel by the user's intensity (0.0–1.0):
+/// blur, tint, refraction depth, refractive index, specular light and the
+/// edge-highlight ring. Scaling the full material is what makes the intensity
+/// slider visibly change the glass — blur and tint alone read as almost no
+/// change on surfaces whose look is dominated by refraction.
 ///
 /// iOS liquid glass stays legible at low intensity: blur eases off gently
-/// while the tint fades faster, so weak glass reads nearly clear instead of
-/// collapsing into a flat frosted box.
+/// while tint, highlights and the rim fade faster, so weak glass reads nearly
+/// clear instead of collapsing into a flat frosted box.
 class LiquidGlassIntensity {
   const LiquidGlassIntensity._();
 
@@ -65,15 +87,51 @@ class LiquidGlassIntensity {
     final scaled = color.a * alphaScale(intensity);
     return color.withValues(alpha: scaled.clamp(0.0, 1.0).toDouble());
   }
+
+  /// Shared material-depth scale for refraction thickness and specular
+  /// light: depth and highlights ease off faster than blur.
+  static double depthScale(double intensity) {
+    final t = intensity.clamp(0.0, 1.0).toDouble();
+    return 0.45 + 0.55 * t;
+  }
+
+  static double scaleThickness(double baseThickness, double intensity) {
+    return baseThickness * depthScale(intensity);
+  }
+
+  static double scaleLight(double baseLight, double intensity) {
+    return baseLight * depthScale(intensity);
+  }
+
+  /// Edge-highlight ring scale; the ring fades out fastest of all so weak
+  /// glass reads clear instead of outlined.
+  static double scaleRim(double baseRim, double intensity) {
+    final t = intensity.clamp(0.0, 1.0).toDouble();
+    return baseRim * (0.20 + 0.80 * t);
+  }
+
+  /// Refractive index lerps from a near-flat lens (1.05) at zero intensity
+  /// to a pronounced one (1.42) at full intensity.
+  static double refractiveIndex(double intensity) {
+    final t = intensity.clamp(0.0, 1.0).toDouble();
+    return 1.05 + 0.37 * t;
+  }
 }
 
 /// A real liquid-glass surface backed by [AdaptiveGlass].
 ///
 /// The shader pipeline supplies blur, refraction, Fresnel rim lighting and
 /// soft elevation shadows, so callers only choose the tint ([color]), the
-/// optional hairline ([borderColor]) and the quality tier. Use
-/// [GlassQuality.premium] only for static chrome (app bars, navigation,
-/// dialogs); scrollable content stays on the default [GlassQuality.standard].
+/// optional hairline ([borderColor]) and the quality tier. All material
+/// channels (blur, tint, thickness, refractive index, specular light, edge
+/// rim) scale with the stored intensity setting.
+///
+/// Quality tiers: [GlassQuality.premium] is only safe for chrome that never
+/// moves on screen — premium tracks transforms through its backdrop group
+/// and flashes black under a sliding ancestor. Anything inside a tab or page
+/// transition (page headers, app bars, the bottom nav) must stay on the
+/// default [GlassQuality.standard], which renders through a plain
+/// [BackdropFilter] and is transform-safe.
 class LiquidGlassSurface extends StatelessWidget {
   const LiquidGlassSurface({
     required this.child,
@@ -128,6 +186,9 @@ class LiquidGlassSurface extends StatelessWidget {
       color ?? liquidGlassContainerColor(context),
       intensity,
     );
+    final baseLight = dark
+        ? LiquidGlassTokens.darkSpecular
+        : LiquidGlassTokens.lightSpecular;
     // Package shapes take a single radius; callers use circular radii.
     final radius = borderRadius.topLeft.x;
     return AdaptiveGlass(
@@ -139,12 +200,24 @@ class LiquidGlassSurface extends StatelessWidget {
       ),
       settings: LiquidGlassSettings(
         blur: effectiveBlur,
-        thickness: LiquidGlassTokens.thickness,
+        thickness: LiquidGlassIntensity.scaleThickness(
+          LiquidGlassTokens.thickness,
+          intensity,
+        ),
         glassColor: tint,
-        refractiveIndex: 1.12,
-        chromaticAberration: 0.006,
-        lightIntensity: dark ? 0.30 : 0.40,
-        saturation: 1.12,
+        refractiveIndex: LiquidGlassIntensity.refractiveIndex(intensity),
+        chromaticAberration: LiquidGlassTokens.chromaticAberration,
+        lightIntensity: LiquidGlassIntensity.scaleLight(baseLight, intensity),
+        ambientStrength: LiquidGlassTokens.ambientStrength,
+        ambientRim: LiquidGlassIntensity.scaleRim(
+          LiquidGlassTokens.edgeRim,
+          intensity,
+        ),
+        edgeAbsorption: LiquidGlassIntensity.scaleRim(
+          LiquidGlassTokens.edgeAbsorption,
+          intensity,
+        ),
+        saturation: LiquidGlassTokens.saturation,
       ),
       quality: quality,
       isInteractive: interactive,

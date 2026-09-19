@@ -102,10 +102,12 @@ class _FixedSettingsHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
+      // The header slides with the tab transition. Premium glass tracks
+      // sliding transforms through its backdrop group and flashes black on
+      // switch, so anything that moves stays on the standard tier.
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        quality: GlassQuality.premium,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
@@ -165,10 +167,11 @@ class _LiquidSettingsAppBar extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    // Pushed sub-pages slide this bar in; standard tier avoids the premium
+    // backdrop flash under sliding transforms (see _FixedSettingsHeader).
     return LiquidGlassSurface(
       borderRadius: BorderRadius.circular(24),
       color: liquidGlassHeaderColor(context),
-      quality: GlassQuality.premium,
       child: SafeArea(
         bottom: false,
         child: DecoratedBox(

@@ -297,7 +297,8 @@ class _ReaderPageState extends State<ReaderPage> {
                 color: readingPalette.background.withValues(
                   alpha: settings.liquidGlassEnabled ? 0.42 : 0.80,
                 ),
-                quality: GlassQuality.premium,
+                // The bar slides with the page route; standard tier avoids
+                // the premium backdrop flash under sliding transforms.
                 child: const SizedBox.expand(),
               )
             : null,

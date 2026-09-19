@@ -215,7 +215,8 @@ class _Track extends StatelessWidget {
 }
 
 /// A pattern and text seen through a real glass surface at [value], so the
-/// slider previews the exact blur and tint the app will render.
+/// slider previews the exact material — blur, tint, refraction depth and
+/// edge highlight — the app will render.
 class _IntensityPreview extends StatelessWidget {
   const _IntensityPreview({required this.value});
 

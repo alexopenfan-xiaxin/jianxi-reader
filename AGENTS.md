@@ -22,7 +22,7 @@
 - Modal bottom sheets use `DraggableScrollableSheet` with `isScrollControlled: true` when they need drag/scroll behavior.
 - Keep animations terminating; do not add repeating animations to widget-test trees. Stagger animations with controller `Interval`s rather than delayed timers. Cancel any hold timer in `dispose`.
 - Markdown reading uses `MarkdownRenderer`, not `SmoothMarkdown`; keep it selectable and links/images tappable. Persisted document IDs must be deterministic, never Dart `hashCode`.
-- Liquid glass uses `liquid_glass_widgets`. Reserve `GlassQuality.premium` for static chrome; moving or scrolling surfaces use `standard`. Preserve the curated intensity setting and avoid committing slider previews on every drag frame.
+- Liquid glass uses `liquid_glass_widgets`. `GlassQuality.premium` is only for chrome that never transforms on screen (the floating bottom nav, dialogs); the premium path tracks sliding ancestors through its backdrop group and flashes black, so page headers, app bars, and anything inside a tab or page transition must stay on the default `standard`. The user intensity scales the full material via `LiquidGlassIntensity` — blur, tint, thickness, refractive index, specular light, and the `ambientRim` edge ring — not just blur and tint. Preserve the curated intensity setting and avoid committing slider previews on every drag frame.
 - Android release builds need `INTERNET` permission in the main manifest. App update checks and downloads use normal platform TLS certificate validation; never add a certificate bypass.
 
 ## Changes and validation

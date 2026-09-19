@@ -62,10 +62,12 @@ class _FixedLibraryHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
+      // The header slides with the tab transition. Premium glass tracks
+      // sliding transforms through its backdrop group and flashes black on
+      // switch, so anything that moves stays on the standard tier.
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        quality: GlassQuality.premium,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
@@ -189,7 +191,6 @@ class _SelectionHeader extends StatelessWidget {
       return LiquidGlassSurface(
         borderRadius: BorderRadius.circular(24),
         color: liquidGlassHeaderColor(context),
-        quality: GlassQuality.premium,
         child: content,
       );
     }
