@@ -212,15 +212,8 @@ class _SettingsHomeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final painter = CustomPaint(
-      painter: _SettingsHomeIconPainter(
-        primary: AppColors.primary,
-        line: palette.ink,
-      ),
-    );
-    if (liquidGlassEnabled(context)) {
-      return LiquidGlassIconTile(child: painter);
-    }
+    // The header tile stays flat in both visual modes: the glass variant read
+    // as a washed grey square over the light page.
     return Container(
       width: 48,
       height: 48,
@@ -236,7 +229,12 @@ class _SettingsHomeIcon extends StatelessWidget {
           ),
         ],
       ),
-      child: painter,
+      child: CustomPaint(
+        painter: _SettingsHomeIconPainter(
+          primary: AppColors.primary,
+          line: palette.ink,
+        ),
+      ),
     );
   }
 }

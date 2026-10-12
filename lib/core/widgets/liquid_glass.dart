@@ -32,13 +32,30 @@ class LiquidGlassTokens {
   // Specular light budget before intensity scaling.
   static const double darkSpecular = 0.42;
   static const double lightSpecular = 0.55;
-  static const double ambientStrength = 0.12;
 
-  // Full-perimeter edge highlight ring and meniscus rim darkening, before
-  // intensity scaling. The premium shader renders no ring at ambientRim 0;
-  // ~1.5–2 reads as a clearly visible but not gaudy highlight.
+  // Ambient body darkening, before intensity scaling. The shaders add a fixed
+  // floor on top of it (the premium path darkens by ~0.08 even at zero), so a
+  // budget tuned for dark glass washes a bright page grey in light mode.
+  static const double darkAmbient = 0.12;
+  static const double lightAmbient = 0.03;
+
+  // Full-perimeter edge highlight ring, before intensity scaling. The premium
+  // shader renders no ring at ambientRim 0; ~1.5–2 reads as a clearly visible
+  // but not gaudy highlight.
   static const double edgeRim = 2.0;
-  static const double edgeAbsorption = 0.12;
+
+  // Meniscus rim darkening, before intensity scaling. iOS light glass takes
+  // its edge definition from the highlight ring, so a dark meniscus band over
+  // a bright page reads as a grey outline; light mode keeps only a hint.
+  static const double darkEdgeAbsorption = 0.12;
+  static const double lightEdgeAbsorption = 0.05;
+
+  // Light-mode whitening veil, luminance gated by the package so text and
+  // icons under the glass stay crisp. Without it a light surface can only mute
+  // the bright backdrop it sits on and reads as a grey wash; dark mode leaves
+  // it off because dark glass reads through the backdrop instead.
+  static const double lightWhiten = 0.25;
+  static const double darkWhiten = 0.0;
 
   static const double saturation = 1.12;
 
@@ -123,8 +140,10 @@ class LiquidGlassIntensity {
 /// The shader pipeline supplies blur, refraction, Fresnel rim lighting and
 /// soft elevation shadows, so callers only choose the tint ([color]), the
 /// optional hairline ([borderColor]) and the quality tier. All material
-/// channels (blur, tint, thickness, refractive index, specular light, edge
-/// rim) scale with the stored intensity setting.
+/// channels (blur, tint, thickness, refractive index, specular light, the edge
+/// rim, and the light-mode whitening veil) scale with the stored intensity
+/// setting, and the channels that read differently on a bright page — ambient
+/// darkening, meniscus rim darkening, whitening — are budgeted per brightness.
 ///
 /// Quality tiers: [GlassQuality.premium] is only safe for chrome that never
 /// moves on screen — premium tracks transforms through its backdrop group
@@ -189,6 +208,18 @@ class LiquidGlassSurface extends StatelessWidget {
     final baseLight = dark
         ? LiquidGlassTokens.darkSpecular
         : LiquidGlassTokens.lightSpecular;
+    final ambient = dark
+        ? LiquidGlassTokens.darkAmbient
+        : LiquidGlassTokens.lightAmbient;
+    final edgeAbsorption = dark
+        ? LiquidGlassTokens.darkEdgeAbsorption
+        : LiquidGlassTokens.lightEdgeAbsorption;
+    // The veil rides the shared depth scale so the intensity slider still
+    // fades it out instead of leaving a flat white lid on weak glass.
+    final whiten = LiquidGlassIntensity.scaleLight(
+      dark ? LiquidGlassTokens.darkWhiten : LiquidGlassTokens.lightWhiten,
+      intensity,
+    );
     // Package shapes take a single radius; callers use circular radii.
     final radius = borderRadius.topLeft.x;
     return AdaptiveGlass(
@@ -208,15 +239,17 @@ class LiquidGlassSurface extends StatelessWidget {
         refractiveIndex: LiquidGlassIntensity.refractiveIndex(intensity),
         chromaticAberration: LiquidGlassTokens.chromaticAberration,
         lightIntensity: LiquidGlassIntensity.scaleLight(baseLight, intensity),
-        ambientStrength: LiquidGlassTokens.ambientStrength,
+        ambientStrength: ambient,
         ambientRim: LiquidGlassIntensity.scaleRim(
           LiquidGlassTokens.edgeRim,
           intensity,
         ),
         edgeAbsorption: LiquidGlassIntensity.scaleRim(
-          LiquidGlassTokens.edgeAbsorption,
+          edgeAbsorption,
           intensity,
         ),
+        whitenStrength: whiten,
+        whitenGated: true,
         saturation: LiquidGlassTokens.saturation,
       ),
       quality: quality,
