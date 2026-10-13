@@ -407,7 +407,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       return NavigationDecision.prevent;
     }
     if (uri.scheme == 'mailto' || uri.scheme == 'tel') {
-      unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+      unawaited(_launchExternal(uri));
       return NavigationDecision.prevent;
     }
     if (uri.scheme.isEmpty && !uri.hasAuthority) {
@@ -445,7 +445,16 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       ),
     );
     if (confirmed == true) {
+      await _launchExternal(uri);
+    }
+  }
+
+  Future<void> _launchExternal(Uri uri) async {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (error) {
+      debugPrint('[HtmlDocumentView] open external link failed: $error');
+      _showNavigationMessage('无法打开链接');
     }
   }
 

@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
-
 class TocEntry {
   const TocEntry({
     required this.index,
@@ -18,27 +16,6 @@ class TocEntry {
 
 class TocService {
   const TocService._();
-
-  static List<TocEntry> fromMarkdown(
-    String data, {
-    ParserPluginRegistry? plugins,
-  }) {
-    final nodes = MarkdownParser(plugins: plugins).parse(data);
-    final entries = <TocEntry>[];
-    for (final node in nodes) {
-      if (node is! HeaderNode || node.level > 4) {
-        continue;
-      }
-      final title = node.content.trim();
-      if (title.isEmpty) {
-        continue;
-      }
-      entries.add(
-        TocEntry(index: entries.length, level: node.level, title: title),
-      );
-    }
-    return entries;
-  }
 
   static List<TocEntry> fromHtmlJson(Object? value) {
     final raw = value?.toString();
