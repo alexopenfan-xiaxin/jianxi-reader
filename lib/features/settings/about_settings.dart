@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '197';
+  static const _fallbackBuildNumber = '198';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -176,21 +176,26 @@ class _AboutPageState extends State<AboutPage> {
         setState(() => _isChecking = false);
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (ctx) => LiquidGlassDialog(
-            title: const Text('发现新版本'),
-            content: Text(
-              newVersion == null || newVersion.isEmpty
-                  ? '有新版本可用，是否下载更新？'
-                  : '发现构建版本 $newVersion，是否下载更新？',
+          builder: (ctx) => GlassDialog(
+            title: '发现新版本',
+            message: newVersion == null || newVersion.isEmpty
+                ? '有新版本可用，是否下载更新？'
+                : '发现构建版本 $newVersion，是否下载更新？',
+            maxWidth: 320,
+            settings: AppGlassSettings.build(
+              ctx,
+              role: AppGlassRole.staticPanel,
             ),
+            quality: GlassQuality.standard,
             actions: [
-              TextButton(
+              GlassDialogAction(
+                label: '取消',
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('取消'),
               ),
-              FilledButton(
+              GlassDialogAction(
+                label: '更新',
+                isPrimary: true,
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('更新'),
               ),
             ],
           ),
@@ -393,17 +398,24 @@ class _AboutPageState extends State<AboutPage> {
     }
     final open = await showDialog<bool>(
       context: context,
-      builder: (ctx) => LiquidGlassDialog(
-        title: const Text('安装权限'),
-        content: const Text('安装更新需要开启「安装未知应用」权限。请先前往设置开启权限，再重新检查更新。'),
+      builder: (ctx) => GlassDialog(
+        title: '安装权限',
+        message: '安装更新需要开启「安装未知应用」权限。请先前往设置开启权限，再重新检查更新。',
+        maxWidth: 320,
+        settings: AppGlassSettings.build(
+          ctx,
+          role: AppGlassRole.staticPanel,
+        ),
+        quality: GlassQuality.standard,
         actions: [
-          TextButton(
+          GlassDialogAction(
+            label: '取消',
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
           ),
-          FilledButton(
+          GlassDialogAction(
+            label: '去设置',
+            isPrimary: true,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('去设置'),
           ),
         ],
       ),

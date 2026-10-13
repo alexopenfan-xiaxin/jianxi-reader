@@ -918,18 +918,24 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
   Future<void> _deleteTag(LibraryController controller, String tag) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => LiquidGlassDialog(
-        title: const Text('删除标签'),
-        content: Text('删除「$tag」后，所有文档都会移除这个标签。'),
+      builder: (context) => GlassDialog(
+        title: '删除标签',
+        message: '删除「$tag」后，所有文档都会移除这个标签。',
+        maxWidth: 320,
+        settings: AppGlassSettings.build(
+          context,
+          role: AppGlassRole.staticPanel,
+        ),
+        quality: GlassQuality.standard,
         actions: [
-          TextButton(
+          GlassDialogAction(
+            label: '取消',
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
           ),
-          FilledButton(
+          GlassDialogAction(
+            label: '删除',
+            isDestructive: true,
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('删除'),
           ),
         ],
       ),

@@ -362,22 +362,22 @@ LiquidGlassSettings buildAppGlassSettings(
 
 ## 10. 文件级 TODO 清单
 
-- [ ] `lib/core/widgets/liquid_glass.dart`：拆出 `AppGlassSettings`/role；保留旧 wrapper 作为回退。
-- [ ] `lib/core/widgets/app_card.dart`：玻璃分支接 `GlassCard`/`GlassContainer`。
-- [ ] `lib/core/widgets/glass_segmented_control.dart`：接 `GlassSegmentedControl`。
-- [ ] `lib/core/widgets/reading_settings_panel.dart`：chip/surface 接组件库。
-- [ ] `lib/features/shell/app_shell.dart`：保持 `GlassTabBar.bottom` 160px；Phase 5 再评估 GlassScaffold。
-- [ ] `lib/features/library/library_toolbar.dart`：头部接 `GlassToolbar`/`GlassButton`。
-- [ ] `lib/features/library/library_page.dart`：dialog/sheet 接 `GlassDialog`/`GlassSheet`。
-- [ ] `lib/features/library/library_search_page.dart`：text field/chip 接组件库。
-- [ ] `lib/features/library/library_list_view.dart`：菜单/dialog/sheet 接组件库。
-- [ ] `lib/features/library/document_actions.dart`：dialog/text field 接组件库。
-- [ ] `lib/features/settings/settings_page.dart`：头部接 `GlassToolbar`。
-- [ ] `lib/features/settings/appearance_settings.dart`：segmented control/icon tile 接组件库；强度卡片已删除。
-- [ ] `lib/features/settings/about_settings.dart`：dialog/surface 接组件库。
-- [ ] `lib/features/reader/reader_page.dart`：app bar/dialog/sheet/text field 接组件库。
-- [ ] `lib/features/reader/markdown/markdown_viewer.dart`：dialog 接 `GlassDialog`。
-- [ ] `test/`：补适配层、quality policy、mode fallback、tab/sheet/dialog 回归测试。
+- [x] `lib/core/widgets/liquid_glass.dart`：新增 `AppGlassRole`/`AppGlassSettings` 单一 material/quality 解析链；`LiquidGlassSurface` 仍用 `AdaptiveGlass` 作自定义 chrome 回退，panel/icon tile/text field/chip/dialog 已接组件库。
+- [x] `lib/core/widgets/app_card.dart`：玻璃分支接 `GlassCard`。
+- [x] `lib/core/widgets/glass_segmented_control.dart`：玻璃模式接 `GlassSegmentedControl`；经典模式保留原 Material/backdrop 实现。
+- [x] `lib/core/widgets/reading_settings_panel.dart`：chip 与 segmented control 已走组件库；预览面板保留 `AdaptiveGlass`。
+- [x] `lib/features/shell/app_shell.dart`：保持 `GlassTabBar.bottom` 160px 与库默认材质；Phase 5（GlassScaffold）本次不执行。
+- [x] `lib/features/library/library_toolbar.dart`：头部 glass surface 保留 `AdaptiveGlass`，操作按钮接 `GlassIconButton`。
+- [x] `lib/features/library/library_page.dart`：dialog 接 `GlassDialog`；sheet 保留原 host，面板接组件库 `AdaptiveGlass` 原语。
+- [x] `lib/features/library/library_search_page.dart`：text field frame 接 `GlassContainer`，chip 走 `LiquidGlassChip`→`GlassChip`。
+- [x] `lib/features/library/library_list_view.dart`：chip/dialog/text field frame 接组件库。
+- [x] `lib/features/library/document_actions.dart`：dialog 接 `GlassDialog`；text field 保留标准 `TextField` + `GlassContainer` frame。
+- [x] `lib/features/settings/settings_page.dart`：子页面 app bar 接 `GlassToolbar`。
+- [x] `lib/features/settings/appearance_settings.dart`：segmented control/icon tile 接组件库；强度卡片已删除。
+- [x] `lib/features/settings/about_settings.dart`：更新/权限 dialog 接 `GlassDialog`；进度 dialog 保留无 action 的 `LiquidGlassDialog`（内部 `GlassCard`）。
+- [x] `lib/features/reader/reader_page.dart`：dialog/sheet/text field frame 接组件库；app bar 保留现有 `AdaptiveGlass` 条 + 标准 `IconButton`，避免在阅读态过度堆叠玻璃控件。
+- [x] `lib/features/reader/markdown/markdown_viewer.dart`：外链 dialog 接 `GlassDialog`。
+- [x] `test/app_glass_settings_test.dart`：覆盖 role→blur/quality 策略与 intensity 全通道缩放。
 
 ## 11. 决策记录
 
@@ -386,8 +386,19 @@ LiquidGlassSettings buildAppGlassSettings(
   - 强度固定 0.72；
   - 底部 tab 宽度恢复 160px；
   - 本计划文档创建。
-- Open questions：
-  - 底部 tab 是否要跟随统一强度（当前不跟随，保持组件默认材质）？
-  - 头部最终用 `GlassToolbar` 还是保留自定义 surface + 组件按钮？
-  - sheet 是保留现有 host，还是迁移到 `GlassSheet.show`？
-  - 何时评估 shell 级 `GlassScaffold`（建议 Phase 5）？
+- 2026-10-14 build 198（Phase 0–4 一次交付，Phase 5 保留为可选项）：
+  - 新增 `AppGlassRole`/`AppGlassSettings`；所有 app 玻璃 surface 经它解析完整 `LiquidGlassSettings`，role 决定 blur 预算与 quality 策略；
+  - `GlassCard`/`GlassContainer`/`GlassChip`/`GlassSegmentedControl`/`GlassDialog`/`GlassToolbar`/`GlassIconButton` 已接入；每个独立 surface 使用 `useOwnLayer: true` + 显式 settings，沿用迁移前的分层行为；
+  - dialog 统一走 `showDialog` + `GlassDialog` widget，quality 固定 `standard`；因为 dialog 路由本身有入场动画，`premium` 有黑闪风险；
+  - sheet 保留 `showModalBottomSheet`/`DraggableScrollableSheet` host，面板使用组件库 `AdaptiveGlass`（与 `GlassSheet` 内部同一原语）；不迁移 `GlassSheet.show`，避免 drag/stretch/键盘行为差异；
+  - 输入框保留标准 Material `TextField`，外层换 `GlassContainer`；不换成 Cupertino 底层的 `GlassTextField`，以保持键盘、选区、校验与 autofocus 行为；
+  - 分段控件玻璃模式改用组件库实现后不再渲染 `selectedIcon`（组件库用指示器 + 文本色表达选中态），调用点已移除该参数；
+  - 头部：tab 内的圆角头部保留 `AdaptiveGlass` 自定义 chrome（组件库 `GlassToolbar` 是通栏形状，会改变现有视觉语言），操作按钮改 `GlassIconButton`；设置子页通栏 app bar 改 `GlassToolbar`；
+  - 版本 2.9.8+198；`build-apk.yml` 产物名同步；
+  - 验证走 GitHub CI/`Build APK` workflow（本机不运行 Flutter 命令），APK 从 workflow artifact 取回桌面；不打 tag、不建 Release。
+- Phase 5 决策：本次不执行 shell 级 `GlassScaffold`。§7.2 已列出的状态重挂载、SnackBar/键盘差异与横屏 rail 阻塞项未验证，保留现有 Material `Scaffold` 根。
+- 已解决/收敛的 Open questions：
+  - 底部 tab 不跟随统一强度，保持 `GlassTabBar.bottom` 默认材质；
+  - 头部采用“tab 内自定义 `AdaptiveGlass` surface + 组件库按钮；设置子页 `GlassToolbar`”的组合；
+  - sheet 保留现有 host，不迁移 `GlassSheet.show`；
+  - `GlassScaffold` 评估保持为独立 Phase 5，本次不做。

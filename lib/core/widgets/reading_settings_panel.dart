@@ -128,7 +128,6 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   return GlassSegment(
                     value: theme,
                     label: theme.label,
-                    selectedIcon: Icons.check_rounded,
                   );
                 }).toList(),
                 value: values.readingTheme,
@@ -150,7 +149,6 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   return GlassSegment(
                     value: margin,
                     label: margin.label,
-                    selectedIcon: Icons.check_rounded,
                   );
                 }).toList(),
                 value: values.readingMargin,
@@ -226,7 +224,6 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                   return GlassSegment(
                     value: family,
                     label: family.label,
-                    selectedIcon: Icons.check_rounded,
                   );
                 }).toList(),
                 value: values.readingFontFamily,

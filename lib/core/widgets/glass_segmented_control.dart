@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as lg;
 import 'package:provider/provider.dart';
 
 import '../app_settings_controller.dart';
@@ -9,20 +10,21 @@ import '../haptic_service.dart';
 import '../spring_curve.dart';
 import 'liquid_glass.dart';
 
+/// One option of an app segmented control.
 class GlassSegment<T> {
-  const GlassSegment({
-    required this.value,
-    required this.label,
-    this.icon,
-    this.selectedIcon,
-  });
+  const GlassSegment({required this.value, required this.label, this.icon});
 
   final T value;
   final String label;
   final IconData? icon;
-  final IconData? selectedIcon;
 }
 
+/// Two-state segmented control used across settings and reading options.
+///
+/// In liquid-glass mode the control is the component library's
+/// [lg.GlassSegmentedControl], resolved through [AppGlassSettings] so the
+/// material matches the rest of the app. Classic mode keeps the pre-migration
+/// Material/backdrop implementation so its appearance does not change.
 class GlassSegmentedControl<T> extends StatelessWidget {
   const GlassSegmentedControl({
     required this.segments,
@@ -37,10 +39,89 @@ class GlassSegmentedControl<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
     final liquidGlass = context.select<AppSettingsController, bool>(
       (settings) => settings.liquidGlassEnabled,
     );
+    if (!liquidGlass) {
+      return _ClassicSegmentedControl<T>(
+        segments: segments,
+        value: value,
+        onChanged: onChanged,
+      );
+    }
+
+    final palette = context.palette;
+    final selectedIndex = segments.indexWhere((segment) {
+      return segment.value == value;
+    });
+    final effectiveIndex = selectedIndex < 0 ? 0 : selectedIndex;
+
+    void selectIndex(int index) {
+      final nextValue = segments[index].value;
+      if (nextValue != value) {
+        HapticService.selectionClick();
+        onChanged(nextValue);
+      }
+    }
+
+    final indicatorColor = AppColors.primary.withValues(alpha: 0.14);
+    return lg.GlassSegmentedControl(
+      segments: [
+        for (final segment in segments)
+          lg.GlassSegment(
+            label: segment.label,
+            icon: segment.icon == null
+                ? null
+                : Icon(segment.icon, size: 18),
+          ),
+      ],
+      selectedIndex: effectiveIndex,
+      onSegmentSelected: selectIndex,
+      height: LiquidGlassTokens.bottomBarHeight,
+      borderRadius: AppRadii.pill,
+      padding: const EdgeInsets.all(LiquidGlassTokens.bottomBarPadding),
+      selectedTextStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: AppColors.primary,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      ),
+      unselectedTextStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: palette.ink,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0,
+      ),
+      indicatorColor: indicatorColor,
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.interactiveControl,
+      ),
+      indicatorSettings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.interactiveControl,
+        color: indicatorColor,
+      ),
+      useOwnLayer: true,
+      quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
+    );
+  }
+}
+
+/// Pre-migration classic implementation. Kept verbatim in structure so the
+/// classic visual mode does not change with the component-library migration.
+class _ClassicSegmentedControl<T> extends StatelessWidget {
+  const _ClassicSegmentedControl({
+    required this.segments,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<GlassSegment<T>> segments;
+  final T value;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
     final selectedIndex = segments.indexWhere((segment) {
       return segment.value == value;
     });
@@ -76,36 +157,25 @@ class GlassSegmentedControl<T> extends StatelessWidget {
             selectFromLocalPosition(details.localPosition);
           },
           child: SizedBox(
-            height: liquidGlass ? LiquidGlassTokens.bottomBarHeight : 48,
+            height: 48,
             child: Stack(
               children: [
-                Positioned.fill(
-                  child: _GlassTrack(
-                    palette: palette,
-                    liquidGlass: liquidGlass,
-                  ),
-                ),
+                Positioned.fill(child: _ClassicTrack(palette: palette)),
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: trackRadius,
                     child: Stack(
                       children: [
                         AnimatedPositioned(
-                          duration: liquidGlass
-                              ? AppMotion.settle
-                              : AppMotion.normal,
+                          duration: AppMotion.normal,
                           curve: SpringCurve.snappy,
                           left: effectiveIndex * itemWidth,
                           top: 0,
                           bottom: 0,
                           width: itemWidth,
-                          child: Padding(
-                            padding: EdgeInsets.all(
-                              liquidGlass
-                                  ? LiquidGlassTokens.bottomBarPadding
-                                  : 4,
-                            ),
-                            child: _GlassThumb(liquidGlass: liquidGlass),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: _ClassicThumb(),
                           ),
                         ),
                         Positioned.fill(
@@ -117,7 +187,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                                 index++
                               )
                                 Expanded(
-                                  child: _GlassSegmentButton<T>(
+                                  child: _ClassicSegmentButton<T>(
                                     segment: segments[index],
                                     selected: index == effectiveIndex,
                                     onTap: () {
@@ -141,22 +211,13 @@ class GlassSegmentedControl<T> extends StatelessWidget {
   }
 }
 
-class _GlassTrack extends StatelessWidget {
-  const _GlassTrack({required this.palette, required this.liquidGlass});
+class _ClassicTrack extends StatelessWidget {
+  const _ClassicTrack({required this.palette});
 
   final AppPalette palette;
-  final bool liquidGlass;
 
   @override
   Widget build(BuildContext context) {
-    if (liquidGlass) {
-      return LiquidGlassSurface(
-        color: liquidGlassContainerColor(context),
-        child: const SizedBox.expand(),
-      );
-    }
-
-    final palette = this.palette;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -180,25 +241,11 @@ class _GlassTrack extends StatelessWidget {
   }
 }
 
-class _GlassThumb extends StatelessWidget {
-  const _GlassThumb({required this.liquidGlass});
-
-  final bool liquidGlass;
+class _ClassicThumb extends StatelessWidget {
+  const _ClassicThumb();
 
   @override
   Widget build(BuildContext context) {
-    // A real glass lens over the track: it refracts the blurred backdrop
-    // beneath it like an iOS segmented capsule, instead of reading as a flat
-    // tinted box. Standard quality keeps the animated thumb cheap to move.
-    if (liquidGlass) {
-      return LiquidGlassSurface(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        color: AppColors.primary.withValues(alpha: 0.14),
-        borderColor: AppColors.primary.withValues(alpha: 0.30),
-        child: const SizedBox.expand(),
-      );
-    }
-
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -229,8 +276,8 @@ class _GlassThumb extends StatelessWidget {
   }
 }
 
-class _GlassSegmentButton<T> extends StatelessWidget {
-  const _GlassSegmentButton({
+class _ClassicSegmentButton<T> extends StatelessWidget {
+  const _ClassicSegmentButton({
     required this.segment,
     required this.selected,
     required this.onTap,
@@ -243,9 +290,7 @@ class _GlassSegmentButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final icon = selected
-        ? segment.selectedIcon ?? segment.icon ?? Icons.check_rounded
-        : segment.icon;
+    final icon = selected ? segment.icon ?? Icons.check_rounded : segment.icon;
     final color = selected ? AppColors.primary : palette.ink;
 
     return Semantics(

@@ -325,13 +325,24 @@ class _HeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: Icon(icon, size: 29),
-      color: context.palette.ink,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-      padding: EdgeInsets.zero,
+    return Tooltip(
+      message: tooltip,
+      child: GlassIconButton(
+        icon: Icon(icon, size: 22, color: context.palette.ink),
+        onPressed: onPressed,
+        size: 40,
+        shape: GlassIconButtonShape.roundedSquare,
+        borderRadius: 13,
+        semanticLabel: tooltip,
+        settings: AppGlassSettings.build(
+          context,
+          role: AppGlassRole.interactiveControl,
+        ),
+        useOwnLayer: true,
+        quality: AppGlassSettings.qualityFor(
+          AppGlassRole.interactiveControl,
+        ),
+      ),
     );
   }
 }

@@ -1007,22 +1007,33 @@ class MarkdownViewerState extends State<MarkdownViewer>
   void _handleLinkTap(BuildContext context, String url) {
     showDialog(
       context: context,
-      builder: (ctx) => LiquidGlassDialog(
-        title: const Text('打开链接'),
+      builder: (ctx) => GlassDialog(
+        title: '打开链接',
+        maxWidth: 320,
+        settings: AppGlassSettings.build(
+          ctx,
+          role: AppGlassRole.staticPanel,
+        ),
+        quality: GlassQuality.standard,
         content: SingleChildScrollView(
-          child: Text(url, style: Theme.of(ctx).textTheme.bodyMedium),
+          child: Text(
+            url,
+            textAlign: TextAlign.center,
+            style: Theme.of(ctx).textTheme.bodyMedium,
+          ),
         ),
         actions: [
-          TextButton(
+          GlassDialogAction(
+            label: '取消',
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
           ),
-          TextButton(
+          GlassDialogAction(
+            label: '打开',
+            isPrimary: true,
             onPressed: () {
               Navigator.of(ctx).pop();
               unawaited(_openMarkdownLink(url));
             },
-            child: const Text('打开'),
           ),
         ],
       ),

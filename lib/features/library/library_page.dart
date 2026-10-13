@@ -299,20 +299,27 @@ Future<bool?> _confirmBatchAction(
 }) {
   return showDialog<bool>(
     context: context,
-    builder: (context) => LiquidGlassDialog(
-      title: Text(title),
-      content: Text(content),
+    builder: (context) => GlassDialog(
+      title: title,
+      message: content,
+      maxWidth: 320,
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.staticPanel,
+      ),
+      // Dialogs animate in with their route, so they stay on the standard
+      // tier; premium is reserved for chrome that never transforms.
+      quality: GlassQuality.standard,
       actions: [
-        TextButton(
+        GlassDialogAction(
+          label: '取消',
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
         ),
-        FilledButton(
+        GlassDialogAction(
+          label: confirmText,
+          isPrimary: !destructive,
+          isDestructive: destructive,
           onPressed: () => Navigator.of(context).pop(true),
-          style: destructive
-              ? FilledButton.styleFrom(backgroundColor: AppColors.error)
-              : null,
-          child: Text(confirmText),
         ),
       ],
     ),

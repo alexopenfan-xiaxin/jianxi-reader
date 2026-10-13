@@ -128,13 +128,11 @@ class AppearancePage extends StatelessWidget {
                               value: AppVisualMode.classic,
                               label: '经典',
                               icon: Icons.layers_outlined,
-                              selectedIcon: Icons.check_rounded,
                             ),
                             GlassSegment(
                               value: AppVisualMode.liquidGlass,
                               label: '液态玻璃',
                               icon: Icons.blur_on_rounded,
-                              selectedIcon: Icons.check_rounded,
                             ),
                           ],
                           value: values.visualMode,
@@ -161,7 +159,6 @@ class AppearancePage extends StatelessWidget {
                               icon: family == AppFontFamily.system
                                   ? Icons.font_download_outlined
                                   : Icons.auto_stories_outlined,
-                              selectedIcon: Icons.check_rounded,
                             );
                           }).toList(),
                           value: values.appFontFamily,
@@ -186,19 +183,16 @@ class AppearancePage extends StatelessWidget {
                               value: ThemeMode.system,
                               label: '系统',
                               icon: Icons.phone_android_rounded,
-                              selectedIcon: Icons.check_rounded,
                             ),
                             GlassSegment(
                               value: ThemeMode.light,
                               label: '浅色',
                               icon: Icons.light_mode_rounded,
-                              selectedIcon: Icons.check_rounded,
                             ),
                             GlassSegment(
                               value: ThemeMode.dark,
                               label: '深色',
                               icon: Icons.dark_mode_rounded,
-                              selectedIcon: Icons.check_rounded,
                             ),
                           ],
                           value: values.themeMode,
@@ -225,7 +219,6 @@ class AppearancePage extends StatelessWidget {
                               icon: viewMode == LibraryViewMode.list
                                   ? Icons.view_list_rounded
                                   : Icons.grid_view_rounded,
-                              selectedIcon: Icons.check_rounded,
                             );
                           }).toList(),
                           value: values.libraryViewMode,

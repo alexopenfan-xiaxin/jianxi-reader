@@ -168,38 +168,36 @@ class _LiquidSettingsAppBar extends StatelessWidget
     final palette = context.palette;
     // Pushed sub-pages slide this bar in; standard tier avoids the premium
     // backdrop flash under sliding transforms (see _FixedSettingsHeader).
-    return LiquidGlassSurface(
-      borderRadius: BorderRadius.circular(24),
-      color: liquidGlassHeaderColor(context),
-      child: SafeArea(
-        bottom: false,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border(
-              bottom: BorderSide(
-                color: palette.hairline.withValues(alpha: 0.20),
-              ),
-            ),
-          ),
-          child: SizedBox(
-            height: kToolbarHeight,
-            child: NavigationToolbar(
-              leading: IconButton(
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                icon: const Icon(Icons.arrow_back_rounded),
-                color: palette.ink,
-                onPressed: () => Navigator.maybePop(context),
-              ),
-              middle: Text(
-                title,
-                style: Theme.of(context).appBarTheme.titleTextStyle,
-              ),
-              centerMiddle: false,
-              middleSpacing: 0,
-            ),
-          ),
+    // GlassToolbar owns the full-width surface; its children stay standard
+    // Material controls, which the package composes inside a toolbar surface.
+    return SafeArea(
+      bottom: false,
+      child: GlassToolbar(
+        height: kToolbarHeight,
+        alignment: MainAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        settings: AppGlassSettings.build(
+          context,
+          role: AppGlassRole.animatedChrome,
+          color: liquidGlassHeaderColor(context),
         ),
+        quality: AppGlassSettings.qualityFor(AppGlassRole.animatedChrome),
+        children: [
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            icon: const Icon(Icons.arrow_back_rounded),
+            color: palette.ink,
+            onPressed: () => Navigator.maybePop(context),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).appBarTheme.titleTextStyle,
+            ),
+          ),
+        ],
       ),
     );
   }

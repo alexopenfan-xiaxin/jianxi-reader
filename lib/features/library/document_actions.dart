@@ -92,11 +92,17 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
       onSubmitted: (_) => _save(),
     );
 
-    return LiquidGlassDialog(
-      title: const Text('重命名文档'),
+    return GlassDialog(
+      title: '重命名文档',
+      maxWidth: 340,
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.staticPanel,
+      ),
+      quality: GlassQuality.standard,
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _ShakeBox(
             key: _shakeKey,
@@ -107,6 +113,7 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '扩展名保持不变',
+            textAlign: TextAlign.center,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: context.palette.muted),
@@ -114,13 +121,22 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+        GlassDialogAction(
+          label: '取消',
+          onPressed: () {
+            if (!_isSaving) {
+              Navigator.of(context).pop();
+            }
+          },
         ),
-        FilledButton(
-          onPressed: _isSaving ? null : _save,
-          child: Text(_isSaving ? '保存中' : '保存'),
+        GlassDialogAction(
+          label: _isSaving ? '保存中' : '保存',
+          isPrimary: true,
+          onPressed: () {
+            if (!_isSaving) {
+              _save();
+            }
+          },
         ),
       ],
     );

@@ -9,7 +9,24 @@ export 'package:liquid_glass_widgets/types/glass_quality.dart'
     show GlassQuality;
 
 export 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
-    show GlassIsolationScope, GlassTab, GlassTabBar;
+    show
+        AdaptiveGlass,
+        GlassCard,
+        GlassChip,
+        GlassContainer,
+        GlassDialog,
+        GlassDialogAction,
+        GlassDivider,
+        GlassGroupedSection,
+        GlassIconButton,
+        GlassIconButtonShape,
+        GlassIsolationScope,
+        GlassListTile,
+        GlassTab,
+        GlassTabBar,
+        GlassToolbar,
+        LiquidGlassSettings,
+        LiquidRoundedSuperellipse;
 
 /// Liquid glass design constants.
 ///
@@ -138,6 +155,157 @@ class LiquidGlassIntensity {
   }
 }
 
+/// Semantic role of a glass surface.
+///
+/// The role owns two policy decisions so call sites do not repeat them: the
+/// default blur budget and the quality tier. [AppGlassRole.staticChrome] and
+/// [AppGlassRole.staticPanel] are the only roles allowed to render
+/// [GlassQuality.premium]; anything that can move inside a tab, page
+/// transition, scroll or drag stays on [GlassQuality.standard] to avoid the
+/// premium backdrop-group black flash.
+enum AppGlassRole {
+  staticChrome,
+  animatedChrome,
+  staticPanel,
+  draggedSurface,
+  interactiveControl,
+  groupedCard,
+}
+
+/// Single adapter between the app's curated intensity and the
+/// `liquid_glass_widgets` material model.
+///
+/// Every glass surface in the app resolves its [LiquidGlassSettings] here.
+/// [material] is a pure function so the intensity/quality policy is unit
+/// testable; [build] only adds the context-dependent pieces (brightness, tint
+/// and the stored intensity). Components that need a different blur budget
+/// pass [blurOverride] instead of rebuilding the material chain.
+class AppGlassSettings {
+  const AppGlassSettings._();
+
+  /// Default blur budget for [role], before intensity scaling.
+  static double blurFor(AppGlassRole role) {
+    switch (role) {
+      case AppGlassRole.staticChrome:
+      case AppGlassRole.animatedChrome:
+        return LiquidGlassTokens.chromeBlur;
+      case AppGlassRole.staticPanel:
+      case AppGlassRole.draggedSurface:
+        return LiquidGlassTokens.panelBlur;
+      case AppGlassRole.interactiveControl:
+      case AppGlassRole.groupedCard:
+        return LiquidGlassTokens.controlBlur;
+    }
+  }
+
+  /// Quality policy for [role].
+  ///
+  /// Premium is reserved for chrome and panels with no sliding or
+  /// transforming ancestor. The premium shader tracks those transforms
+  /// through its backdrop group and flashes black when the assumption is
+  /// violated, so moving surfaces stay on the standard tier.
+  static GlassQuality qualityFor(AppGlassRole role) {
+    switch (role) {
+      case AppGlassRole.staticChrome:
+      case AppGlassRole.staticPanel:
+        return GlassQuality.premium;
+      case AppGlassRole.animatedChrome:
+      case AppGlassRole.draggedSurface:
+      case AppGlassRole.interactiveControl:
+      case AppGlassRole.groupedCard:
+        return GlassQuality.standard;
+    }
+  }
+
+  /// Builds the full material for [role] from an explicit intensity.
+  ///
+  /// Kept free of [BuildContext] so the policy can be tested directly.
+  static LiquidGlassSettings material({
+    required AppGlassRole role,
+    required double intensity,
+    required Brightness brightness,
+    required Color color,
+    double? blurOverride,
+  }) {
+    final dark = brightness == Brightness.dark;
+    final baseBlur = blurOverride ?? blurFor(role);
+    final baseLight = dark
+        ? LiquidGlassTokens.darkSpecular
+        : LiquidGlassTokens.lightSpecular;
+    final ambient = dark
+        ? LiquidGlassTokens.darkAmbient
+        : LiquidGlassTokens.lightAmbient;
+    final edgeAbsorption = dark
+        ? LiquidGlassTokens.darkEdgeAbsorption
+        : LiquidGlassTokens.lightEdgeAbsorption;
+    // The veil rides the shared depth scale so weak glass fades it out
+    // instead of leaving a flat white lid on top of the backdrop.
+    final whiten = LiquidGlassIntensity.scaleLight(
+      dark ? LiquidGlassTokens.darkWhiten : LiquidGlassTokens.lightWhiten,
+      intensity,
+    );
+    return LiquidGlassSettings(
+      blur: LiquidGlassIntensity.scaleBlur(baseBlur, intensity),
+      thickness: LiquidGlassIntensity.scaleThickness(
+        LiquidGlassTokens.thickness,
+        intensity,
+      ),
+      glassColor: LiquidGlassIntensity.scaleTint(color, intensity),
+      refractiveIndex: LiquidGlassIntensity.refractiveIndex(intensity),
+      chromaticAberration: LiquidGlassTokens.chromaticAberration,
+      lightIntensity: LiquidGlassIntensity.scaleLight(baseLight, intensity),
+      ambientStrength: ambient,
+      ambientRim: LiquidGlassIntensity.scaleRim(
+        LiquidGlassTokens.edgeRim,
+        intensity,
+      ),
+      edgeAbsorption: LiquidGlassIntensity.scaleRim(
+        edgeAbsorption,
+        intensity,
+      ),
+      whitenStrength: whiten,
+      whitenGated: true,
+      saturation: LiquidGlassTokens.saturation,
+    );
+  }
+
+  /// Resolves the material for a widget, honoring the stored intensity.
+  static LiquidGlassSettings build(
+    BuildContext context, {
+    required AppGlassRole role,
+    Color? color,
+    double? blurOverride,
+    double? intensityOverride,
+  }) {
+    final intensity = intensityOverride ??
+        context.select<AppSettingsController, double>(
+          (settings) => settings.liquidGlassIntensityValue,
+        );
+    return material(
+      role: role,
+      intensity: intensity,
+      brightness: Theme.of(context).brightness,
+      color: color ?? liquidGlassContainerColor(context),
+      blurOverride: blurOverride,
+    );
+  }
+
+  /// App-level fallback for library widgets that receive no explicit settings.
+  ///
+  /// App surfaces pass their own resolved [LiquidGlassSettings], so this is a
+  /// safety net rather than the primary material source. It cannot be
+  /// brightness-aware because it is installed once at startup; use [material]
+  /// for anything that needs light/dark budgets.
+  static LiquidGlassSettings fallbackGlobal() {
+    return material(
+      role: AppGlassRole.interactiveControl,
+      intensity: AppSettingsController.liquidGlassIntensityDefault,
+      brightness: Brightness.light,
+      color: const Color(0x52FFFFFF),
+    );
+  }
+}
+
 /// A real liquid-glass surface backed by [AdaptiveGlass].
 ///
 /// The shader pipeline supplies blur, refraction, Fresnel rim lighting and
@@ -192,36 +360,18 @@ class LiquidGlassSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final intensity =
-        intensityOverride ??
-        context.select<AppSettingsController, double>(
-          (settings) => settings.liquidGlassIntensityValue,
-        );
-    final baseBlur =
-        blur ??
-        (quality == GlassQuality.premium
-            ? LiquidGlassTokens.chromeBlur
-            : LiquidGlassTokens.controlBlur);
-    final effectiveBlur = LiquidGlassIntensity.scaleBlur(baseBlur, intensity);
-    final tint = LiquidGlassIntensity.scaleTint(
-      color ?? liquidGlassContainerColor(context),
-      intensity,
-    );
-    final baseLight = dark
-        ? LiquidGlassTokens.darkSpecular
-        : LiquidGlassTokens.lightSpecular;
-    final ambient = dark
-        ? LiquidGlassTokens.darkAmbient
-        : LiquidGlassTokens.lightAmbient;
-    final edgeAbsorption = dark
-        ? LiquidGlassTokens.darkEdgeAbsorption
-        : LiquidGlassTokens.lightEdgeAbsorption;
-    // The veil rides the shared depth scale so the intensity slider still
-    // fades it out instead of leaving a flat white lid on weak glass.
-    final whiten = LiquidGlassIntensity.scaleLight(
-      dark ? LiquidGlassTokens.darkWhiten : LiquidGlassTokens.lightWhiten,
-      intensity,
+    // Legacy wrapper surfaces keep build 197's visual contract: premium
+    // surfaces are static chrome, everything else is an interactive control.
+    // New code picks its role via [AppGlassSettings] directly.
+    final role = quality == GlassQuality.premium
+        ? AppGlassRole.staticChrome
+        : AppGlassRole.interactiveControl;
+    final settings = AppGlassSettings.build(
+      context,
+      role: role,
+      color: color,
+      blurOverride: blur,
+      intensityOverride: intensityOverride,
     );
     // Package shapes take a single radius; callers use circular radii.
     final radius = borderRadius.topLeft.x;
@@ -232,29 +382,7 @@ class LiquidGlassSurface extends StatelessWidget {
             ? BorderSide.none
             : BorderSide(color: borderColor!, width: 1),
       ),
-      settings: LiquidGlassSettings(
-        blur: effectiveBlur,
-        thickness: LiquidGlassIntensity.scaleThickness(
-          LiquidGlassTokens.thickness,
-          intensity,
-        ),
-        glassColor: tint,
-        refractiveIndex: LiquidGlassIntensity.refractiveIndex(intensity),
-        chromaticAberration: LiquidGlassTokens.chromaticAberration,
-        lightIntensity: LiquidGlassIntensity.scaleLight(baseLight, intensity),
-        ambientStrength: ambient,
-        ambientRim: LiquidGlassIntensity.scaleRim(
-          LiquidGlassTokens.edgeRim,
-          intensity,
-        ),
-        edgeAbsorption: LiquidGlassIntensity.scaleRim(
-          edgeAbsorption,
-          intensity,
-        ),
-        whitenStrength: whiten,
-        whitenGated: true,
-        saturation: LiquidGlassTokens.saturation,
-      ),
+      settings: settings,
       quality: quality,
       isInteractive: interactive,
       child: Padding(padding: padding, child: child),
@@ -327,11 +455,20 @@ class LiquidGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LiquidGlassSurface(
-      borderRadius: borderRadius,
+    final role = quality == GlassQuality.premium
+        ? AppGlassRole.staticPanel
+        : AppGlassRole.draggedSurface;
+    return GlassContainer(
       padding: padding,
-      color: color ?? liquidGlassCardColor(context),
-      blur: LiquidGlassTokens.panelBlur,
+      shape: LiquidRoundedSuperellipse(borderRadius: borderRadius.topLeft.x),
+      clipBehavior: Clip.antiAlias,
+      settings: AppGlassSettings.build(
+        context,
+        role: role,
+        color: color ?? liquidGlassCardColor(context),
+        blurOverride: LiquidGlassTokens.panelBlur,
+      ),
+      useOwnLayer: true,
       quality: quality,
       child: child,
     );
@@ -365,15 +502,33 @@ class LiquidGlassSheetPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The panel keeps the library's AdaptiveGlass primitive (the same surface
+    // GlassSheet uses internally) instead of GlassContainer: a sheet hosts
+    // interactive glass controls, and GlassContainer would set
+    // avoidsRefraction for that subtree. The existing DraggableScrollableSheet
+    // host also owns drag/keyboard behavior, so GlassSheet.show is not used.
+    final role = quality == GlassQuality.premium
+        ? AppGlassRole.staticPanel
+        : AppGlassRole.draggedSurface;
     return Padding(
       padding: margin,
-      child: LiquidGlassPanel(
-        padding: padding,
-        borderRadius: borderRadius,
+      child: AdaptiveGlass(
+        shape: LiquidRoundedSuperellipse(
+          borderRadius: borderRadius.topLeft.x,
+        ),
+        settings: AppGlassSettings.build(
+          context,
+          role: role,
+          color: liquidGlassCardColor(context),
+          blurOverride: LiquidGlassTokens.panelBlur,
+        ),
         quality: quality,
-        child: SafeArea(
-          top: false,
-          child: Material(type: MaterialType.transparency, child: child),
+        child: Padding(
+          padding: padding,
+          child: SafeArea(
+            top: false,
+            child: Material(type: MaterialType.transparency, child: child),
+          ),
         ),
       ),
     );
@@ -381,8 +536,8 @@ class LiquidGlassSheetPanel extends StatelessWidget {
 }
 
 /// Glass replacement for the small tinted icon tiles used in headers and
-/// settings cards. The classic variant is a flat primary-tinted box; glass
-/// mode keeps the same silhouette with a real translucent surface.
+/// settings cards. The surface is a component-library [GlassContainer]; the
+/// tile itself stays non-interactive.
 class LiquidGlassIconTile extends StatelessWidget {
   const LiquidGlassIconTile({
     required this.child,
@@ -399,20 +554,35 @@ class LiquidGlassIconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return GlassContainer(
       width: size,
       height: size,
-      child: LiquidGlassSurface(
-        borderRadius: BorderRadius.circular(radius),
-        color: tint ?? AppColors.primary.withValues(alpha: 0.10),
-        borderColor: AppColors.primary.withValues(alpha: 0.20),
-        child: Center(child: child),
+      shape: LiquidRoundedSuperellipse(
+        borderRadius: radius,
+        side: BorderSide(
+          color: AppColors.primary.withValues(alpha: 0.20),
+          width: 1,
+        ),
       ),
+      clipBehavior: Clip.antiAlias,
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.interactiveControl,
+        color: tint ?? AppColors.primary.withValues(alpha: 0.10),
+      ),
+      useOwnLayer: true,
+      quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
+      child: Center(child: child),
     );
   }
 }
 
-/// Glass frame around app-bar text fields.
+/// Glass frame around standard Material text fields.
+///
+/// The field itself stays a normal Flutter [TextField] so keyboard, selection,
+/// validation and autofocus behavior do not change; the component library
+/// supplies the surrounding glass material. This matches the package's
+/// documented composition rule: glass containers hold standard form controls.
 class LiquidGlassTextFieldFrame extends StatelessWidget {
   const LiquidGlassTextFieldFrame({
     required this.child,
@@ -430,19 +600,24 @@ class LiquidGlassTextFieldFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
+    return GlassContainer(
       height: height,
-      child: LiquidGlassSurface(
-        borderRadius: borderRadius,
-        padding: padding,
+      padding: padding,
+      shape: LiquidRoundedSuperellipse(borderRadius: borderRadius.topLeft.x),
+      clipBehavior: Clip.antiAlias,
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.interactiveControl,
         color: liquidGlassContainerColor(context, alpha: dark ? 0.14 : 0.30),
-        child: child,
       ),
+      useOwnLayer: true,
+      quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
+      child: child,
     );
   }
 }
 
-/// Glass filter chip with selection state.
+/// Glass filter chip backed by the component library's [GlassChip].
 class LiquidGlassChip extends StatelessWidget {
   const LiquidGlassChip({
     required this.label,
@@ -466,58 +641,40 @@ class LiquidGlassChip extends StatelessWidget {
     final foreground = selected
         ? (dark ? const Color(0xFFF1FBFF) : AppColors.primary)
         : palette.ink;
-    return LiquidGlassSurface(
-      borderRadius: BorderRadius.circular(AppRadii.pill),
-      color: selected
-          ? AppColors.primary.withValues(alpha: dark ? 0.16 : 0.12)
-          : liquidGlassContainerColor(context, alpha: dark ? 0.12 : 0.28),
-      borderColor: selected ? AppColors.primary.withValues(alpha: 0.26) : null,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: AppColors.primary.withValues(alpha: 0.05),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 17, color: foreground),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: foreground,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-                if (onDeleted != null) ...[
-                  const SizedBox(width: 4),
-                  Semantics(
-                    label: '删除标签',
-                    button: true,
-                    child: InkResponse(
-                      onTap: onDeleted,
-                      radius: 14,
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 16,
-                        color: foreground,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
+    final selectedColor = AppColors.primary.withValues(
+      alpha: dark ? 0.16 : 0.12,
+    );
+    return GlassChip(
+      label: label,
+      icon: icon == null ? null : Icon(icon, size: 17),
+      onTap: onTap,
+      onDeleted: onDeleted,
+      selected: selected,
+      selectedColor: selectedColor,
+      iconColor: foreground,
+      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: foreground,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+        letterSpacing: 0,
       ),
+      deleteIcon: Semantics(
+        label: '删除标签',
+        button: true,
+        child: Icon(Icons.close_rounded, size: 16, color: foreground),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.interactiveControl,
+        color: selected
+            ? selectedColor
+            : liquidGlassContainerColor(
+                context,
+                alpha: dark ? 0.12 : 0.28,
+              ),
+      ),
+      useOwnLayer: true,
+      quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
     );
   }
 }
@@ -546,14 +703,25 @@ class LiquidGlassDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-      child: LiquidGlassPanel(
+      child: GlassCard(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.lg,
           AppSpacing.lg,
           AppSpacing.md,
         ),
-        borderRadius: BorderRadius.circular(30),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 30),
+        clipBehavior: Clip.antiAlias,
+        settings: AppGlassSettings.build(
+          context,
+          role: AppGlassRole.staticPanel,
+          color: liquidGlassCardColor(context),
+          blurOverride: LiquidGlassTokens.panelBlur,
+        ),
+        useOwnLayer: true,
+        // Dialog routes animate their child in; the premium tier tracks
+        // transform changes through its backdrop group and can flash black.
+        quality: GlassQuality.standard,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

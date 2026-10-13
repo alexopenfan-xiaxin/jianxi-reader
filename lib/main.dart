@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app.dart';
+import 'core/widgets/liquid_glass.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LiquidGlassWidgets.initialize();
+  // Safety net for library widgets that are not handed explicit
+  // settings by one of the app wrappers; app surfaces resolve their
+  // own AppGlassSettings role.
+  LiquidGlassWidgets.globalSettings = AppGlassSettings.fallbackGlobal();
   runZonedGuarded(
     () {
       FlutterError.onError = (details) {

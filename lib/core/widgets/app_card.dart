@@ -73,9 +73,17 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
       builder: (context, child) =>
           Transform.scale(scale: _scaleAnim.value, child: child),
       child: liquidGlass
-          ? LiquidGlassSurface(
-              borderRadius: borderRadius,
-              color: liquidGlassCardColor(context),
+          ? GlassCard(
+              padding: EdgeInsets.zero,
+              shape: LiquidRoundedSuperellipse(borderRadius: radius),
+              clipBehavior: Clip.antiAlias,
+              settings: AppGlassSettings.build(
+                context,
+                role: AppGlassRole.groupedCard,
+                color: liquidGlassCardColor(context),
+              ),
+              useOwnLayer: true,
+              quality: AppGlassSettings.qualityFor(AppGlassRole.groupedCard),
               child: Material(
                 color: Colors.transparent,
                 borderRadius: borderRadius,
