@@ -294,6 +294,15 @@ class _ReaderPageState extends State<ReaderPage> {
             : readingPalette.background,
         foregroundColor: readingPalette.foreground,
         surfaceTintColor: Colors.transparent,
+        leading: settings.liquidGlassEnabled && Navigator.of(context).canPop()
+            ? _ReaderAppBarAction(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: Icons.arrow_back_rounded,
+                onPressed: () => Navigator.maybePop(context),
+                foreground: readingPalette.foreground,
+                glass: true,
+              )
+            : null,
         flexibleSpace: showGlassAppBar
             ? LiquidGlassSurface(
                 borderRadius: BorderRadius.zero,
@@ -351,52 +360,66 @@ class _ReaderPageState extends State<ReaderPage> {
         actions: _isSearching
             ? [
                 _ReaderSearchCount(controller: _searchController),
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '上一个',
+                  icon: Icons.keyboard_arrow_up_rounded,
                   onPressed: _searchController.hasMatches
                       ? _searchController.previous
                       : null,
-                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '下一个',
+                  icon: Icons.keyboard_arrow_down_rounded,
                   onPressed: _searchController.hasMatches
                       ? _searchController.next
                       : null,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '关闭搜索',
+                  icon: Icons.close_rounded,
                   onPressed: _closeSearch,
-                  icon: const Icon(Icons.close_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
               ]
             : [
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '文档目录',
+                  icon: Icons.toc_rounded,
                   onPressed: _tocEntries.isEmpty ? null : _openTocDrawer,
-                  icon: const Icon(Icons.toc_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '文档内搜索',
+                  icon: Icons.search_rounded,
                   onPressed: _openSearch,
-                  icon: const Icon(Icons.search_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
-                IconButton(
+                _ReaderAppBarAction(
                   tooltip: '阅读显示',
+                  icon: Icons.text_fields_rounded,
                   onPressed: () => showReadingDisplaySheet(context),
-                  icon: const Icon(Icons.text_fields_rounded),
+                  foreground: readingPalette.foreground,
+                  glass: settings.liquidGlassEnabled,
                 ),
                 if (settings.liquidGlassEnabled)
-                  IconButton(
+                  _ReaderAppBarAction(
                     tooltip: '文档操作',
+                    icon: Icons.more_horiz_rounded,
+                    foreground: readingPalette.foreground,
+                    glass: true,
                     onPressed: () async {
                       final action = await _showReaderDocumentMenu(context);
                       if (action != null && mounted) {
                         await _handleAction(action);
                       }
                     },
-                    icon: const Icon(Icons.more_horiz_rounded),
                   )
                 else
                   PopupMenuButton<_ReaderMenuAction>(
@@ -657,66 +680,92 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 }
 
-Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) {
-  return showModalBottomSheet<_ReaderMenuAction>(
+Future<_ReaderMenuAction?> _showReaderDocumentMenu(
+  BuildContext context,
+) async {
+  // The component library's action sheet pops itself after invoking the
+  // action, so the chosen value is captured here instead of returned from
+  // Navigator.pop.
+  _ReaderMenuAction? selected;
+  await showGlassActionSheet<void>(
     context: context,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.14),
-    builder: (context) {
-      return LiquidGlassSheetPanel(
-        padding: EdgeInsets.zero,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            _ReaderMenuTile(
-              icon: Icons.bookmark_add_outlined,
-              title: '添加书签',
-              action: _ReaderMenuAction.bookmark,
-            ),
-            _ReaderMenuTile(
-              icon: Icons.drive_file_rename_outline_rounded,
-              title: '重命名',
-              action: _ReaderMenuAction.rename,
-            ),
-            _ReaderMenuTile(
-              icon: Icons.remove_circle_outline_rounded,
-              title: '移出',
-              action: _ReaderMenuAction.remove,
-              destructive: true,
-            ),
-          ],
-        ),
-      );
-    },
+    title: '文档操作',
+    cancelLabel: '取消',
+    settings: AppGlassSettings.build(
+      context,
+      role: AppGlassRole.staticPanel,
+    ),
+    quality: GlassQuality.standard,
+    actions: [
+      GlassActionSheetAction(
+        label: '添加书签',
+        icon: const Icon(Icons.bookmark_add_outlined),
+        onPressed: () => selected = _ReaderMenuAction.bookmark,
+      ),
+      GlassActionSheetAction(
+        label: '重命名',
+        icon: const Icon(Icons.drive_file_rename_outline_rounded),
+        onPressed: () => selected = _ReaderMenuAction.rename,
+      ),
+      GlassActionSheetAction(
+        label: '移出',
+        icon: const Icon(Icons.remove_circle_outline_rounded),
+        style: GlassActionSheetStyle.destructive,
+        onPressed: () => selected = _ReaderMenuAction.remove,
+      ),
+    ],
   );
+  return selected;
 }
 
-class _ReaderMenuTile extends StatelessWidget {
-  const _ReaderMenuTile({
+/// App bar action that switches between the Material icon button and the
+/// component library's glass icon button.
+///
+/// Glass buttons are only used in the liquid-glass visual mode; classic mode
+/// and the transient scroll-driven glass bar keep the existing Material
+/// control so the reading chrome does not change there.
+class _ReaderAppBarAction extends StatelessWidget {
+  const _ReaderAppBarAction({
+    required this.tooltip,
     required this.icon,
-    required this.title,
-    required this.action,
-    this.destructive = false,
+    required this.onPressed,
+    required this.foreground,
+    required this.glass,
   });
 
+  final String tooltip;
   final IconData icon;
-  final String title;
-  final _ReaderMenuAction action;
-  final bool destructive;
+  final VoidCallback? onPressed;
+  final Color foreground;
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? AppColors.error : context.palette.ink;
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(color: color, letterSpacing: 0),
+    if (!glass) {
+      return IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, color: foreground),
+      );
+    }
+    return Center(
+      child: Tooltip(
+        message: tooltip,
+        child: GlassIconButton(
+          icon: Icon(icon, size: 20, color: foreground),
+          onPressed: onPressed,
+          size: 40,
+          semanticLabel: tooltip,
+          settings: AppGlassSettings.build(
+            context,
+            role: AppGlassRole.interactiveControl,
+          ),
+          useOwnLayer: true,
+          quality: AppGlassSettings.qualityFor(
+            AppGlassRole.interactiveControl,
+          ),
+        ),
       ),
-      onTap: () => Navigator.of(context).pop(action),
     );
   }
 }

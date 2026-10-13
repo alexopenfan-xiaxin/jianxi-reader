@@ -108,13 +108,26 @@ class _FixedLibraryHeader extends StatelessWidget {
   }
 
   void _showSortSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    final controller = context.read<LibraryController>();
+    showGlassActionSheet<void>(
       context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.36),
-      builder: (context) => const _SortSheet(),
+      title: '文档排序',
+      cancelLabel: '取消',
+      settings: AppGlassSettings.build(
+        context,
+        role: AppGlassRole.staticPanel,
+      ),
+      quality: GlassQuality.standard,
+      actions: [
+        for (final mode in LibrarySortMode.values)
+          GlassActionSheetAction(
+            label: mode.label,
+            icon: mode == controller.sortMode
+                ? const Icon(Icons.check_rounded)
+                : null,
+            onPressed: () => controller.updateSortMode(mode),
+          ),
+      ],
     );
   }
 }
@@ -444,195 +457,6 @@ class _FloatingImportButton extends StatelessWidget {
                   child: button,
                 ),
               ),
-      ),
-    );
-  }
-}
-
-class _SortSheet extends StatelessWidget {
-  const _SortSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.85,
-      minChildSize: 0.45,
-      maxChildSize: 0.9,
-      builder: (context, scrollController) {
-        // Only the selection matters here; a full Consumer would rebuild the
-        // whole sheet (and every glass surface in it) on each library change.
-        return Selector<LibraryController, LibrarySortMode>(
-          selector: (context, controller) => controller.sortMode,
-          builder: (context, sortMode, _) {
-            final controller = context.read<LibraryController>();
-            final content = Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '文档排序',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                for (final mode in LibrarySortMode.values)
-                  _SortOptionTile(
-                    mode: mode,
-                    selected: sortMode == mode,
-                    onTap: () {
-                      controller.updateSortMode(mode);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    '取消',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              ],
-            );
-
-            final scrollableContent = SingleChildScrollView(
-              controller: scrollController,
-              child: content,
-            );
-
-            if (liquidGlassEnabled(context)) {
-              // The sheet both drags and scrolls, so it stays on standard
-              // quality: premium re-captures the backdrop texture every frame
-              // and was the cause of the severe jank on open, drag, dismiss.
-              return LiquidGlassSheetPanel(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.md,
-                ),
-                borderRadius: BorderRadius.circular(42),
-                child: scrollableContent,
-              );
-            }
-
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.palette.card,
-                  borderRadius: BorderRadius.circular(42),
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      AppSpacing.xl,
-                      AppSpacing.xl,
-                      AppSpacing.md,
-                    ),
-                    child: scrollableContent,
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _SortOptionTile extends StatelessWidget {
-  const _SortOptionTile({
-    required this.mode,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final LibrarySortMode mode;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final row = Row(
-      children: [
-        Expanded(
-          child: Text(
-            mode.label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-        AnimatedContainer(
-          duration: AppMotion.fast,
-          curve: AppMotion.emphasized,
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: selected ? AppColors.primary : context.palette.hairline,
-              width: selected ? 5 : 2,
-            ),
-          ),
-        ),
-      ],
-    );
-
-    if (liquidGlassEnabled(context)) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: PressScale(
-          child: LiquidGlassPanel(
-            // Tiles ride inside a dragged sheet; standard keeps them cheap.
-            quality: GlassQuality.standard,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            borderRadius: BorderRadius.circular(18),
-            color: selected
-                ? AppColors.primary.withValues(alpha: 0.10)
-                : liquidGlassContainerColor(context, alpha: 0.18),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(18),
-                splashFactory: NoSplash.splashFactory,
-                child: SizedBox(height: 62, child: row),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return PressScale(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        child: Container(
-          height: 72,
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: context.palette.hairline)),
-          ),
-          child: row,
-        ),
       ),
     );
   }

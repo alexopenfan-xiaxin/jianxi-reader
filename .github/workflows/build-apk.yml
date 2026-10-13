@@ -71,12 +71,12 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk             artifacts/jianxi-reader-2.9.8+198-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-release.apk             artifacts/jianxi-reader-2.9.9+199-arm64-v8a.apk
           ls -lh artifacts/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jianxi-reader-arm64-v8a
-          path: artifacts/jianxi-reader-2.9.8+198-arm64-v8a.apk
+          path: artifacts/jianxi-reader-2.9.9+199-arm64-v8a.apk
           retention-days: 14
