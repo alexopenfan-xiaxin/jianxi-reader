@@ -277,11 +277,12 @@ class AppGlassSettings {
     double? blurOverride,
     double? intensityOverride,
   }) {
+    // The curated intensity is a fixed value (the custom control was removed
+    // in build 197), so a plain read keeps this helper usable from tap
+    // callbacks where Provider forbids select().
     final intensity =
         intensityOverride ??
-        context.select<AppSettingsController, double>(
-          (settings) => settings.liquidGlassIntensityValue,
-        );
+        context.read<AppSettingsController>().liquidGlassIntensityValue;
     return material(
       role: role,
       intensity: intensity,
