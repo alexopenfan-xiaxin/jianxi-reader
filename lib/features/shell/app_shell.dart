@@ -398,10 +398,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
 }
 
 class _GlassBottomNav extends StatelessWidget {
-  const _GlassBottomNav({
-    required this.currentIndex,
-    required this.onChanged,
-  });
+  const _GlassBottomNav({required this.currentIndex, required this.onChanged});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
