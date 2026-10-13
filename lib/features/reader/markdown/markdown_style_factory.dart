@@ -55,11 +55,13 @@ class MarkdownStyleFactory {
         letterSpacing: 0,
       ),
       h5Style: textTheme.titleMedium?.copyWith(
+        fontSize: fontSize + 1,
         color: readingPalette.foreground,
         fontFamily: fontFamily,
         letterSpacing: 0,
       ),
       h6Style: textTheme.titleMedium?.copyWith(
+        fontSize: fontSize,
         color: readingPalette.muted,
         fontFamily: fontFamily,
         letterSpacing: 0,
@@ -78,7 +80,7 @@ class MarkdownStyleFactory {
         color: readingPalette.foreground,
         backgroundColor: readingPalette.codeBackground,
         fontFamily: 'monospace',
-        fontSize: 15,
+        fontSize: (fontSize * 0.92).clamp(12.0, 28.0),
         height: 1.45,
       ),
       codeBlockDecoration: BoxDecoration(
@@ -93,7 +95,7 @@ class MarkdownStyleFactory {
         color: readingPalette.foreground,
         fontWeight: FontWeight.w700,
       ),
-      tableCellStyle: bodyStyle.copyWith(fontSize: 15),
+      tableCellStyle: bodyStyle.copyWith(fontSize: fontSize * 0.92),
       tableCellPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       horizontalRuleColor: readingPalette.border,
       horizontalRuleThickness: 1,

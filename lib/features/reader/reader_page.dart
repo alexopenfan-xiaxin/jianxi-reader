@@ -275,12 +275,15 @@ class _ReaderPageState extends State<ReaderPage> {
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       backgroundColor: readingPalette.background,
-      endDrawer: TocDrawer(
-        entries: _tocEntries,
-        documentName: _document.name,
-        progressRatio: _progressController.ratio,
-        onSelected: _jumpToTocEntry,
-        onBackToTop: _jumpToTop,
+      endDrawer: AnimatedBuilder(
+        animation: _progressController,
+        builder: (context, _) => TocDrawer(
+          entries: _tocEntries,
+          documentName: _document.name,
+          progressRatio: _progressController.ratio,
+          onSelected: _jumpToTocEntry,
+          onBackToTop: _jumpToTop,
+        ),
       ),
       appBar: AppBar(
         toolbarHeight: appBarHeight,
@@ -644,7 +647,7 @@ class _ReaderPageState extends State<ReaderPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('添加书签失败：$e')));
+        ).showSnackBar(SnackBar(content: Text('添加书签失败：${describeDocumentError(e)}')));
       }
     }
   }

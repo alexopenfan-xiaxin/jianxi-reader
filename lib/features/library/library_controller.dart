@@ -46,6 +46,7 @@ class LibraryController extends ChangeNotifier {
   // Cached computed lists — invalidated on data change.
   List<DocumentEntry>? _cachedDocuments;
   List<DocumentEntry>? _cachedDocumentsIgnoringSearch;
+  int _loadGeneration = 0;
 
   List<DocumentEntry> get documents {
     return _cachedDocuments ??= _computeDocuments(
@@ -110,12 +111,16 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<void> loadDocuments() async {
+    final generation = ++_loadGeneration;
     _isLoading = true;
     _errorMessage = null;
 
     // Phase 1: show cached results immediately if available.
     try {
       final cached = await documentService.scanLibraryCached();
+      if (generation != _loadGeneration) {
+        return;
+      }
       if (cached.isNotEmpty) {
         _allDocuments = cached;
         await _loadTags();
@@ -126,17 +131,25 @@ class LibraryController extends ChangeNotifier {
       debugPrint('[LibraryController] cached scan failed: $error');
     }
 
-    // Phase 2: full background refresh.
+    // Phase 2: one full background refresh.
     try {
-      _allDocuments = await documentService.scanLibrary();
+      final scanned = await documentService.scanLibrary();
+      if (generation != _loadGeneration) {
+        return;
+      }
+      _allDocuments = scanned;
       await _loadTags();
       _invalidateCache();
     } catch (error) {
       debugPrint('[LibraryController] load documents failed: $error');
-      _errorMessage = '读取文档库失败：${describeDocumentError(error)}';
+      if (generation == _loadGeneration) {
+        _errorMessage = '读取文档库失败：${describeDocumentError(error)}';
+      }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -456,8 +469,12 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<void> _loadTags() async {
-    final tags = await documentService.loadTags();
-    final pinnedTags = await documentService.loadPinnedTags();
+    final loaded = await Future.wait([
+      documentService.loadTags(),
+      documentService.loadPinnedTags(),
+    ]);
+    final tags = loaded[0];
+    final pinnedTags = loaded[1];
     _pinnedTags = pinnedTags.where(tags.contains).toList();
     _tags = tags.toList()
       ..sort((left, right) {

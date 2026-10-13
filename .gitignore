@@ -49,3 +49,8 @@ windows/flutter/
 
 # Local dev guide (contains token)
 git推送指南.md
+
+# Local agent/tool debris
+.codex/
+.zcode/
+.tmp_notes.md

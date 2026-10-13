@@ -496,13 +496,17 @@ class LiquidGlassChip extends StatelessWidget {
                 ),
                 if (onDeleted != null) ...[
                   const SizedBox(width: 4),
-                  InkResponse(
-                    onTap: onDeleted,
-                    radius: 14,
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: 16,
-                      color: foreground,
+                  Semantics(
+                    label: '删除标签',
+                    button: true,
+                    child: InkResponse(
+                      onTap: onDeleted,
+                      radius: 14,
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: foreground,
+                      ),
                     ),
                   ),
                 ],

@@ -40,7 +40,7 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
-  Future<List<DocumentEntry>> scanLibraryCached() => scanLibrary();
+  Future<List<DocumentEntry>> scanLibraryCached() async => const [];
 
   @override
   void invalidateLibraryCache() {}

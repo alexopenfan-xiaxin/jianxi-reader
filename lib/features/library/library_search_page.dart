@@ -35,80 +35,98 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
       body: SafeArea(
         child: Consumer<LibraryController>(
           builder: (context, controller, _) {
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: isLiquidGlass
-                          ? LiquidGlassTextFieldFrame(
-                              height: 52,
-                              child: _LibrarySearchTextField(
-                                controller: _controller,
-                                libraryController: controller,
-                              ),
-                            )
-                          : Container(
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: palette.dividerSoft,
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.pill,
-                                ),
-                              ),
-                              child: _LibrarySearchTextField(
-                                controller: _controller,
-                                libraryController: controller,
+            final documents = controller.documents;
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Row(
+                        children: [
+                          Expanded(
+                            child: isLiquidGlass
+                                ? LiquidGlassTextFieldFrame(
+                                    height: 52,
+                                    child: _LibrarySearchTextField(
+                                      controller: _controller,
+                                      libraryController: controller,
+                                    ),
+                                  )
+                                : Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: palette.dividerSoft,
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadii.pill,
+                                      ),
+                                    ),
+                                    child: _LibrarySearchTextField(
+                                      controller: _controller,
+                                      libraryController: controller,
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text(
+                              '取消',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text(
-                        '取消',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        '搜索指定标签',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: palette.muted,
+                          letterSpacing: 0,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.md),
+                      _SearchTagWrap(controller: controller),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        '找到 ${documents.length} 个文档',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: palette.muted,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      if (documents.isEmpty)
+                        _SearchEmptyState(
+                          hasQuery: controller.searchQuery.isNotEmpty,
+                        ),
+                    ]),
+                  ),
+                ),
+                if (documents.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
                     ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  '搜索指定标签',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: palette.muted,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _SearchTagWrap(controller: controller),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  '找到 ${controller.documents.length} 个文档',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: palette.muted,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (controller.documents.isEmpty)
-                  _SearchEmptyState(hasQuery: controller.searchQuery.isNotEmpty)
-                else
-                  ...controller.documents.map(
-                    (document) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _SearchResultTile(document: document),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _SearchResultTile(document: documents[index]),
+                        ),
+                        childCount: documents.length,
+                      ),
                     ),
                   ),
               ],
@@ -170,12 +188,14 @@ class _SearchTagWrap extends StatelessWidget {
       runSpacing: AppSpacing.sm,
       children: [
         _SearchTagChip(
+          key: const ValueKey('search_tag_all'),
           label: '全部',
           selected: controller.selectedTag == null,
           onTap: () => controller.updateSelectedTag(null),
         ),
         for (final tag in tags)
           _SearchTagChip(
+            key: ValueKey('search_tag_$tag'),
             label: tag,
             selected: controller.selectedTag == tag,
             onTap: () => controller.updateSelectedTag(tag),
@@ -236,6 +256,7 @@ class _SearchTagChip extends StatelessWidget {
     required this.label,
     required this.selected,
     this.onTap,
+    super.key,
   });
 
   final String label;
@@ -247,7 +268,6 @@ class _SearchTagChip extends StatelessWidget {
     final foreground = selected ? AppColors.primary : context.palette.ink;
     if (liquidGlassEnabled(context)) {
       return LiquidGlassChip(
-        key: ValueKey('search_tag_$label'),
         label: label,
         selected: selected,
         icon: Icons.label_outline_rounded,
@@ -255,7 +275,6 @@ class _SearchTagChip extends StatelessWidget {
       );
     }
     return ActionChip(
-      key: ValueKey('search_tag_$label'),
       onPressed: onTap,
       avatar: const Icon(Icons.label_outline_rounded, size: 18),
       label: Text(label),

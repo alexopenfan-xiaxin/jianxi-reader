@@ -24,6 +24,21 @@ class MainActivity : FlutterActivity() {
     private var pendingDocumentPickResult: MethodChannel.Result? = null
     private var pendingFolderPickResult: MethodChannel.Result? = null
 
+    private fun runInBackground(
+        result: MethodChannel.Result,
+        errorCode: String,
+        block: () -> Any?
+    ) {
+        Thread {
+            try {
+                val value = block()
+                runOnUiThread { result.success(value) }
+            } catch (error: Exception) {
+                runOnUiThread { result.error(errorCode, error.message, null) }
+            }
+        }.start()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APK_CHANNEL).setMethodCallHandler { call, result ->
@@ -61,10 +76,8 @@ class MainActivity : FlutterActivity() {
                     if (uri.isNullOrEmpty() || path.isNullOrEmpty()) {
                         result.error("INVALID_ARGUMENT", "文档地址和本地路径不能为空", null)
                     } else {
-                        try {
-                            result.success(copyUriToFile(Uri.parse(uri), File(path)))
-                        } catch (error: Exception) {
-                            result.error("REFRESH_FAILED", error.message, null)
+                        runInBackground(result, "REFRESH_FAILED") {
+                            copyUriToFile(Uri.parse(uri), File(path))
                         }
                     }
                 }
@@ -73,10 +86,8 @@ class MainActivity : FlutterActivity() {
                     if (uriValue.isNullOrEmpty()) {
                         result.error("INVALID_ARGUMENT", "文档地址不能为空", null)
                     } else {
-                        try {
-                            result.success(importExternalUri(Uri.parse(uriValue)))
-                        } catch (error: Exception) {
-                            result.error("IMPORT_FAILED", error.message, null)
+                        runInBackground(result, "IMPORT_FAILED") {
+                            importExternalUri(Uri.parse(uriValue))
                         }
                     }
                 }
@@ -134,8 +145,8 @@ class MainActivity : FlutterActivity() {
                 return
             }
 
-            try {
-                val documents = uris.map { uri ->
+            runInBackground(result, "COPY_FAILED") {
+                uris.map { uri ->
                     persistReadPermission(uri, data)
                     val name = documentNameForUri(uri)
                     val file = nextDocumentMirrorFile(name)
@@ -143,9 +154,6 @@ class MainActivity : FlutterActivity() {
                     metadata["uri"] = uri.toString()
                     metadata
                 }
-                result.success(documents)
-            } catch (error: Exception) {
-                result.error("COPY_FAILED", error.message, null)
             }
             return
         }
@@ -165,11 +173,9 @@ class MainActivity : FlutterActivity() {
                 result.error("NO_URI", "Folder picker did not return a uri", null)
                 return
             }
-            try {
+            runInBackground(result, "FOLDER_IMPORT_FAILED") {
                 persistReadPermission(treeUri, data)
-                result.success(importFolderDocuments(treeUri))
-            } catch (error: Exception) {
-                result.error("FOLDER_IMPORT_FAILED", error.message, null)
+                importFolderDocuments(treeUri)
             }
             return
         }
@@ -357,7 +363,9 @@ class MainActivity : FlutterActivity() {
 
     private fun documentUrisInTree(treeUri: Uri): List<Uri> {
         val uris = mutableListOf<Uri>()
-        fun walk(childrenUri: Uri) {
+        val visited = mutableSetOf<String>()
+        fun walk(childrenUri: Uri, depth: Int) {
+            if (depth > 32) return
             contentResolver.query(
                 childrenUri,
                 arrayOf(
@@ -379,7 +387,12 @@ class MainActivity : FlutterActivity() {
                         null
                     }
                     if (DocumentsContract.Document.MIME_TYPE_DIR == mimeType) {
-                        walk(DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId))
+                        if (visited.add(documentId)) {
+                            walk(
+                                DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId),
+                                depth + 1
+                            )
+                        }
                     } else {
                         uris.add(DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId))
                     }
@@ -387,7 +400,8 @@ class MainActivity : FlutterActivity() {
             }
         }
         val rootId = DocumentsContract.getTreeDocumentId(treeUri)
-        walk(DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, rootId))
+        visited.add(rootId)
+        walk(DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, rootId), 0)
         return uris
     }
 
@@ -488,10 +502,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun performHaptic(constant: Int) {
-        window.decorView.performHapticFeedback(
-            constant,
-            HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-        )
+        window.decorView.performHapticFeedback(constant)
     }
 
     private fun canRequestPackageInstalls(): Boolean {

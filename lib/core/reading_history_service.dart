@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'metadata_file_store.dart';
 
 /// A single reading event: document opened at a point in time.
@@ -44,14 +46,21 @@ class ReadingHistoryService {
   static Future<List<ReadingHistoryEvent>> loadAll() async {
     return _loadFuture ??= () async {
       final file = await MetadataFileStore.file(_fileName);
+      _cache = [];
       if (await file.exists()) {
-        final raw = await file.readAsString();
-        final list = jsonDecode(raw) as List;
-        _cache = list
-            .map((e) => ReadingHistoryEvent.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } else {
-        _cache = [];
+        try {
+          final raw = await file.readAsString();
+          final list = jsonDecode(raw);
+          if (list is List) {
+            _cache = list
+                .whereType<Map>()
+                .map((e) => ReadingHistoryEvent.fromJson(Map<String, dynamic>.from(e)))
+                .toList();
+          }
+        } catch (error) {
+          _cache = [];
+          debugPrint('[ReadingHistoryService] history file damaged: $error');
+        }
       }
       return _cache!;
     }();

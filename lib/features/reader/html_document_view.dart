@@ -251,6 +251,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   bool _isScrollBridgeReady = false;
   bool _isApplyingSearch = false;
   String _lastAppliedSearchQuery = '';
+  String? _pendingSearchQuery;
   String? _loadError;
   Timer? _searchDebounce;
   int _loadGeneration = 0;
@@ -468,13 +469,18 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
   void _handleSearchChanged() {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 250), () {
-      if (_isApplyingSearch) return;
       final query = widget.searchController?.normalizedQuery ?? '';
       if (query != _lastAppliedSearchQuery) {
+        if (_isApplyingSearch) {
+          _pendingSearchQuery = query;
+          return;
+        }
         unawaited(_runSearch());
         return;
       }
-      unawaited(_goToCurrentSearchMatch());
+      if (!_isApplyingSearch) {
+        unawaited(_goToCurrentSearchMatch());
+      }
     });
   }
 
@@ -579,6 +585,11 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
       debugPrint('[HtmlDocumentView] run search failed: $error');
     } finally {
       _isApplyingSearch = false;
+      final pending = _pendingSearchQuery;
+      _pendingSearchQuery = null;
+      if (pending != null && pending != _lastAppliedSearchQuery) {
+        unawaited(_runSearch());
+      }
     }
   }
 

@@ -248,9 +248,14 @@ class _GlassSegmentButton<T> extends StatelessWidget {
         : segment.icon;
     final color = selected ? AppColors.primary : palette.ink;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: segment.label,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         splashFactory: NoSplash.splashFactory,
@@ -283,6 +288,7 @@ class _GlassSegmentButton<T> extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),

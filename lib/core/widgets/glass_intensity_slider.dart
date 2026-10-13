@@ -80,8 +80,12 @@ class _GlassIntensitySliderState extends State<GlassIntensitySlider> {
         const SizedBox(height: AppSpacing.lg),
         LayoutBuilder(
           builder: (context, constraints) {
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            return Semantics(
+              slider: true,
+              label: '液态玻璃强度',
+              value: '${(_dragValue * 100).round()}%',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
               onTapDown: (details) {
                 _dragging = true;
                 _updateFromPosition(
@@ -112,8 +116,10 @@ class _GlassIntensitySliderState extends State<GlassIntensitySlider> {
               },
               onHorizontalDragCancel: () {
                 _dragging = false;
+                setState(() => _dragValue = widget.value);
               },
-              child: _Track(value: _dragValue, dragging: _dragging),
+                child: _Track(value: _dragValue, dragging: _dragging),
+              ),
             );
           },
         ),

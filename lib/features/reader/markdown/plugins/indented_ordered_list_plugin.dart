@@ -45,6 +45,7 @@ class IndentedOrderedListPlugin extends BlockParserPlugin {
   const IndentedOrderedListPlugin();
 
   static const _maxDepth = 64;
+  static const _maxNestedLookahead = 256;
   static final _orderedLine = RegExp(r'^( *)(\d+)[.)]\s+(.+)$');
 
   @override
@@ -62,7 +63,11 @@ class IndentedOrderedListPlugin extends BlockParserPlugin {
     if (first == null || first.group(1)!.isNotEmpty) {
       return false;
     }
-    for (var i = index + 1; i < lines.length; i++) {
+    final lookaheadEnd = (index + _maxNestedLookahead).clamp(
+      0,
+      lines.length,
+    );
+    for (var i = index + 1; i < lookaheadEnd; i++) {
       final match = _orderedLine.firstMatch(lines[i]);
       if (match == null) {
         return false;

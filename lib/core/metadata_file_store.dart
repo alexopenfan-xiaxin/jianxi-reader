@@ -45,7 +45,9 @@ class MetadataFileStore {
 
   static Future<void> writeJson(String fileName, Object? value) async {
     final destination = await file(fileName);
-    final temporary = File('${destination.path}.tmp');
+    final temporary = File(
+      '${destination.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',
+    );
     try {
       await temporary.writeAsString(jsonEncode(value), flush: true);
       await temporary.rename(destination.path);

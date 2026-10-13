@@ -30,7 +30,9 @@ class _TocDrawerState extends State<TocDrawer> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToActiveEntry(animated: false);
+      if (mounted) {
+        _scrollToActiveEntry(animated: false);
+      }
     });
   }
 

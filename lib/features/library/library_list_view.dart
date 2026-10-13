@@ -149,13 +149,35 @@ class _RecentReadingSliver extends StatelessWidget {
   }
 }
 
-class _RecentDocumentCard extends StatelessWidget {
+class _RecentDocumentCard extends StatefulWidget {
   const _RecentDocumentCard({required this.document});
 
   final DocumentEntry document;
 
   @override
+  State<_RecentDocumentCard> createState() => _RecentDocumentCardState();
+}
+
+class _RecentDocumentCardState extends State<_RecentDocumentCard> {
+  late Future<double?> _progressFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _progressFuture = ReadingProgressService.loadProgress(widget.document.path);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecentDocumentCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.document.path != widget.document.path) {
+      _progressFuture = ReadingProgressService.loadProgress(widget.document.path);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final document = widget.document;
     return SizedBox(
       width: 220,
       child: AppCard(
@@ -192,7 +214,7 @@ class _RecentDocumentCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxs),
             FutureBuilder<double?>(
-              future: ReadingProgressService.loadProgress(document.path),
+              future: _progressFuture,
               builder: (context, snapshot) {
                 final ratio = snapshot.data;
                 final progress = ratio == null ? null : (ratio * 100).round();
@@ -218,11 +240,7 @@ class _RecentDocumentCard extends StatelessWidget {
 
   Future<void> _openDocument(BuildContext context) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final controller = context.read<LibraryController>();
-    await _openReader(context, document);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
+    await _openReader(context, widget.document);
   }
 }
 
@@ -321,24 +339,22 @@ class _AnimatedDocumentSliverListState
       );
     }
 
+    final existingByPath = <String, DocumentEntry>{
+      for (final item in _items) item.path: item,
+    };
     setState(() {
       _items = nextDocuments
           .map(
-            (next) => _items
-                .firstWhere(
-                  (item) => item.path == next.path,
-                  orElse: () => next,
-                )
-                .copyWith(
-                  name: next.name,
-                  type: next.type,
-                  sizeBytes: next.sizeBytes,
-                  modifiedAt: next.modifiedAt,
-                  recentOpenedAt: next.recentOpenedAt,
-                  isReferenced: next.isReferenced,
-                  tags: next.tags,
-                  pinned: next.pinned,
-                ),
+            (next) => (existingByPath[next.path] ?? next).copyWith(
+              name: next.name,
+              type: next.type,
+              sizeBytes: next.sizeBytes,
+              modifiedAt: next.modifiedAt,
+              recentOpenedAt: next.recentOpenedAt,
+              isReferenced: next.isReferenced,
+              tags: next.tags,
+              pinned: next.pinned,
+            ),
           )
           .toList();
     });
@@ -449,7 +465,7 @@ class _DocumentTileState extends State<_DocumentTile>
         liquidGlass && Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: widget.document.name,
-      hint: widget.selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
+      hint: widget.selectionActive ? '轻点切换选择' : '轻点打开阅读，长按多选',
       button: true,
       selected: widget.selected,
       child: AnimatedBuilder(
@@ -574,11 +590,7 @@ class _DocumentTileState extends State<_DocumentTile>
 
   Future<void> _openDocument(BuildContext context) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final controller = context.read<LibraryController>();
     await _openReader(context, widget.document);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
   }
 
   Future<void> _handleAction(
@@ -850,7 +862,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
               right: AppSpacing.lg,
               bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
             ),
-            child: content,
+            child: SingleChildScrollView(child: content),
           );
         }
 
@@ -871,7 +883,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: content,
+                  child: SingleChildScrollView(child: content),
                 ),
               ),
             ),
@@ -896,7 +908,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('创建标签失败：$error')));
+        ).showSnackBar(SnackBar(content: Text('创建标签失败：${describeDocumentError(error)}')));
       }
     }
   }
@@ -930,7 +942,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('删除标签失败：$error')));
+        ).showSnackBar(SnackBar(content: Text('删除标签失败：${describeDocumentError(error)}')));
       }
     }
   }
@@ -957,7 +969,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('保存标签失败：$error')));
+        ).showSnackBar(SnackBar(content: Text('保存标签失败：${describeDocumentError(error)}')));
       }
     }
   }

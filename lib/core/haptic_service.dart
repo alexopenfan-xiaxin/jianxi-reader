@@ -1,40 +1,37 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-
 class HapticService {
   const HapticService._();
 
   static const _channel = MethodChannel('com.jianxi.reader/haptics');
 
   static void selectionClick() {
-    HapticFeedback.selectionClick();
-    if (defaultTargetPlatform != TargetPlatform.android) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _channel.invokeMethod<void>('selectionClick').catchError((_) {});
       return;
     }
-    _channel.invokeMethod<void>('selectionClick').catchError((_) {});
+    HapticFeedback.selectionClick();
   }
 
   static void lightImpact() {
-    HapticFeedback.lightImpact();
-    if (defaultTargetPlatform != TargetPlatform.android) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _channel.invokeMethod<void>('lightImpact').catchError((_) {});
       return;
     }
-    _channel.invokeMethod<void>('lightImpact').catchError((_) {});
+    HapticFeedback.lightImpact();
   }
 
   static void mediumImpact() {
-    HapticFeedback.mediumImpact();
-    if (defaultTargetPlatform != TargetPlatform.android) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _channel.invokeMethod<void>('mediumImpact').catchError((_) {});
       return;
     }
-    _channel.invokeMethod<void>('mediumImpact').catchError((_) {});
+    HapticFeedback.mediumImpact();
   }
 
   static void successFeedback() {
-    if (defaultTargetPlatform != TargetPlatform.android) {
-      HapticFeedback.mediumImpact();
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _channel.invokeMethod<void>('successFeedback').catchError((_) {});
       return;
     }
-    _channel.invokeMethod<void>('successFeedback').catchError((_) {});
+    HapticFeedback.mediumImpact();
   }
 }

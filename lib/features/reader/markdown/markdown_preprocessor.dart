@@ -1,16 +1,25 @@
+final _referenceDefinition = RegExp(r'^\[([^\]]+)\]:\s*(\S+)\s*$', multiLine: true);
+final _referenceLink = RegExp(r'\[([^\]]+)\]\[([^\]]+)\]');
+final _angleEmail = RegExp(r'<([^\s<>]+@[^\s<>]+\.[^\s<>]+)>');
+final _angleUrl = RegExp(r'<(https?://[^\s<>]+)>');
+final _mermaidFence = RegExp(r'```mermaid[\s\S]*?```', multiLine: true);
+final _mermaidTrailingSemicolon = RegExp(r'^(.*?);$', multiLine: true);
+final _htmlUnderline = RegExp(r'<u>(.*?)</u>', caseSensitive: false, dotAll: true);
+final _orderedIndent = RegExp(r'^( {2,3})(\d+[.)]\s+)');
+
 String preprocessMarkdown(String raw) {
   raw = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
   // 1. Collect reference link definitions [id]: url
   final refLinks = <String, String>{};
-  final refRegex = RegExp(r'^\[([^\]]+)\]:\s*(\S+)\s*$', multiLine: true);
+  final refRegex = _referenceDefinition;
   var processed = raw.replaceAllMapped(refRegex, (match) {
     refLinks[match.group(1)!] = match.group(2)!;
     return '';
   });
 
   // 2. Replace [text][id] references
-  processed = processed.replaceAllMapped(RegExp(r'\[([^\]]+)\]\[([^\]]+)\]'), (
+  processed = processed.replaceAllMapped(_referenceLink, (
     match,
   ) {
     final id = match.group(2)!;
@@ -23,21 +32,21 @@ String preprocessMarkdown(String raw) {
 
   // 3. Autolinks <url> and <email>
   processed = processed.replaceAllMapped(
-    RegExp(r'<([^\s<>]+@[^\s<>]+\.[^\s<>]+)>'),
+    _angleEmail,
     (match) => '[${match.group(1)}](mailto:${match.group(1)})',
   );
   processed = processed.replaceAllMapped(
-    RegExp(r'<(https?://[^\s<>]+)>'),
+    _angleUrl,
     (match) => '[${match.group(1)}](${match.group(1)})',
   );
 
   // 4. Strip trailing ; inside mermaid code blocks
   processed = processed.replaceAllMapped(
-    RegExp(r'```mermaid[\s\S]*?```', multiLine: true),
+    _mermaidFence,
     (match) {
       var block = match.group(0)!;
       return block.replaceAllMapped(
-        RegExp(r'^(.*?);$', multiLine: true),
+        _mermaidTrailingSemicolon,
         (m) => m.group(1)!,
       );
     },
@@ -45,7 +54,7 @@ String preprocessMarkdown(String raw) {
 
   // 5. Convert <u>text</u> to ++text++ for underline rendering
   processed = processed.replaceAllMapped(
-    RegExp(r'<u>(.*?)</u>', caseSensitive: false, dotAll: true),
+    _htmlUnderline,
     (match) => '++${match.group(1)}++',
   );
 
@@ -65,7 +74,7 @@ String _normalizeNestedOrderedLists(String markdown) {
       continue;
     }
     lines[i] = lines[i].replaceFirstMapped(
-      RegExp(r'^( {2,3})(\d+[.)]\s+)'),
+      _orderedIndent,
       (match) => '    ${match.group(2)!}',
     );
   }

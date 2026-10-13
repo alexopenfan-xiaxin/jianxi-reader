@@ -51,7 +51,11 @@ class SearchTextBuilder extends MarkdownWidgetBuilder {
       final matchIndex = controller?.claimBuildMatchIndex() ?? -1;
       if (controller != null &&
           matchIndex >= DocumentSearchController.maxMatches) {
-        spans.add(TextSpan(text: text.substring(matchStart)));
+        // The pre-loop text and every earlier match are already in spans.
+        // Append the remaining tail exactly once; the post-loop tail append
+        // below must not repeat it.
+        spans.add(TextSpan(text: text.substring(start)));
+        start = text.length;
         break;
       }
       if (controller != null &&

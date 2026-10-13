@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_settings_controller.dart';
 import '../../../core/design_tokens.dart';
+import '../../../core/document_error_describer.dart';
 import '../../../core/emoji_service.dart';
 import '../../../core/widgets/app_page_route.dart';
 import '../../../core/widgets/liquid_glass.dart';
@@ -298,7 +299,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
       _updateSearchMatches();
     } catch (e) {
       if (mounted && widget.file.path == filePath) {
-        setState(() => _error = '读取 Markdown 失败：$e');
+        setState(() => _error = '读取 Markdown 失败：${describeDocumentError(e)}');
       }
     }
   }
@@ -739,7 +740,10 @@ class MarkdownViewerState extends State<MarkdownViewer>
       ..register('mindmap', const MindmapBuilder())
       ..register('indented_ordered_list', const IndentedOrderedListBuilder())
       ..register('link', const ClickableLinkBuilder())
-      ..register('image', const TappableImageBuilder())
+      ..register(
+        'image',
+        TappableImageBuilder(documentDirectory: widget.file.parent.path),
+      )
       ..register('emoji', const EmojiBuilder());
   }
 
@@ -1114,7 +1118,10 @@ class MarkdownViewerState extends State<MarkdownViewer>
                 child: InteractiveViewer(
                   minScale: 0.5,
                   maxScale: 4,
-                  child: MarkdownPreviewImage(url: url),
+                  child: MarkdownPreviewImage(
+                    url: url,
+                    documentDirectory: widget.file.parent.path,
+                  ),
                 ),
               ),
               Positioned(

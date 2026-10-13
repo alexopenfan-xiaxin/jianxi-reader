@@ -78,7 +78,6 @@ class SubscriptBuilder extends MarkdownWidgetBuilder {
         fontSize: (baseStyle.fontSize ?? 14) * 0.72,
         textBaseline: TextBaseline.alphabetic,
       ),
-      textScaler: const TextScaler.linear(1),
     );
   }
 }

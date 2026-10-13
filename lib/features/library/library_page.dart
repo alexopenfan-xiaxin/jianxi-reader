@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
+import '../../core/document_error_describer.dart';
 import '../../core/file_rules.dart';
 import '../../core/haptic_service.dart';
 import '../../core/reading_progress_service.dart';
@@ -317,6 +318,7 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
   return showModalBottomSheet<_ImportAction>(
     context: context,
     useSafeArea: true,
+    isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.14),
     builder: (context) {
@@ -358,7 +360,10 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
       );
 
       if (liquidGlassEnabled(context)) {
-        return LiquidGlassSheetPanel(padding: EdgeInsets.zero, child: content);
+        return LiquidGlassSheetPanel(
+          padding: EdgeInsets.zero,
+          child: SingleChildScrollView(child: content),
+        );
       }
       return Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -371,7 +376,10 @@ Future<_ImportAction?> _showImportSheet(BuildContext context) {
           color: context.palette.card,
           borderRadius: BorderRadius.circular(AppRadii.lg),
           clipBehavior: Clip.antiAlias,
-          child: SafeArea(top: false, child: content),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(child: content),
+          ),
         ),
       );
     },
@@ -424,9 +432,6 @@ Future<void> _importAndMaybeOpen(
     return;
   }
   await _openReader(context, documents.single);
-  if (context.mounted) {
-    await controller.loadDocuments();
-  }
 }
 
 Future<void> _importFolderAndShowResult(
@@ -449,9 +454,6 @@ Future<void> _importFolderAndShowResult(
   showSuccessFeedback(context, message);
   if (result.documents.length == 1) {
     await _openReader(context, result.documents.single);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
   }
 }
 

@@ -1,0 +1,82 @@
+name: Build APK
+
+# Manual, artifact-only build. This workflow never creates tags or releases.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to build (default test)'
+        required: false
+        default: 'test'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ARM64 APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ github.event.inputs.ref || 'test' }}
+          fetch-depth: 1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test --reporter expanded
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
+            {
+              echo "storePassword=$STORE_PASSWORD"
+              echo "keyPassword=$KEY_PASSWORD"
+              echo "keyAlias=$KEY_ALIAS"
+              echo "storeFile=app/release-keystore.jks"
+            } > android/key.properties
+          fi
+
+      - name: Build release APK (ARM64)
+        run: |
+          flutter build apk --release             --target-platform android-arm64             --android-skip-build-dependency-validation
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk             artifacts/jianxi-reader-2.9.5+195-arm64-v8a.apk
+          ls -lh artifacts/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jianxi-reader-arm64-v8a
+          path: artifacts/jianxi-reader-2.9.5+195-arm64-v8a.apk
+          retention-days: 14

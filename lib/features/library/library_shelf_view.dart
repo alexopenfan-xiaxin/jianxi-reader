@@ -90,7 +90,7 @@ class _ShelfDocumentCard extends StatelessWidget {
     final cover = _CoverStyle.forDocument(document);
     return Semantics(
       label: document.name,
-      hint: selectionActive ? '双击切换选择' : '双击打开阅读，长按多选',
+      hint: selectionActive ? '轻点切换选择' : '轻点打开阅读，长按多选',
       button: true,
       selected: selected,
       child: RepaintBoundary(
@@ -200,11 +200,7 @@ class _ShelfDocumentCard extends StatelessWidget {
 
   Future<void> _openDocument(BuildContext context) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final controller = context.read<LibraryController>();
     await _openReader(context, document);
-    if (context.mounted) {
-      await controller.loadDocuments();
-    }
   }
 
   void _handleLongPress(BuildContext context) {

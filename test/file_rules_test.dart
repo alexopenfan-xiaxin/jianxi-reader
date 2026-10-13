@@ -71,6 +71,14 @@ void main() {
         () => DocumentFileRules.validateBaseName('../bad'),
         throwsA(isA<FileSystemException>()),
       );
+      expect(
+        () => DocumentFileRules.validateBaseName('CON'),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(
+        () => DocumentFileRules.validateBaseName('trailing.'),
+        throwsA(isA<FileSystemException>()),
+      );
     });
   });
 
@@ -146,6 +154,22 @@ void main() {
       expect(originalFile.existsSync(), isFalse);
       expect(await ReadingProgressService.loadProgress(document.path), isNull);
       expect(await ReadingProgressService.loadProgress(renamed.path), 0.6);
+    });
+
+    test('does not duplicate an extension typed by the user', () async {
+      final targetDir = Directory.systemTemp.createTempSync('jianxi_target_');
+      addTearDown(() => targetDir.deleteSync(recursive: true));
+
+      final originalFile = File(p.join(targetDir.path, 'article.md'));
+      await originalFile.writeAsString('# Title');
+      final document = await DocumentEntry.fromFile(originalFile);
+
+      final renamed = await DocumentFileService().renameDocument(
+        document,
+        'renamed.md',
+      );
+
+      expect(renamed.name, 'renamed.md');
     });
 
     test('does not overwrite another document when renaming', () async {

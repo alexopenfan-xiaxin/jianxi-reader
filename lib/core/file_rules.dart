@@ -23,6 +23,10 @@ class DocumentFileRules {
   };
 
   static final RegExp _invalidBaseNameCharacters = RegExp(r'[\\/:*?"<>|]');
+  static final RegExp _reservedDeviceName = RegExp(
+    r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$',
+    caseSensitive: false,
+  );
 
   static DocumentType? typeForPath(String filePath) {
     final extension = p.extension(filePath).toLowerCase();
@@ -53,6 +57,12 @@ class DocumentFileRules {
     }
     if (_invalidBaseNameCharacters.hasMatch(cleanName)) {
       throw const FileSystemException('文件名不能包含 \\ / : * ? " < > |');
+    }
+    if (cleanName.endsWith('.') || cleanName.endsWith(' ')) {
+      throw const FileSystemException('文件名不能以点或空格结尾');
+    }
+    if (_reservedDeviceName.hasMatch(cleanName)) {
+      throw const FileSystemException('文件名不能使用系统保留名称');
     }
     return cleanName;
   }

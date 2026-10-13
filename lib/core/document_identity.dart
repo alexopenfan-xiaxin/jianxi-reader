@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import 'metadata_file_store.dart';
 
 /// Manages stable document identifiers that survive renames and mirror migrations.
@@ -19,12 +21,20 @@ class DocumentIdentityService {
   static Future<Map<String, String>> _loadIdMap() async {
     return _idMapFuture ??= () async {
       final file = await MetadataFileStore.file(_idMapFileName);
+      _idMap = {};
       if (await file.exists()) {
-        final raw = await file.readAsString();
-        final decoded = jsonDecode(raw) as Map<String, dynamic>;
-        _idMap = decoded.map((k, v) => MapEntry(k, v.toString()));
-      } else {
-        _idMap = {};
+        try {
+          final raw = await file.readAsString();
+          final decoded = jsonDecode(raw);
+          if (decoded is Map) {
+            _idMap = decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+          }
+        } catch (error) {
+          // A damaged map must not permanently poison the service future.
+          // Keeping an empty map lets the next write rebuild the file.
+          _idMap = {};
+          debugPrint('[DocumentIdentityService] id map damaged: $error');
+        }
       }
       return _idMap!;
     }();

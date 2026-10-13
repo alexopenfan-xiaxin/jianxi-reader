@@ -172,7 +172,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                 min: AppSettingsController.readingFontSizeMin,
                 max: AppSettingsController.readingFontSizeMax,
                 divisions: 28,
-                valueLabel: '${values.readingFontSize.toStringAsFixed(1)} px',
+                formatValue: (value) => '${value.toStringAsFixed(1)} px',
                 presets: AppSettingsController.readingScalePresets
                     .map(
                       (preset) => _ReadingSliderPreset(
@@ -199,7 +199,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
                 min: AppSettingsController.readingLineHeightMin,
                 max: AppSettingsController.readingLineHeightMax,
                 divisions: 40,
-                valueLabel: values.readingLineHeight.toStringAsFixed(2),
+                formatValue: (value) => value.toStringAsFixed(2),
                 presets: AppSettingsController.readingScalePresets
                     .map(
                       (preset) => _ReadingSliderPreset(
@@ -339,13 +339,13 @@ class _ReadingSliderPreset {
   final double value;
 }
 
-class _ReadingValueSlider extends StatelessWidget {
+class _ReadingValueSlider extends StatefulWidget {
   const _ReadingValueSlider({
     required this.value,
     required this.min,
     required this.max,
     required this.divisions,
-    required this.valueLabel,
+    required this.formatValue,
     required this.presets,
     required this.onChanged,
   });
@@ -354,9 +354,42 @@ class _ReadingValueSlider extends StatelessWidget {
   final double min;
   final double max;
   final int divisions;
-  final String valueLabel;
+  final String Function(double value) formatValue;
   final List<_ReadingSliderPreset> presets;
   final ValueChanged<double> onChanged;
+
+  @override
+  State<_ReadingValueSlider> createState() => _ReadingValueSliderState();
+}
+
+class _ReadingValueSliderState extends State<_ReadingValueSlider> {
+  late double _dragValue;
+  bool _dragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dragValue = widget.value;
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReadingValueSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_dragging && widget.value != oldWidget.value) {
+      _dragValue = widget.value;
+    }
+  }
+
+  void _updatePreview(double value) {
+    _dragging = true;
+    setState(() => _dragValue = value);
+  }
+
+  void _commit(double value) {
+    _dragging = false;
+    setState(() => _dragValue = value);
+    widget.onChanged(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -364,6 +397,7 @@ class _ReadingValueSlider extends StatelessWidget {
     final liquidGlass = context.select<AppSettingsController, bool>(
       (settings) => settings.liquidGlassEnabled,
     );
+    final valueLabel = widget.formatValue(_dragValue);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,12 +405,13 @@ class _ReadingValueSlider extends StatelessWidget {
           children: [
             Expanded(
               child: Slider(
-                value: value.clamp(min, max).toDouble(),
-                min: min,
-                max: max,
-                divisions: divisions,
+                value: _dragValue.clamp(widget.min, widget.max).toDouble(),
+                min: widget.min,
+                max: widget.max,
+                divisions: widget.divisions,
                 label: valueLabel,
-                onChanged: onChanged,
+                onChanged: _updatePreview,
+                onChangeEnd: _commit,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -398,14 +433,14 @@ class _ReadingValueSlider extends StatelessWidget {
         Wrap(
           spacing: AppSpacing.xs,
           runSpacing: AppSpacing.xs,
-          children: presets.map((preset) {
-            final selected = (preset.value - value).abs() < 0.02;
+          children: widget.presets.map((preset) {
+            final selected = (preset.value - _dragValue).abs() < 0.02;
             if (liquidGlass) {
               return LiquidGlassChip(
                 label: preset.label,
                 selected: selected,
                 icon: selected ? Icons.check_rounded : null,
-                onTap: () => onChanged(preset.value),
+                onTap: () => _commit(preset.value),
               );
             }
             return ActionChip(
@@ -421,7 +456,7 @@ class _ReadingValueSlider extends StatelessWidget {
                     ? AppColors.primary.withValues(alpha: 0.28)
                     : palette.hairline,
               ),
-              onPressed: () => onChanged(preset.value),
+              onPressed: () => _commit(preset.value),
             );
           }).toList(),
         ),

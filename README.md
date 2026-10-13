@@ -3,7 +3,7 @@
 简兮，一个纯粹简洁的移动端 Markdown / HTML 阅读器。
 
 
-没有广告，没有后台同步，没有账号体系。打开即读，读完即走。所有文档停留在本地，不联网、不追踪、不打扰。
+没有广告，没有后台同步，没有账号体系。打开即读，读完即走。文档解析和文档库数据默认保留在本地；远程 Markdown 图片、HTML 外部资源以及手动检查更新时可能访问网络，不追踪用户。
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/alexopenfan-xiaxin/jianxi-reader?style=flat-square&labelColor=ffffff&color=007AFF" alt="最新版本" />
@@ -37,7 +37,7 @@
 | 🌐 **HTML 渲染** | 基于 WebView，保留完整 CSS 样式 |
 | 🔍 **搜索排序** | 按名称或修改时间排序，支持实时搜索过滤 |
 | 🎨 **主题切换** | 浅色 / 深色 / 跟随系统，棕色调 Sepia 护眼模式 |
-| 🔠 **阅读定制** | 三种字号（16/18/21px） × 三种行高（1.42/1.58/1.74） |
+| 🔠 **阅读定制** | 字号、行距、页边距可调，并提供常用预设 |
 | ✂️ **文本选择** | 长按选择，复制时自动剥离 Markdown 语法标记 |
 | 📋 **文档管理** | 重命名任意文档、移出/删除、阅读进度记录 |
 | 📊 **阅读进度** | 顶部进度条显示当前阅读位置 |
@@ -96,8 +96,8 @@ lib/
 │   ├── app_settings_controller.dart # 阅读设置
 │   └── widgets/
 │       ├── app_card.dart         # 卡片组件
-│       ├── palette.dart          # 调色板
-│       └── reading_settings_panel.dart # 字号/行高面板
+│       ├── liquid_glass.dart     # 液态玻璃材质与强度
+│       └── reading_settings_panel.dart # 阅读显示面板
 ├── features/
 │   ├── shell/app_shell.dart      # 底部导航
 │   ├── library/                  # 文档库（列表/搜索/排序/导入）

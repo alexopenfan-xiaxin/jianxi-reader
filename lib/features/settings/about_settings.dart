@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '194';
+  static const _fallbackBuildNumber = '195';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');

@@ -235,14 +235,21 @@ class _SyntaxHighlightCodeBlockWidgetState
     return spans;
   }
 
+  static final _httpRequestLine = RegExp(
+    r'^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)$',
+  );
+  static final _httpResponseLine = RegExp(
+    r'^(HTTP/\d(?:\.\d)?\s+)(\d{3})(.*)$',
+  );
+  static final _httpQueryLine = RegExp(r'^(\s*[?&])([A-Za-z0-9_.-]+)(=)(.*)$');
+  static final _httpHeaderLine = RegExp(r'^([A-Za-z0-9-]+)(:)(.*)$');
+
   TextSpan _highlightHttpCode(Map<String, TextStyle> theme) {
     final spans = <TextSpan>[];
-    final request = RegExp(
-      r'^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)$',
-    );
-    final response = RegExp(r'^(HTTP/\d(?:\.\d)?\s+)(\d{3})(.*)$');
-    final query = RegExp(r'^(\s*[?&])([A-Za-z0-9_.-]+)(=)(.*)$');
-    final header = RegExp(r'^([A-Za-z0-9-]+)(:)(.*)$');
+    final request = _httpRequestLine;
+    final response = _httpResponseLine;
+    final query = _httpQueryLine;
+    final header = _httpHeaderLine;
     final lines = widget.code.split('\n');
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
@@ -349,7 +356,9 @@ class _SyntaxHighlightCodeBlockWidgetState
       matches++;
       start = matchEnd;
       if (matches >= DocumentSearchController.maxMatches) {
+        // Append the tail once; the post-loop append must not repeat it.
         spans.add(TextSpan(text: widget.code.substring(start)));
+        start = widget.code.length;
         break;
       }
       matchStart = lowerCode.indexOf(lowerQuery, start);
@@ -365,6 +374,7 @@ class _SyntaxHighlightCodeBlockWidgetState
 
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.code));
+    if (!mounted) return;
     setState(() => _copied = true);
     _copyResetTimer?.cancel();
     _copyResetTimer = Timer(const Duration(seconds: 2), () {

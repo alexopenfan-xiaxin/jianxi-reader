@@ -126,6 +126,14 @@ class ReadingPalette {
 }
 
 class AppSettingsController extends ChangeNotifier {
+  int _mutationVersion = 0;
+
+  @override
+  void notifyListeners() {
+    _mutationVersion++;
+    super.notifyListeners();
+  }
+
   static const readingFontSizeMin = 14.0;
   static const readingFontSizeMax = 28.0;
   static const readingFontSizeDefault = 18.0;
@@ -288,7 +296,13 @@ class AppSettingsController extends ChangeNotifier {
   }
 
   Future<void> load() async {
+    final mutationVersionAtStart = _mutationVersion;
     _prefs = await SharedPreferences.getInstance();
+    // A setting changed while preferences were loading wins over the stored
+    // snapshot; otherwise an early user action could be overwritten.
+    if (mutationVersionAtStart != _mutationVersion) {
+      return;
+    }
     final preferences = _prefs!;
     _themeMode = _themeModeFromName(preferences.getString(_themeModeKey));
     _readingFontSize = _readingFontSizeFromStored(

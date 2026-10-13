@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../features/library/document_entry.dart';
 import 'document_identity.dart';
 import 'file_rules.dart';
+import 'bookmark_service.dart';
+import 'reading_history_service.dart';
 import 'reading_progress_service.dart';
 
 abstract class DocumentLibraryService {
@@ -109,14 +111,18 @@ class DocumentFileService implements DocumentLibraryService {
         .toList();
 
     for (final file in files) {
-      entries.add(
-        await DocumentEntry.fromFile(
-          file,
-          recentOpenedAt: _recentOpenedAt(preferences, file.path),
-          tags: _documentTags(preferences, file.path),
-          pinned: _documentPinned(preferences, file.path),
-        ),
-      );
+      try {
+        entries.add(
+          await DocumentEntry.fromFile(
+            file,
+            recentOpenedAt: _recentOpenedAt(preferences, file.path),
+            tags: _documentTags(preferences, file.path),
+            pinned: _documentPinned(preferences, file.path),
+          ),
+        );
+      } catch (error) {
+        debugPrint('[DocumentFileService] scan file failed: $error');
+      }
     }
 
     // 2. Add referenced (original path) files
@@ -141,15 +147,19 @@ class DocumentFileService implements DocumentLibraryService {
       final file = File(refreshedPath);
       if (!file.existsSync()) continue;
       if (!DocumentFileRules.isSupportedPath(refreshedPath)) continue;
-      entries.add(
-        await DocumentEntry.fromFile(
-          file,
-          recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
-          isReferenced: true,
-          tags: _documentTags(preferences, refreshedPath),
-          pinned: _documentPinned(preferences, refreshedPath),
-        ),
-      );
+      try {
+        entries.add(
+          await DocumentEntry.fromFile(
+            file,
+            recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
+            isReferenced: true,
+            tags: _documentTags(preferences, refreshedPath),
+            pinned: _documentPinned(preferences, refreshedPath),
+          ),
+        );
+      } catch (error) {
+        debugPrint('[DocumentFileService] scan referenced file failed: $error');
+      }
     }
     if (pathsChanged) {
       await _persistPreference(
@@ -176,7 +186,9 @@ class DocumentFileService implements DocumentLibraryService {
         DateTime.now().difference(_cacheTimestamp!) < _cacheMaxAge) {
       return _cachedEntries!;
     }
-    return scanLibrary();
+    // Returning an empty cache miss lets the controller decide when to do the
+    // one full scan, instead of scanning twice in the initial/refresh path.
+    return const [];
   }
 
   @override
@@ -212,35 +224,48 @@ class DocumentFileService implements DocumentLibraryService {
     final imported = <DocumentEntry>[];
     final preferences = await _preferences();
     final paths = preferences.getStringList(_referencedPathsKey) ?? [];
+    Object? firstError;
+    var pathsChanged = false;
     for (final pickedFile in result.files) {
-      final sourcePath = pickedFile.path;
-      if (sourcePath == null || sourcePath.isEmpty) {
-        throw const FileSystemException('系统文件选择器没有返回可读取的路径');
-      }
+      try {
+        final sourcePath = pickedFile.path;
+        if (sourcePath == null || sourcePath.isEmpty) {
+          throw const FileSystemException('系统文件选择器没有返回可读取的路径');
+        }
 
-      final source = File(sourcePath);
-      if (!source.existsSync()) {
-        throw FileSystemException('文件不存在', sourcePath);
-      }
-      if (!DocumentFileRules.isSupportedPath(sourcePath)) {
-        throw FileSystemException('仅支持 Markdown 和 HTML 文档', sourcePath);
-      }
+        final source = File(sourcePath);
+        if (!source.existsSync()) {
+          throw FileSystemException('文件不存在', sourcePath);
+        }
+        if (!DocumentFileRules.isSupportedPath(sourcePath)) {
+          throw FileSystemException('仅支持 Markdown 和 HTML 文档', sourcePath);
+        }
 
-      if (!paths.contains(sourcePath)) {
-        paths.add(sourcePath);
+        if (!paths.contains(sourcePath)) {
+          paths.add(sourcePath);
+          pathsChanged = true;
+        }
+        imported.add(
+          await DocumentEntry.fromFile(
+            source,
+            isReferenced: true,
+            tags: _documentTags(preferences, sourcePath),
+            pinned: _documentPinned(preferences, sourcePath),
+          ),
+        );
+      } catch (error) {
+        firstError ??= error;
+        debugPrint('[DocumentFileService] pick import failed: $error');
       }
-      imported.add(
-        await DocumentEntry.fromFile(
-          source,
-          isReferenced: true,
-          tags: _documentTags(preferences, sourcePath),
-          pinned: _documentPinned(preferences, sourcePath),
-        ),
+    }
+    if (imported.isEmpty && firstError != null) {
+      throw firstError;
+    }
+    if (pathsChanged) {
+      await _persistPreference(
+        preferences.setStringList(_referencedPathsKey, paths),
       );
     }
-    await _persistPreference(
-      preferences.setStringList(_referencedPathsKey, paths),
-    );
 
     return imported;
   }
@@ -391,8 +416,18 @@ class DocumentFileService implements DocumentLibraryService {
     DocumentEntry document,
     String baseName,
   ) async {
-    final cleanBaseName = DocumentFileRules.validateBaseName(baseName);
+    var cleanBaseName = DocumentFileRules.validateBaseName(baseName);
     final source = File(document.path);
+    final sourceExtension = p.extension(document.path);
+    if (sourceExtension.isNotEmpty &&
+        cleanBaseName.toLowerCase().endsWith(sourceExtension.toLowerCase())) {
+      cleanBaseName = cleanBaseName
+          .substring(0, cleanBaseName.length - sourceExtension.length)
+          .trim();
+      if (cleanBaseName.isEmpty) {
+        throw const FileSystemException('文件名不能为空');
+      }
+    }
     if (!source.existsSync()) {
       throw FileSystemException('文档不存在或已被移出', document.path);
     }
@@ -516,6 +551,16 @@ class DocumentFileService implements DocumentLibraryService {
       }
       await _clearDocumentMetadata(preferences, document.path);
       await DocumentIdentityService.removePath(document.path);
+      if (documentId != null) {
+        try {
+          await BookmarkService.removeForDocument(documentId);
+          await ReadingHistoryService.removeForDocument(documentId);
+        } catch (error) {
+          debugPrint(
+            '[DocumentFileService] remove bookmark/history failed: $error',
+          );
+        }
+      }
       if (stagedFile != null && stagedFile.existsSync()) {
         await stagedFile.delete();
       }
@@ -670,7 +715,7 @@ class DocumentFileService implements DocumentLibraryService {
     List<String> tags,
   ) async {
     final preferences = await _preferences();
-    final cleanTags = _cleanTags(tags);
+    final cleanTags = _cleanTags(tags).map(_validateTagName).toList();
     final allTags = _allTags(preferences);
     for (final tag in cleanTags) {
       if (!allTags.contains(tag)) {
@@ -850,37 +895,46 @@ class DocumentFileService implements DocumentLibraryService {
 
     final preferences = await _preferences();
     final documents = <DocumentEntry>[];
+    Object? firstError;
     for (final item in picked) {
-      final metadata = item is Map ? item : const <String, Object?>{};
-      final path = metadata['path'] as String?;
-      final sourceUri = metadata['uri'] as String?;
-      if (path == null ||
-          path.isEmpty ||
-          sourceUri == null ||
-          sourceUri.isEmpty) {
-        throw const FileSystemException('系统文件选择器没有返回可读取的路径');
-      }
-      if (!DocumentFileRules.isSupportedPath(path)) {
-        final pickedFile = File(path);
-        if (pickedFile.existsSync()) {
-          await pickedFile.delete();
+      try {
+        final metadata = item is Map ? item : const <String, Object?>{};
+        final path = metadata['path'] as String?;
+        final sourceUri = metadata['uri'] as String?;
+        if (path == null ||
+            path.isEmpty ||
+            sourceUri == null ||
+            sourceUri.isEmpty) {
+          throw const FileSystemException('系统文件选择器没有返回可读取的路径');
         }
-        throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
-      }
+        if (!DocumentFileRules.isSupportedPath(path)) {
+          final pickedFile = File(path);
+          if (pickedFile.existsSync()) {
+            await pickedFile.delete();
+          }
+          throw FileSystemException('仅支持 Markdown 和 HTML 文档', path);
+        }
 
-      await _rememberReferencedDocument(
-        preferences: preferences,
-        path: path,
-        sourceUri: sourceUri,
-      );
-      documents.add(
-        await DocumentEntry.fromFile(
-          File(path),
-          isReferenced: true,
-          tags: _documentTags(preferences, path),
-          pinned: _documentPinned(preferences, path),
-        ),
-      );
+        await _rememberReferencedDocument(
+          preferences: preferences,
+          path: path,
+          sourceUri: sourceUri,
+        );
+        documents.add(
+          await DocumentEntry.fromFile(
+            File(path),
+            isReferenced: true,
+            tags: _documentTags(preferences, path),
+            pinned: _documentPinned(preferences, path),
+          ),
+        );
+      } catch (error) {
+        firstError ??= error;
+        debugPrint('[DocumentFileService] Android pick import failed: $error');
+      }
+    }
+    if (documents.isEmpty && firstError != null) {
+      throw firstError;
     }
     return documents;
   }
@@ -986,7 +1040,11 @@ class DocumentFileService implements DocumentLibraryService {
     required String path,
     required String sourceUri,
   }) async {
-    final paths = preferences.getStringList(_referencedPathsKey) ?? [];
+    final originalPaths = preferences.getStringList(_referencedPathsKey) ?? [];
+    final previousSourceUri = preferences.getString(
+      _referencedSourceUriKey(path),
+    );
+    final paths = List<String>.from(originalPaths);
     final previousPath = paths.cast<String?>().firstWhere(
       (candidate) =>
           candidate != null &&
@@ -995,28 +1053,50 @@ class DocumentFileService implements DocumentLibraryService {
               sourceUri,
       orElse: () => null,
     );
-    await _persistPreference(
-      preferences.setString(_referencedSourceUriKey(path), sourceUri),
-    );
-    if (previousPath != null) {
-      await _moveDocumentMetadata(preferences, previousPath, path);
-      paths.remove(previousPath);
-    }
-    if (!paths.contains(path)) {
-      paths.add(path);
-    }
-    if (previousPath != null ||
-        !(preferences.getStringList(_referencedPathsKey) ?? []).contains(
-          path,
-        )) {
+    try {
       await _persistPreference(
-        preferences.setStringList(_referencedPathsKey, paths),
+        preferences.setString(_referencedSourceUriKey(path), sourceUri),
       );
+      if (previousPath != null) {
+        await _moveDocumentMetadata(preferences, previousPath, path);
+        paths.remove(previousPath);
+      }
+      if (!paths.contains(path)) {
+        paths.add(path);
+      }
+      if (previousPath != null ||
+          !(preferences.getStringList(_referencedPathsKey) ?? []).contains(
+            path,
+          )) {
+        await _persistPreference(
+          preferences.setStringList(_referencedPathsKey, paths),
+        );
+      }
+      await DocumentIdentityService.getOrCreateId(
+        path: path,
+        sourceUri: sourceUri,
+      );
+    } catch (error, stackTrace) {
+      // Best-effort rollback of the preference pointers. File/metadata
+      // movement is idempotent enough to retry on the next import.
+      try {
+        if (previousSourceUri == null) {
+          await preferences.remove(_referencedSourceUriKey(path));
+        } else {
+          await preferences.setString(
+            _referencedSourceUriKey(path),
+            previousSourceUri,
+          );
+        }
+        await preferences.setStringList(_referencedPathsKey, originalPaths);
+      } catch (rollbackError) {
+        debugPrint(
+          '[DocumentFileService] referenced metadata rollback failed: '
+          '$rollbackError',
+        );
+      }
+      Error.throwWithStackTrace(error, stackTrace);
     }
-    await DocumentIdentityService.getOrCreateId(
-      path: path,
-      sourceUri: sourceUri,
-    );
     if (previousPath != null) {
       await _persistPreference(
         preferences.remove(_referencedSourceUriKey(previousPath)),

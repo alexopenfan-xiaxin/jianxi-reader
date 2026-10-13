@@ -45,7 +45,12 @@ class TocService {
     if (raw == null || raw.isEmpty) {
       return const [];
     }
-    final decoded = jsonDecode(_unwrapJsString(raw));
+    Object? decoded;
+    try {
+      decoded = jsonDecode(_unwrapJsString(raw));
+    } catch (_) {
+      return const [];
+    }
     if (decoded is! List) {
       return const [];
     }

@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 
-import '../../../../../core/design_tokens.dart';
 
 class ClickableLinkBuilder extends MarkdownWidgetBuilder {
   const ClickableLinkBuilder();
@@ -16,23 +15,22 @@ class ClickableLinkBuilder extends MarkdownWidgetBuilder {
     MarkdownRenderContext context,
   ) {
     final linkNode = node as LinkNode;
-    final linkStyle = (styleSheet.linkStyle ?? const TextStyle()).copyWith(
-      decoration: TextDecoration.underline,
-      color: AppColors.primary,
-    );
-
-    final text = linkNode.children
-        .whereType<TextNode>()
-        .map((n) => n.content)
-        .join();
+    final linkStyle =
+        (styleSheet.linkStyle ?? styleSheet.textStyle ?? const TextStyle())
+            .copyWith(decoration: TextDecoration.underline);
+    final inlineRenderer = context.inlineRenderer;
+    final child = inlineRenderer != null
+        ? inlineRenderer(linkNode.children, linkStyle)
+        : Text(linkNode.url, style: linkStyle);
 
     return Semantics(
       link: true,
       label: linkNode.title ?? linkNode.url,
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: () => context.onTapLink?.call(linkNode.url),
         behavior: HitTestBehavior.opaque,
-        child: Text(text, style: linkStyle),
+        child: child,
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
+import '../../core/document_error_describer.dart';
 import '../../core/haptic_service.dart';
 import '../../core/spring_curve.dart';
 import '../../core/widgets/app_page_route.dart';
@@ -48,6 +49,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   Future<void> _startExternalDocumentListener() async {
+    if (!mounted) return;
     try {
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
@@ -57,6 +59,7 @@ class _AppShellState extends State<AppShell> {
       debugPrint('[AppShell] read initial external uri failed: $error');
     }
 
+    if (!mounted) return;
     try {
       _linkSubscription ??= _appLinks.uriLinkStream.listen(
         (uri) => unawaited(_handleExternalDocumentUri(uri)),
@@ -91,7 +94,7 @@ class _AppShellState extends State<AppShell> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('打开外部文档失败：$error')));
+      ).showSnackBar(SnackBar(content: Text('打开外部文档失败：${describeDocumentError(error)}')));
     }
   }
 

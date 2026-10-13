@@ -1,15 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_smooth_markdown/flutter_smooth_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/design_tokens.dart';
 
 class TappableImageBuilder extends MarkdownWidgetBuilder {
-  const TappableImageBuilder();
+  const TappableImageBuilder({this.documentDirectory});
+
+  final String? documentDirectory;
 
   @override
   bool canBuild(MarkdownNode node) => node is ImageNode;
@@ -21,19 +25,36 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
     MarkdownRenderContext context,
   ) {
     final imageNode = node as ImageNode;
-    final isSvg = imageNode.url.toLowerCase().endsWith('.svg');
-    final isNetwork =
-        imageNode.url.startsWith('http://') ||
-        imageNode.url.startsWith('https://');
+    final url = imageNode.url;
+    final isNetwork = _isNetworkImageUrl(url);
+    final isSvg = _isSvgUrl(url);
+    final localPath = isNetwork
+        ? null
+        : _resolveLocalImagePath(url, documentDirectory);
 
     Widget imageWidget;
     if (isNetwork) {
-      imageWidget = CachedMarkdownImage(url: imageNode.url, isSvg: isSvg);
+      imageWidget = CachedMarkdownImage(url: url, isSvg: isSvg);
+    } else if (_isDataImageUrl(url)) {
+      imageWidget = _dataImageWidget(url);
+    } else if (localPath != null && File(localPath).existsSync()) {
+      imageWidget = isSvg
+          ? SvgPicture.file(File(localPath))
+          : Image.file(
+              File(localPath),
+              fit: BoxFit.contain,
+              cacheWidth:
+                  (MediaQuery.sizeOf(context).width *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+              errorBuilder: (ctx, error, stackTrace) =>
+                  const Icon(Icons.broken_image),
+            );
     } else if (isSvg) {
-      imageWidget = SvgPicture.asset(imageNode.url);
+      imageWidget = SvgPicture.asset(url);
     } else {
       imageWidget = Image.asset(
-        imageNode.url,
+        url,
         errorBuilder: (ctx, error, stackTrace) =>
             const Icon(Icons.broken_image),
       );
@@ -75,6 +96,53 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
   }
 }
 
+bool _isNetworkImageUrl(String url) {
+  final uri = Uri.tryParse(url);
+  return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+}
+
+bool _isSvgUrl(String url) {
+  final path = Uri.tryParse(url)?.path.toLowerCase();
+  return path != null && path.endsWith('.svg');
+}
+
+bool _isDataImageUrl(String url) {
+  return url.trimLeft().toLowerCase().startsWith('data:image/');
+}
+
+String? _resolveLocalImagePath(String url, String? documentDirectory) {
+  final trimmed = url.trim();
+  if (trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri != null) {
+    if (uri.scheme == 'file') return uri.toFilePath();
+    if (uri.scheme.isNotEmpty) return null;
+  }
+  final decoded = Uri.decodeComponent(trimmed);
+  if (p.isAbsolute(decoded)) return p.normalize(decoded);
+  if (documentDirectory == null || documentDirectory.isEmpty) return null;
+  return p.normalize(p.join(documentDirectory, decoded));
+}
+
+Widget _dataImageWidget(String url) {
+  try {
+    final comma = url.indexOf(',');
+    if (comma <= 0) throw const FormatException('invalid data image');
+    final header = url.substring(5, comma).toLowerCase();
+    if (!header.contains('base64')) {
+      throw const FormatException('only base64 data images are supported');
+    }
+    return Image.memory(
+      base64Decode(Uri.decodeComponent(url.substring(comma + 1))),
+      fit: BoxFit.contain,
+      errorBuilder: (ctx, error, stackTrace) =>
+          const Icon(Icons.broken_image),
+    );
+  } catch (_) {
+    return const Icon(Icons.broken_image);
+  }
+}
+
 class CachedMarkdownImage extends StatefulWidget {
   const CachedMarkdownImage({
     required this.url,
@@ -93,6 +161,7 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
   static const _timeout = Duration(seconds: 15);
   static const _maxImageBytes = 25 * 1024 * 1024;
   static const _maxCacheBytes = 100 * 1024 * 1024;
+  static final Map<String, Future<File>> _inFlight = {};
 
   Future<File>? _fileFuture;
 
@@ -136,6 +205,10 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
         return Image.file(
           file,
           fit: BoxFit.contain,
+          cacheWidth:
+              (MediaQuery.sizeOf(context).width *
+                      MediaQuery.devicePixelRatioOf(context))
+                  .round(),
           errorBuilder: (ctx, error, stackTrace) {
             return _ImageLoadingState(
               message: '图片渲染失败',
@@ -154,7 +227,31 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
     });
   }
 
-  Future<File> _loadImage({bool forceRefresh = false}) async {
+  Future<File> _loadImage({bool forceRefresh = false}) {
+    if (!forceRefresh) {
+      final existing = _inFlight[widget.url];
+      if (existing != null) return existing;
+    }
+    final future = _loadImageUncached(forceRefresh: forceRefresh);
+    if (!forceRefresh) {
+      _inFlight[widget.url] = future;
+      future.then<void>(
+        (_) {
+          if (identical(_inFlight[widget.url], future)) {
+            _inFlight.remove(widget.url);
+          }
+        },
+        onError: (Object _, StackTrace __) {
+          if (identical(_inFlight[widget.url], future)) {
+            _inFlight.remove(widget.url);
+          }
+        },
+      );
+    }
+    return future;
+  }
+
+  Future<File> _loadImageUncached({required bool forceRefresh}) async {
     final file = await _cacheFileForUrl(widget.url, widget.isSvg);
     if (!forceRefresh && file.existsSync() && file.lengthSync() > 0) {
       await file.setLastModified(DateTime.now());
@@ -312,16 +409,37 @@ class _ImageLoadingState extends StatelessWidget {
 }
 
 class MarkdownPreviewImage extends StatelessWidget {
-  const MarkdownPreviewImage({required this.url, super.key});
+  const MarkdownPreviewImage({
+    required this.url,
+    this.documentDirectory,
+    super.key,
+  });
 
   final String url;
+  final String? documentDirectory;
 
   @override
   Widget build(BuildContext context) {
-    final isSvg = url.toLowerCase().endsWith('.svg');
-    final isNetwork = url.startsWith('http://') || url.startsWith('https://');
+    final isSvg = _isSvgUrl(url);
+    final isNetwork = _isNetworkImageUrl(url);
     if (isNetwork) {
       return CachedMarkdownImage(url: url, isSvg: isSvg);
+    }
+    if (_isDataImageUrl(url)) {
+      return _dataImageWidget(url);
+    }
+    final localPath = _resolveLocalImagePath(url, documentDirectory);
+    if (localPath != null && File(localPath).existsSync()) {
+      return isSvg
+          ? SvgPicture.file(File(localPath))
+          : Image.file(
+              File(localPath),
+              fit: BoxFit.contain,
+              cacheWidth:
+                  (MediaQuery.sizeOf(context).width *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+            );
     }
     if (isSvg) {
       return SvgPicture.asset(url);

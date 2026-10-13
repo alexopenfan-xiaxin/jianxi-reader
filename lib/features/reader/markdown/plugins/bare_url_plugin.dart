@@ -23,7 +23,7 @@ class BareUrlPlugin extends InlineParserPlugin {
     if (index >= text.length) return false;
     final c = text[index];
     if (c != 'h' && c != 'H') return false;
-    return _urlBody.matchAsPrefix(text.substring(index)) != null;
+    return _urlBody.matchAsPrefix(text, index) != null;
   }
 
   @override
@@ -31,7 +31,7 @@ class BareUrlPlugin extends InlineParserPlugin {
     if (startIndex >= text.length) return null;
     final c = text[startIndex];
     if (c != 'h' && c != 'H') return null;
-    final m = _urlBody.matchAsPrefix(text.substring(startIndex));
+    final m = _urlBody.matchAsPrefix(text, startIndex);
     if (m == null) return null;
     var url = m.group(0)!;
     while (url.isNotEmpty && _trailingPunct.contains(url[url.length - 1])) {
