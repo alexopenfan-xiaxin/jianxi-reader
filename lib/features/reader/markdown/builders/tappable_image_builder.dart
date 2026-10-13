@@ -157,6 +157,7 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
   static const _maxImageBytes = 25 * 1024 * 1024;
   static const _maxCacheBytes = 100 * 1024 * 1024;
   static final Map<String, Future<File>> _inFlight = {};
+  static DateTime? _lastPruneAt;
 
   Future<File>? _fileFuture;
 
@@ -301,6 +302,12 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
   }
 
   Future<void> _pruneImageCache(Directory cacheDirectory) async {
+    final now = DateTime.now();
+    if (_lastPruneAt != null &&
+        now.difference(_lastPruneAt!) < const Duration(minutes: 5)) {
+      return;
+    }
+    _lastPruneAt = now;
     if (!cacheDirectory.existsSync()) {
       return;
     }

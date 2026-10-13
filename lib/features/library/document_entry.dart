@@ -13,6 +13,7 @@ class DocumentEntry {
     required this.modifiedAt,
     this.recentOpenedAt,
     this.isReferenced = false,
+    this.sourceUri,
     this.tags = const [],
     this.pinned = false,
   });
@@ -24,6 +25,7 @@ class DocumentEntry {
   final DateTime modifiedAt;
   final DateTime? recentOpenedAt;
   final bool isReferenced;
+  final String? sourceUri;
   final List<String> tags;
   final bool pinned;
 
@@ -35,6 +37,7 @@ class DocumentEntry {
     DateTime? modifiedAt,
     DateTime? recentOpenedAt,
     bool? isReferenced,
+    String? sourceUri,
     List<String>? tags,
     bool? pinned,
   }) {
@@ -46,6 +49,7 @@ class DocumentEntry {
       modifiedAt: modifiedAt ?? this.modifiedAt,
       recentOpenedAt: recentOpenedAt ?? this.recentOpenedAt,
       isReferenced: isReferenced ?? this.isReferenced,
+      sourceUri: sourceUri ?? this.sourceUri,
       tags: List.unmodifiable(tags ?? this.tags),
       pinned: pinned ?? this.pinned,
     );
@@ -55,6 +59,7 @@ class DocumentEntry {
     File file, {
     DateTime? recentOpenedAt,
     bool isReferenced = false,
+    String? sourceUri,
     List<String> tags = const [],
     bool pinned = false,
   }) async {
@@ -72,6 +77,7 @@ class DocumentEntry {
       modifiedAt: stat.modified,
       recentOpenedAt: recentOpenedAt,
       isReferenced: isReferenced,
+      sourceUri: sourceUri,
       tags: List.unmodifiable(tags),
       pinned: pinned,
     );

@@ -506,7 +506,10 @@ class _ReaderPageState extends State<ReaderPage> {
       }
       final opened = await _libraryController.markDocumentOpened(refreshed);
       // Record reading history with stable document ID.
-      DocumentIdentityService.getOrCreateId(path: opened.path)
+      DocumentIdentityService.getOrCreateId(
+          path: opened.path,
+          sourceUri: opened.sourceUri,
+        )
           .then((docId) {
             ReadingHistoryService.record(documentId: docId).catchError((e) {
               debugPrint('[ReaderPage] record history failed: $e');
@@ -622,6 +625,7 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       final docId = await DocumentIdentityService.getOrCreateId(
         path: _document.path,
+        sourceUri: _document.sourceUri,
       );
       final ratio = _progressController.ratio;
       // Find current heading as bookmark title.

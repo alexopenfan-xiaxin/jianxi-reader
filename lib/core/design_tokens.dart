@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const primary = Color(0xFF0066CC);
   static const primaryFocus = Color(0xFF0071E3);
-  static const primaryOnDark = Color(0xFF2997FF);
   static const ink = Color(0xFF1D1D1F);
   static const inkMuted80 = Color(0xFF333333);
   static const inkMuted48 = Color(0xFF7A7A7A);

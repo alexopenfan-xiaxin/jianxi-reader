@@ -153,6 +153,9 @@ class DocumentFileService implements DocumentLibraryService {
             file,
             recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
             isReferenced: true,
+            sourceUri: preferences.getString(
+              _referencedSourceUriKey(refreshedPath),
+            ),
             tags: _documentTags(preferences, refreshedPath),
             pinned: _documentPinned(preferences, refreshedPath),
           ),
@@ -249,6 +252,7 @@ class DocumentFileService implements DocumentLibraryService {
           await DocumentEntry.fromFile(
             source,
             isReferenced: true,
+            sourceUri: source.uri.toString(),
             tags: _documentTags(preferences, sourcePath),
             pinned: _documentPinned(preferences, sourcePath),
           ),
@@ -316,6 +320,7 @@ class DocumentFileService implements DocumentLibraryService {
           await DocumentEntry.fromFile(
             entity,
             isReferenced: true,
+            sourceUri: entity.uri.toString(),
             tags: _documentTags(preferences, entity.path),
             pinned: _documentPinned(preferences, entity.path),
           ),
@@ -371,6 +376,7 @@ class DocumentFileService implements DocumentLibraryService {
     return DocumentEntry.fromFile(
       source,
       isReferenced: true,
+      sourceUri: uri.toString(),
       tags: _documentTags(preferences, sourcePath),
       pinned: _documentPinned(preferences, sourcePath),
     );
@@ -391,6 +397,8 @@ class DocumentFileService implements DocumentLibraryService {
       file,
       recentOpenedAt: _recentOpenedAt(preferences, path),
       isReferenced: document.isReferenced,
+      sourceUri: document.sourceUri ??
+          preferences.getString(_referencedSourceUriKey(path)),
       tags: _documentTags(preferences, path),
       pinned: _documentPinned(preferences, path),
     );
@@ -493,6 +501,7 @@ class DocumentFileService implements DocumentLibraryService {
       renamedFile,
       recentOpenedAt: _recentOpenedAt(preferences, renamedFile.path),
       isReferenced: document.isReferenced,
+      sourceUri: document.sourceUri,
       tags: _documentTags(preferences, renamedFile.path),
       pinned: _documentPinned(preferences, renamedFile.path),
     );
@@ -924,6 +933,7 @@ class DocumentFileService implements DocumentLibraryService {
           await DocumentEntry.fromFile(
             File(path),
             isReferenced: true,
+            sourceUri: sourceUri,
             tags: _documentTags(preferences, path),
             pinned: _documentPinned(preferences, path),
           ),
@@ -1030,6 +1040,7 @@ class DocumentFileService implements DocumentLibraryService {
     return DocumentEntry.fromFile(
       File(path),
       isReferenced: true,
+      sourceUri: sourceUri,
       tags: _documentTags(preferences, path),
       pinned: _documentPinned(preferences, path),
     );

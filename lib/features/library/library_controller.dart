@@ -45,19 +45,11 @@ class LibraryController extends ChangeNotifier {
 
   // Cached computed lists — invalidated on data change.
   List<DocumentEntry>? _cachedDocuments;
-  List<DocumentEntry>? _cachedDocumentsIgnoringSearch;
   int _loadGeneration = 0;
 
   List<DocumentEntry> get documents {
     return _cachedDocuments ??= _computeDocuments(
       query: _searchQuery,
-      tag: _selectedTag,
-    );
-  }
-
-  List<DocumentEntry> get documentsIgnoringSearch {
-    return _cachedDocumentsIgnoringSearch ??= _computeDocuments(
-      query: '',
       tag: _selectedTag,
     );
   }
@@ -78,7 +70,6 @@ class LibraryController extends ChangeNotifier {
 
   void _invalidateCache() {
     _cachedDocuments = null;
-    _cachedDocumentsIgnoringSearch = null;
   }
 
   List<DocumentEntry> get allDocuments => _allDocuments;
@@ -154,15 +145,19 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<List<DocumentEntry>> importExternalDocuments() async {
+    final generation = ++_loadGeneration;
     _isImporting = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final imported = await documentService.pickAndImportDocuments();
-      _allDocuments = await documentService.scanLibrary();
-      await _loadTags();
-      _invalidateCache();
+      final scanned = await documentService.scanLibrary();
+      if (generation == _loadGeneration) {
+        _allDocuments = scanned;
+        await _loadTags();
+        _invalidateCache();
+      }
       return imported;
     } catch (error) {
       debugPrint(
@@ -177,15 +172,19 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<DocumentFolderImportResult> importExternalFolderDocuments() async {
+    final generation = ++_loadGeneration;
     _isImporting = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final result = await documentService.pickAndImportFolderDocuments();
-      _allDocuments = await documentService.scanLibrary();
-      await _loadTags();
-      _invalidateCache();
+      final scanned = await documentService.scanLibrary();
+      if (generation == _loadGeneration) {
+        _allDocuments = scanned;
+        await _loadTags();
+        _invalidateCache();
+      }
       return result;
     } catch (error) {
       debugPrint('[LibraryController] import folder documents failed: $error');
@@ -202,6 +201,7 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<DocumentEntry> importExternalUri(Uri uri) async {
+    final generation = ++_loadGeneration;
     _isImporting = true;
     _errorMessage = null;
     notifyListeners();
@@ -209,9 +209,12 @@ class LibraryController extends ChangeNotifier {
     try {
       final imported = await documentService.importExternalUri(uri);
       await documentService.markDocumentOpened(imported);
-      _allDocuments = await documentService.scanLibrary();
-      await _loadTags();
-      _invalidateCache();
+      final scanned = await documentService.scanLibrary();
+      if (generation == _loadGeneration) {
+        _allDocuments = scanned;
+        await _loadTags();
+        _invalidateCache();
+      }
       return imported;
     } catch (error) {
       debugPrint('[LibraryController] import external uri failed: $error');
