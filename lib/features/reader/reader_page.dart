@@ -680,45 +680,70 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 }
 
-Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) async {
-  // The component library's action sheet pops itself after invoking the
-  // action, so the chosen value is captured here instead of returned from
-  // Navigator.pop.
-  _ReaderMenuAction? selected;
-  await showGlassActionSheet<void>(
+Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) {
+  return showModalBottomSheet<_ReaderMenuAction>(
     context: context,
-    title: '文档操作',
-    cancelLabel: '取消',
-    settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
-    quality: GlassQuality.standard,
-    actions: [
-      GlassActionSheetAction(
-        label: '添加书签',
-        icon: const Icon(Icons.bookmark_add_outlined),
-        onPressed: () => selected = _ReaderMenuAction.bookmark,
-      ),
-      GlassActionSheetAction(
-        label: '重命名',
-        icon: const Icon(Icons.drive_file_rename_outline_rounded),
-        onPressed: () => selected = _ReaderMenuAction.rename,
-      ),
-      GlassActionSheetAction(
-        label: '移出',
-        icon: const Icon(Icons.remove_circle_outline_rounded),
-        style: GlassActionSheetStyle.destructive,
-        onPressed: () => selected = _ReaderMenuAction.remove,
-      ),
-    ],
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.14),
+    builder: (context) {
+      return LiquidGlassSheetPanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            _ReaderMenuTile(
+              icon: Icons.bookmark_add_outlined,
+              title: '添加书签',
+              action: _ReaderMenuAction.bookmark,
+            ),
+            _ReaderMenuTile(
+              icon: Icons.drive_file_rename_outline_rounded,
+              title: '重命名',
+              action: _ReaderMenuAction.rename,
+            ),
+            _ReaderMenuTile(
+              icon: Icons.remove_circle_outline_rounded,
+              title: '移出',
+              action: _ReaderMenuAction.remove,
+              destructive: true,
+            ),
+          ],
+        ),
+      );
+    },
   );
-  return selected;
 }
 
-/// App bar action that switches between the Material icon button and the
-/// component library's glass icon button.
-///
-/// Glass buttons are only used in the liquid-glass visual mode; classic mode
-/// and the transient scroll-driven glass bar keep the existing Material
-/// control so the reading chrome does not change there.
+class _ReaderMenuTile extends StatelessWidget {
+  const _ReaderMenuTile({
+    required this.icon,
+    required this.title,
+    required this.action,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final _ReaderMenuAction action;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : context.palette.ink;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(color: color, letterSpacing: 0),
+      ),
+      onTap: () => Navigator.of(context).pop(action),
+    );
+  }
+}
+
 class _ReaderAppBarAction extends StatelessWidget {
   const _ReaderAppBarAction({
     required this.tooltip,

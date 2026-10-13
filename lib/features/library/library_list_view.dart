@@ -616,44 +616,89 @@ class _DocumentTileState extends State<_DocumentTile>
 Future<_DocumentMenuAction?> _showGlassDocumentMenu(
   BuildContext context,
   DocumentEntry document,
-) async {
-  // The component library's action sheet pops itself after invoking the
-  // action, so the chosen value is captured here instead of returned from
-  // Navigator.pop.
-  _DocumentMenuAction? selected;
-  await showGlassActionSheet<void>(
+) {
+  return showModalBottomSheet<_DocumentMenuAction>(
     context: context,
-    title: document.name,
-    cancelLabel: '取消',
-    settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
-    quality: GlassQuality.standard,
-    actions: [
-      GlassActionSheetAction(
-        label: document.pinned ? '取消置顶' : '置顶',
-        icon: Icon(
-          document.pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.14),
+    builder: (context) {
+      return LiquidGlassSheetPanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
+              child: Text(
+                document.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            _GlassMenuTile(
+              icon: document.pinned
+                  ? Icons.push_pin_rounded
+                  : Icons.push_pin_outlined,
+              title: document.pinned ? '取消置顶' : '置顶',
+              action: _DocumentMenuAction.pin,
+            ),
+            _GlassMenuTile(
+              icon: Icons.drive_file_rename_outline_rounded,
+              title: '重命名',
+              action: _DocumentMenuAction.rename,
+            ),
+            _GlassMenuTile(
+              icon: Icons.label_outline_rounded,
+              title: '设置标签',
+              action: _DocumentMenuAction.tags,
+            ),
+            _GlassMenuTile(
+              icon: Icons.remove_circle_outline_rounded,
+              title: '移出',
+              action: _DocumentMenuAction.remove,
+              destructive: true,
+            ),
+          ],
         ),
-        onPressed: () => selected = _DocumentMenuAction.pin,
-      ),
-      GlassActionSheetAction(
-        label: '重命名',
-        icon: const Icon(Icons.drive_file_rename_outline_rounded),
-        onPressed: () => selected = _DocumentMenuAction.rename,
-      ),
-      GlassActionSheetAction(
-        label: '设置标签',
-        icon: const Icon(Icons.label_outline_rounded),
-        onPressed: () => selected = _DocumentMenuAction.tags,
-      ),
-      GlassActionSheetAction(
-        label: '移出',
-        icon: const Icon(Icons.remove_circle_outline_rounded),
-        style: GlassActionSheetStyle.destructive,
-        onPressed: () => selected = _DocumentMenuAction.remove,
-      ),
-    ],
+      );
+    },
   );
-  return selected;
+}
+
+class _GlassMenuTile extends StatelessWidget {
+  const _GlassMenuTile({
+    required this.icon,
+    required this.title,
+    required this.action,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final _DocumentMenuAction action;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : context.palette.ink;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(color: color, letterSpacing: 0),
+      ),
+      onTap: () => Navigator.of(context).pop(action),
+    );
+  }
 }
 
 Future<void> _showTagEditor(
