@@ -402,10 +402,7 @@ class _AboutPageState extends State<AboutPage> {
         title: '安装权限',
         message: '安装更新需要开启「安装未知应用」权限。请先前往设置开启权限，再重新检查更新。',
         maxWidth: 320,
-        settings: AppGlassSettings.build(
-          ctx,
-          role: AppGlassRole.staticPanel,
-        ),
+        settings: AppGlassSettings.build(ctx, role: AppGlassRole.staticPanel),
         quality: GlassQuality.standard,
         actions: [
           GlassDialogAction(

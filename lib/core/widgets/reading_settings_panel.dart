@@ -125,10 +125,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
               const SizedBox(height: AppSpacing.sm),
               GlassSegmentedControl<ReadingTheme>(
                 segments: ReadingTheme.values.map((theme) {
-                  return GlassSegment(
-                    value: theme,
-                    label: theme.label,
-                  );
+                  return GlassSegment(value: theme, label: theme.label);
                 }).toList(),
                 value: values.readingTheme,
                 onChanged: settings.setReadingTheme,
@@ -146,10 +143,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
               const SizedBox(height: AppSpacing.sm),
               GlassSegmentedControl<ReadingMargin>(
                 segments: ReadingMargin.values.map((margin) {
-                  return GlassSegment(
-                    value: margin,
-                    label: margin.label,
-                  );
+                  return GlassSegment(value: margin, label: margin.label);
                 }).toList(),
                 value: values.readingMargin,
                 onChanged: settings.setReadingMargin,
@@ -221,10 +215,7 @@ class _ReadingSettingsPanelState extends State<ReadingSettingsPanel>
               const SizedBox(height: AppSpacing.sm),
               GlassSegmentedControl<ReadingFontFamily>(
                 segments: ReadingFontFamily.values.map((family) {
-                  return GlassSegment(
-                    value: family,
-                    label: family.label,
-                  );
+                  return GlassSegment(value: family, label: family.label);
                 }).toList(),
                 value: values.readingFontFamily,
                 onChanged: settings.setReadingFontFamily,

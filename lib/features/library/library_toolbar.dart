@@ -339,9 +339,7 @@ class _HeaderIconButton extends StatelessWidget {
           role: AppGlassRole.interactiveControl,
         ),
         useOwnLayer: true,
-        quality: AppGlassSettings.qualityFor(
-          AppGlassRole.interactiveControl,
-        ),
+        quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
       ),
     );
   }

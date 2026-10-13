@@ -95,10 +95,7 @@ class _RenameDocumentDialogState extends State<_RenameDocumentDialog> {
     return GlassDialog(
       title: '重命名文档',
       maxWidth: 340,
-      settings: AppGlassSettings.build(
-        context,
-        role: AppGlassRole.staticPanel,
-      ),
+      settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
       quality: GlassQuality.standard,
       content: Column(
         mainAxisSize: MainAxisSize.min,

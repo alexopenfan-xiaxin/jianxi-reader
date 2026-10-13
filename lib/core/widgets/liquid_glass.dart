@@ -259,10 +259,7 @@ class AppGlassSettings {
         LiquidGlassTokens.edgeRim,
         intensity,
       ),
-      edgeAbsorption: LiquidGlassIntensity.scaleRim(
-        edgeAbsorption,
-        intensity,
-      ),
+      edgeAbsorption: LiquidGlassIntensity.scaleRim(edgeAbsorption, intensity),
       whitenStrength: whiten,
       whitenGated: true,
       saturation: LiquidGlassTokens.saturation,
@@ -277,7 +274,8 @@ class AppGlassSettings {
     double? blurOverride,
     double? intensityOverride,
   }) {
-    final intensity = intensityOverride ??
+    final intensity =
+        intensityOverride ??
         context.select<AppSettingsController, double>(
           (settings) => settings.liquidGlassIntensityValue,
         );
@@ -513,9 +511,7 @@ class LiquidGlassSheetPanel extends StatelessWidget {
     return Padding(
       padding: margin,
       child: AdaptiveGlass(
-        shape: LiquidRoundedSuperellipse(
-          borderRadius: borderRadius.topLeft.x,
-        ),
+        shape: LiquidRoundedSuperellipse(borderRadius: borderRadius.topLeft.x),
         settings: AppGlassSettings.build(
           context,
           role: role,
@@ -668,10 +664,7 @@ class LiquidGlassChip extends StatelessWidget {
         role: AppGlassRole.interactiveControl,
         color: selected
             ? selectedColor
-            : liquidGlassContainerColor(
-                context,
-                alpha: dark ? 0.12 : 0.28,
-              ),
+            : liquidGlassContainerColor(context, alpha: dark ? 0.12 : 0.28),
       ),
       useOwnLayer: true,
       quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),

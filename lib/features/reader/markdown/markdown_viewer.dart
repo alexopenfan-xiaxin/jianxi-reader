@@ -1010,10 +1010,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
       builder: (ctx) => GlassDialog(
         title: '打开链接',
         maxWidth: 320,
-        settings: AppGlassSettings.build(
-          ctx,
-          role: AppGlassRole.staticPanel,
-        ),
+        settings: AppGlassSettings.build(ctx, role: AppGlassRole.staticPanel),
         quality: GlassQuality.standard,
         content: SingleChildScrollView(
           child: Text(

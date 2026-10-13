@@ -70,9 +70,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
         for (final segment in segments)
           lg.GlassSegment(
             label: segment.label,
-            icon: segment.icon == null
-                ? null
-                : Icon(segment.icon, size: 18),
+            icon: segment.icon == null ? null : Icon(segment.icon, size: 18),
           ),
       ],
       selectedIndex: effectiveIndex,
