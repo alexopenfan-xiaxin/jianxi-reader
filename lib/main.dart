@@ -83,7 +83,7 @@ class _GlobalErrorCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.error_outline_rounded, color: Colors.red),
                       SizedBox(width: 10),
