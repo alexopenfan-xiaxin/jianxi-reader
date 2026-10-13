@@ -273,7 +273,7 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
       (settings) => settings.liquidGlassEnabled,
     );
     if (liquidGlass) {
-      return _LiquidBottomNav(
+      return _GlassBottomNav(
         currentIndex: widget.currentIndex,
         onChanged: widget.onChanged,
       );
@@ -397,275 +397,42 @@ class _FloatingBottomNavState extends State<_FloatingBottomNav> {
   }
 }
 
-class _LiquidBottomNav extends StatefulWidget {
-  const _LiquidBottomNav({required this.currentIndex, required this.onChanged});
+class _GlassBottomNav extends StatelessWidget {
+  const _GlassBottomNav({
+    required this.currentIndex,
+    required this.onChanged,
+  });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
   @override
-  State<_LiquidBottomNav> createState() => _LiquidBottomNavState();
-}
-
-class _LiquidBottomNavState extends State<_LiquidBottomNav> {
-  static const _itemWidth = LiquidGlassTokens.floatingBottomBarItemWidth;
-  static const _itemHeight = LiquidGlassTokens.floatingBottomBarHeight;
-  static const _outerPadding = LiquidGlassTokens.floatingBottomBarPadding;
-  static const _navWidth = _itemWidth * 2 + _outerPadding * 2;
-  static const _dragThreshold = _itemWidth * 0.35;
-
-  double _dragOffset = 0;
-  bool _isDragging = false;
-
-  @override
   Widget build(BuildContext context) {
-    final clampedDrag = _dragOffset.clamp(-_itemWidth, _itemWidth).toDouble();
-    final selectedLeft =
-        _outerPadding + widget.currentIndex * _itemWidth + clampedDrag;
-    final dragProgress = (clampedDrag.abs() / _itemWidth).clamp(0.0, 1.0);
-    final dragDirection = clampedDrag == 0 ? 0.0 : clampedDrag.sign;
-    final panelOffset =
-        dragDirection *
-        LiquidGlassTokens.floatingBottomBarPanelOffsetMax *
-        Curves.easeOutCubic.transform(dragProgress);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final indicatorColor = (dark ? Colors.white : Colors.black).withValues(
-      alpha: 0.10,
-    );
-    final indicatorBorder = Colors.white.withValues(alpha: dark ? 0.18 : 0.38);
-
-    return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        heightFactor: 1,
-        child: GestureDetector(
-          onHorizontalDragUpdate: (details) {
-            setState(() {
-              _isDragging = true;
-              final nextOffset = _dragOffset + details.delta.dx;
-              _dragOffset = widget.currentIndex == 0
-                  ? nextOffset.clamp(0, _itemWidth).toDouble()
-                  : nextOffset.clamp(-_itemWidth, 0).toDouble();
-            });
-          },
-          onHorizontalDragEnd: (details) {
-            final shouldMoveRight =
-                widget.currentIndex == 0 &&
-                (_dragOffset > _dragThreshold ||
-                    details.primaryVelocity != null &&
-                        details.primaryVelocity! > 280);
-            final shouldMoveLeft =
-                widget.currentIndex == 1 &&
-                (_dragOffset < -_dragThreshold ||
-                    details.primaryVelocity != null &&
-                        details.primaryVelocity! < -280);
-            if (shouldMoveRight) {
-              _selectIndex(1);
-            } else if (shouldMoveLeft) {
-              _selectIndex(0);
-            }
-            setState(() {
-              _dragOffset = 0;
-              _isDragging = false;
-            });
-          },
-          onHorizontalDragCancel: () {
-            setState(() {
-              _dragOffset = 0;
-              _isDragging = false;
-            });
-          },
-          child: SizedBox(
-            width: _navWidth,
-            height: _itemHeight,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: LiquidGlassSurface(
-                    color: liquidGlassContainerColor(context),
-                    quality: GlassQuality.premium,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-                AnimatedPositioned(
-                  duration: _isDragging ? Duration.zero : AppMotion.normal,
-                  curve: SpringCurve.snappy,
-                  left: selectedLeft,
-                  top: _outerPadding,
-                  width: _itemWidth,
-                  height: LiquidGlassTokens.floatingBottomBarIndicatorHeight,
-                  child: Transform.scale(
-                    scaleX: 1 + dragProgress * 0.20,
-                    scaleY: 1 - dragProgress * 0.06,
-                    // A tinted capsule over the glass panel: nesting a second
-                    // glass surface here would double-blur the backdrop.
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: indicatorColor,
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                        border: Border.all(color: indicatorBorder),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(_outerPadding),
-                    child: Transform.translate(
-                      offset: Offset(panelOffset, 0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _LiquidBottomNavItem(
-                            selected: widget.currentIndex == 0,
-                            icon: Icons.home_outlined,
-                            selectedIcon: Icons.home_rounded,
-                            label: '首页',
-                            onTap: () => _selectFromTap(0),
-                          ),
-                          _LiquidBottomNavItem(
-                            selected: widget.currentIndex == 1,
-                            icon: Icons.settings_outlined,
-                            selectedIcon: Icons.settings_rounded,
-                            label: '设置',
-                            onTap: () => _selectFromTap(1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    return GlassIsolationScope(
+      isolated: true,
+      defaultQuality: GlassQuality.premium,
+      child: SafeArea(
+        top: false,
+        bottom: Theme.of(context).platform == TargetPlatform.android,
+        child: GlassTabBar.bottom(
+          tabs: const [
+            GlassTab(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: '首页',
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectFromTap(int index) {
-    setState(() {
-      _dragOffset = 0;
-      _isDragging = false;
-    });
-    _selectIndex(index);
-  }
-
-  void _selectIndex(int index) {
-    if (index != widget.currentIndex) {
-      HapticService.lightImpact();
-      widget.onChanged(index);
-    }
-  }
-}
-
-class _LiquidBottomNavItem extends StatelessWidget {
-  const _LiquidBottomNavItem({
-    required this.selected,
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final bool selected;
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final foreground = selected ? AppColors.primary : palette.muted;
-    final unselectedForeground = palette.muted;
-    return Semantics(
-      selected: selected,
-      button: true,
-      label: label,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
-          child: SizedBox(
-            width: _LiquidBottomNavState._itemWidth,
-            height:
-                _LiquidBottomNavState._itemHeight -
-                _LiquidBottomNavState._outerPadding * 2,
-            child: AnimatedScale(
-              scale: selected ? 1.08 : 1,
-              duration: AppMotion.settle,
-              curve: SpringCurve.bouncy,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AnimatedOpacity(
-                          opacity: selected ? 0 : 1,
-                          duration: AppMotion.fast,
-                          curve: AppMotion.emphasized,
-                          child: Icon(
-                            icon,
-                            color: unselectedForeground,
-                            size: 22,
-                          ),
-                        ),
-                        AnimatedOpacity(
-                          opacity: selected ? 1 : 0,
-                          duration: AppMotion.fast,
-                          curve: AppMotion.emphasized,
-                          child: Icon(
-                            selectedIcon,
-                            color: AppColors.primary,
-                            size: 22,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  AnimatedDefaultTextStyle(
-                    duration: AppMotion.fast,
-                    curve: AppMotion.emphasized,
-                    style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                      color: foreground,
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      height: 1.12,
-                      letterSpacing: 0,
-                    ),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+            GlassTab(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings_rounded),
+              label: '设置',
             ),
-          ),
+          ],
+          selectedIndex: currentIndex,
+          onTabSelected: (index) {
+            if (index == currentIndex) return;
+            HapticService.lightImpact();
+            onChanged(index);
+          },
         ),
       ),
     );

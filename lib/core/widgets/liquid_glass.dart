@@ -8,6 +8,9 @@ import '../design_tokens.dart';
 export 'package:liquid_glass_widgets/types/glass_quality.dart'
     show GlassQuality;
 
+export 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassIsolationScope, GlassTab, GlassTabBar;
+
 /// Liquid glass design constants.
 ///
 /// Glass visuals (blur, refraction, lighting, shadows) are rendered by the
