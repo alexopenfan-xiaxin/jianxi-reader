@@ -2,6 +2,8 @@ name: Build APK
 
 # Manual, artifact-only build. This workflow never creates tags or releases.
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
