@@ -507,9 +507,9 @@ class _ReaderPageState extends State<ReaderPage> {
       final opened = await _libraryController.markDocumentOpened(refreshed);
       // Record reading history with stable document ID.
       DocumentIdentityService.getOrCreateId(
-          path: opened.path,
-          sourceUri: opened.sourceUri,
-        )
+            path: opened.path,
+            sourceUri: opened.sourceUri,
+          )
           .then((docId) {
             ReadingHistoryService.record(documentId: docId).catchError((e) {
               debugPrint('[ReaderPage] record history failed: $e');

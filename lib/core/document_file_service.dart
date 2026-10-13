@@ -397,7 +397,8 @@ class DocumentFileService implements DocumentLibraryService {
       file,
       recentOpenedAt: _recentOpenedAt(preferences, path),
       isReferenced: document.isReferenced,
-      sourceUri: document.sourceUri ??
+      sourceUri:
+          document.sourceUri ??
           preferences.getString(_referencedSourceUriKey(path)),
       tags: _documentTags(preferences, path),
       pinned: _documentPinned(preferences, path),
