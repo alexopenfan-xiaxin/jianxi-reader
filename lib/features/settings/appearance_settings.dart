@@ -85,8 +85,6 @@ class AppearancePage extends StatelessWidget {
             AppFontFamily appFontFamily,
             ThemeMode themeMode,
             LibraryViewMode libraryViewMode,
-            LiquidGlassIntensityMode liquidGlassIntensityMode,
-            double liquidGlassIntensity,
           })
         >(
           (settings) => (
@@ -94,8 +92,6 @@ class AppearancePage extends StatelessWidget {
             appFontFamily: settings.appFontFamily,
             themeMode: settings.themeMode,
             libraryViewMode: settings.libraryViewMode,
-            liquidGlassIntensityMode: settings.liquidGlassIntensityMode,
-            liquidGlassIntensity: settings.liquidGlassIntensityValue,
           ),
         );
     final settings = context.read<AppSettingsController>();
@@ -238,46 +234,6 @@ class AppearancePage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (values.visualMode == AppVisualMode.liquidGlass)
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _CardTitle(
-                            icon: Icons.blur_on_rounded,
-                            title: '玻璃强度',
-                            subtitle: '默认已按 iOS 液态玻璃调校，自定义可调节模糊与通透程度。',
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassSegmentedControl<LiquidGlassIntensityMode>(
-                            segments: const [
-                              GlassSegment(
-                                value: LiquidGlassIntensityMode.standard,
-                                label: '默认',
-                                icon: Icons.auto_awesome_rounded,
-                                selectedIcon: Icons.check_rounded,
-                              ),
-                              GlassSegment(
-                                value: LiquidGlassIntensityMode.custom,
-                                label: '自定义',
-                                icon: Icons.tune_rounded,
-                                selectedIcon: Icons.check_rounded,
-                              ),
-                            ],
-                            value: values.liquidGlassIntensityMode,
-                            onChanged: settings.setLiquidGlassIntensityMode,
-                          ),
-                          if (values.liquidGlassIntensityMode ==
-                              LiquidGlassIntensityMode.custom) ...[
-                            const SizedBox(height: AppSpacing.lg),
-                            GlassIntensitySlider(
-                              value: values.liquidGlassIntensity,
-                              onChanged: settings.setLiquidGlassIntensity,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ],

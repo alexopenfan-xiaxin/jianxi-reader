@@ -411,25 +411,34 @@ class _GlassBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         bottom: Theme.of(context).platform == TargetPlatform.android,
-        child: GlassTabBar.bottom(
-          tabs: const [
-            GlassTab(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: '首页',
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: SizedBox(
+            width: 160,
+            child: GlassTabBar.bottom(
+              tabs: const [
+                GlassTab(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home_rounded),
+                  label: '首页',
+                ),
+                GlassTab(
+                  icon: Icon(Icons.settings_outlined),
+                  activeIcon: Icon(Icons.settings_rounded),
+                  label: '设置',
+                ),
+              ],
+              selectedIndex: currentIndex,
+              onTabSelected: (index) {
+                if (index == currentIndex) return;
+                HapticService.lightImpact();
+                onChanged(index);
+              },
+              tabWidth: 80,
+              horizontalPadding: 0,
             ),
-            GlassTab(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings_rounded),
-              label: '设置',
-            ),
-          ],
-          selectedIndex: currentIndex,
-          onTabSelected: (index) {
-            if (index == currentIndex) return;
-            HapticService.lightImpact();
-            onChanged(index);
-          },
+          ),
         ),
       ),
     );

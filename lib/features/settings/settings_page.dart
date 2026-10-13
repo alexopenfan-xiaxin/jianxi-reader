@@ -13,7 +13,6 @@ import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_page_route.dart';
-import '../../core/widgets/glass_intensity_slider.dart';
 import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
