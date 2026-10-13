@@ -25,6 +25,7 @@ class TocDrawer extends StatefulWidget {
 
 class _TocDrawerState extends State<TocDrawer> {
   final _scrollController = ScrollController();
+  final Map<int, GlobalKey> _entryKeys = {};
 
   @override
   void initState() {
@@ -61,9 +62,20 @@ class _TocDrawerState extends State<TocDrawer> {
   void _scrollToActiveEntry({bool animated = false}) {
     if (!_scrollController.hasClients || widget.entries.isEmpty) return;
 
-    // Estimate each ListTile height: dense ListTile ≈ 48px vertical.
-    const itemHeight = 48.0;
     final activeIndex = _activeIndex;
+    final activeContext = _entryKeys[activeIndex]?.currentContext;
+    if (activeContext != null && activeContext.mounted) {
+      Scrollable.ensureVisible(
+        activeContext,
+        duration: animated ? const Duration(milliseconds: 280) : Duration.zero,
+        curve: Curves.easeOutCubic,
+        alignment: 0.35,
+      );
+      return;
+    }
+
+    // Fallback while the target tile is not laid out yet.
+    const itemHeight = 48.0;
     // Center the active item in the visible viewport when possible.
     final viewportHeight = _scrollController.position.viewportDimension;
     final targetOffset = (activeIndex * itemHeight) - (viewportHeight * 0.35);
@@ -146,10 +158,13 @@ class _TocDrawerState extends State<TocDrawer> {
                       itemCount: widget.entries.length,
                       itemBuilder: (context, index) {
                         final entry = widget.entries[index];
-                        return _TocTile(
-                          entry: entry,
-                          active: index == _activeIndex,
-                          onTap: () => widget.onSelected(entry),
+                        return KeyedSubtree(
+                          key: _entryKeys.putIfAbsent(index, () => GlobalKey()),
+                          child: _TocTile(
+                            entry: entry,
+                            active: index == _activeIndex,
+                            onTap: () => widget.onSelected(entry),
+                          ),
                         );
                       },
                     ),

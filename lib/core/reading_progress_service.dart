@@ -46,10 +46,18 @@ class ReadingProgressService {
     return _serializeMutation(() async {
       final preferences = await SharedPreferences.getInstance();
       final value = preferences.getDouble(_key(oldPath));
+      final previousNewValue = preferences.getDouble(_key(newPath));
       if (value != null && !await preferences.setDouble(_key(newPath), value)) {
         throw const FileSystemException('无法迁移阅读进度');
       }
       if (!await preferences.remove(_key(oldPath))) {
+        // Best-effort rollback so the old path keeps the only authoritative
+        // copy instead of silently duplicating it.
+        if (previousNewValue == null) {
+          await preferences.remove(_key(newPath));
+        } else {
+          await preferences.setDouble(_key(newPath), previousNewValue);
+        }
         throw const FileSystemException('无法迁移阅读进度');
       }
     });

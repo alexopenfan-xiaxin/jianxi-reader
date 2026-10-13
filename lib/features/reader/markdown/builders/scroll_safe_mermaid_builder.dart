@@ -69,6 +69,11 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
     );
   }
 
+  void _resetView() {
+    _transformCtrl.value = Matrix4.identity();
+    setState(() => _scale = 1.0);
+  }
+
   void _syncScaleFromGesture() {
     final gestureScale = _transformCtrl.value.getMaxScaleOnAxis();
     setState(() {
@@ -136,7 +141,7 @@ class _MermaidScrollBlockerState extends State<_MermaidScrollBlocker> {
                 canZoomOut: _scale > _minScale,
                 canZoomIn: _scale < _maxScale,
                 onZoomOut: () => _setScale(_scale - _scaleStep),
-                onReset: () => _setScale(1.0),
+                onReset: _resetView,
                 onZoomIn: () => _setScale(_scale + _scaleStep),
               ),
             ),

@@ -5,6 +5,39 @@ import '../../core/app_settings_controller.dart';
 class HtmlStyler {
   const HtmlStyler._();
 
+  static final _scriptTag = RegExp(
+    r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
+    caseSensitive: false,
+  );
+  static final _metaRefresh = RegExp(
+    r'''<meta[^>]*http-equiv=["']?refresh["']?[^>]*>''',
+    caseSensitive: false,
+  );
+  static final _embeddedFrame = RegExp(
+    r'<(iframe|object|embed)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>',
+    caseSensitive: false,
+  );
+  static final _eventDoubleQuoted = RegExp(
+    r'\s+on[a-zA-Z]+\s*=\s*"[^"]*"',
+    caseSensitive: false,
+  );
+  static final _eventSingleQuoted = RegExp(
+    r"\s+on[a-zA-Z]+\s*=\s*'[^']*'",
+    caseSensitive: false,
+  );
+  static final _eventBare = RegExp(
+    r'\s+on[a-zA-Z]+\s*=\s*[^\s>]+',
+    caseSensitive: false,
+  );
+  static final _javascriptDoubleQuoted = RegExp(
+    r'\s+(href|src)\s*=\s*"javascript:[^"]*"',
+    caseSensitive: false,
+  );
+  static final _javascriptSingleQuoted = RegExp(
+    r"\s+(href|src)\s*=\s*'javascript:[^']*'",
+    caseSensitive: false,
+  );
+
   static String buildAssimilatedHtml(
     String rawHtml, {
     required double fontSize,
@@ -88,7 +121,7 @@ class HtmlStyler {
     }
     a {
       color: var(--primary) !important;
-      text-decoration: none !important;
+      text-decoration: underline !important;
     }
     img, video, iframe, canvas, svg {
       max-width: 100% !important;
@@ -177,47 +210,18 @@ class HtmlStyler {
   }
 
   static String _sanitizeHtml(String rawHtml) {
-    var sanitized = rawHtml.replaceAll(
-      RegExp(
-        r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
-        caseSensitive: false,
-      ),
-      '',
-    );
-    sanitized = sanitized.replaceAll(
-      RegExp(
-        r"<meta[^>]*http-equiv=["
-        "']?refresh["
-        "']?[^>]*>",
-        caseSensitive: false,
-      ),
-      '',
-    );
-    sanitized = sanitized.replaceAll(
-      RegExp(
-        r'<(iframe|object|embed)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>',
-        caseSensitive: false,
-      ),
-      '',
-    );
-    sanitized = sanitized.replaceAll(
-      RegExp(r'\s+on[a-zA-Z]+\s*=\s*"[^"]*"', caseSensitive: false),
-      '',
-    );
-    sanitized = sanitized.replaceAll(
-      RegExp(r"\s+on[a-zA-Z]+\s*=\s*'[^']*'", caseSensitive: false),
-      '',
-    );
-    sanitized = sanitized.replaceAll(
-      RegExp(r'\s+on[a-zA-Z]+\s*=\s*[^\s>]+', caseSensitive: false),
-      '',
-    );
+    var sanitized = rawHtml.replaceAll(_scriptTag, '');
+    sanitized = sanitized.replaceAll(_metaRefresh, '');
+    sanitized = sanitized.replaceAll(_embeddedFrame, '');
+    sanitized = sanitized.replaceAll(_eventDoubleQuoted, '');
+    sanitized = sanitized.replaceAll(_eventSingleQuoted, '');
+    sanitized = sanitized.replaceAll(_eventBare, '');
     sanitized = sanitized.replaceAllMapped(
-      RegExp(r'\s+(href|src)\s*=\s*"javascript:[^"]*"', caseSensitive: false),
+      _javascriptDoubleQuoted,
       (match) => ' ${match.group(1)}="#"',
     );
     sanitized = sanitized.replaceAllMapped(
-      RegExp(r"\s+(href|src)\s*=\s*'javascript:[^']*'", caseSensitive: false),
+      _javascriptSingleQuoted,
       (match) => " ${match.group(1)}='#'",
     );
     return sanitized;

@@ -146,14 +146,24 @@ class MainActivity : FlutterActivity() {
             }
 
             runInBackground(result, "COPY_FAILED") {
-                uris.map { uri ->
-                    persistReadPermission(uri, data)
-                    val name = documentNameForUri(uri)
-                    val file = nextDocumentMirrorFile(name)
-                    val metadata = copyUriToFile(uri, file).toMutableMap()
-                    metadata["uri"] = uri.toString()
-                    metadata
+                val documents = mutableListOf<Map<String, Any?>>()
+                var firstError: Exception? = null
+                for (uri in uris) {
+                    try {
+                        persistReadPermission(uri, data)
+                        val name = documentNameForUri(uri)
+                        val file = nextDocumentMirrorFile(name)
+                        val metadata = copyUriToFile(uri, file).toMutableMap()
+                        metadata["uri"] = uri.toString()
+                        documents.add(metadata)
+                    } catch (error: Exception) {
+                        if (firstError == null) firstError = error
+                    }
                 }
+                if (documents.isEmpty() && firstError != null) {
+                    throw firstError!!
+                }
+                documents
             }
             return
         }

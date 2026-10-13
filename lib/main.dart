@@ -67,8 +67,11 @@ class _GlobalErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark =
+        MediaQuery.maybePlatformBrightnessOf(context) == Brightness.dark;
+    final foreground = dark ? Colors.white : const Color(0xFF1D1D1F);
     return Material(
-      color: const Color(0xFFF8F1E6),
+      color: dark ? const Color(0xFF0A0A0C) : const Color(0xFFF8F1E6),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
@@ -88,6 +91,7 @@ class _GlobalErrorCard extends StatelessWidget {
                         child: Text(
                           '页面暂时无法显示',
                           style: TextStyle(
+                            color: foreground,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
@@ -100,7 +104,7 @@ class _GlobalErrorCard extends StatelessWidget {
                     details.exceptionAsString(),
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(color: foreground, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
                   Align(

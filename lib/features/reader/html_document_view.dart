@@ -164,7 +164,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
 
   function search(query, maxHits) {
     clear();
-    maxHits = maxHits || 200;
+    maxHits = maxHits || 2000;
     const cleanQuery = (query || '').trim();
     if (!cleanQuery) return JSON.stringify({count: 0, truncated: false});
     const nodes = collectTextNodes(document.querySelector('.reader-shell') || document.body);
@@ -571,7 +571,7 @@ class HtmlDocumentViewState extends State<HtmlDocumentView> {
         return;
       }
       final result = await _controller.runJavaScriptReturningResult(
-        'window.jianxiSearch.search(${jsonEncode(query)}, 200);',
+        'window.jianxiSearch.search(${jsonEncode(query)}, 2000);',
       );
       final parsed = _parseSearchResult(result);
       searchController.updateMatchCount(parsed.count);

@@ -80,15 +80,36 @@ class MindmapBuilder extends MarkdownWidgetBuilder {
 
 // ── Mindmap Diagram Widget ───────────────────────────────────────────────
 
-class MindmapDiagram extends StatelessWidget {
-  final String code;
+class MindmapDiagram extends StatefulWidget {
   const MindmapDiagram({super.key, required this.code});
 
+  final String code;
+
+  @override
+  State<MindmapDiagram> createState() => _MindmapDiagramState();
+}
+
+class _MindmapDiagramState extends State<MindmapDiagram> {
   static const _maxDepth = 64;
+  _MindmapNodeData? _tree;
+
+  @override
+  void initState() {
+    super.initState();
+    _tree = _parseMindmap(widget.code);
+  }
+
+  @override
+  void didUpdateWidget(covariant MindmapDiagram oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.code != widget.code) {
+      _tree = _parseMindmap(widget.code);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final tree = _parseMindmap(code);
+    final tree = _tree;
     if (tree == null) {
       return Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -106,9 +127,12 @@ class MindmapDiagram extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        return SizedBox(
-          width: width,
-          child: _MindmapTree(tree: tree, availableWidth: width),
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: width < 320 ? 320 : width,
+            child: _MindmapTree(tree: tree, availableWidth: width),
+          ),
         );
       },
     );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -40,8 +41,23 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   final Set<String> _selectedPaths = {};
+  Timer? _relativeTimeTimer;
 
   bool get _selectionActive => _selectedPaths.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _relativeTimeTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _relativeTimeTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
