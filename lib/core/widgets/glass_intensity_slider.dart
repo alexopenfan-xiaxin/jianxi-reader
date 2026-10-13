@@ -86,38 +86,38 @@ class _GlassIntensitySliderState extends State<GlassIntensitySlider> {
               value: '${(_dragValue * 100).round()}%',
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-              onTapDown: (details) {
-                _dragging = true;
-                _updateFromPosition(
-                  details.localPosition,
-                  constraints.maxWidth,
-                );
-              },
-              onTapUp: (_) {
-                _dragging = false;
-                _commit();
-              },
-              onHorizontalDragDown: (details) {
-                _dragging = true;
-                _updateFromPosition(
-                  details.localPosition,
-                  constraints.maxWidth,
-                );
-              },
-              onHorizontalDragUpdate: (details) {
-                _updateFromPosition(
-                  details.localPosition,
-                  constraints.maxWidth,
-                );
-              },
-              onHorizontalDragEnd: (_) {
-                _dragging = false;
-                _commit();
-              },
-              onHorizontalDragCancel: () {
-                _dragging = false;
-                setState(() => _dragValue = widget.value);
-              },
+                onTapDown: (details) {
+                  _dragging = true;
+                  _updateFromPosition(
+                    details.localPosition,
+                    constraints.maxWidth,
+                  );
+                },
+                onTapUp: (_) {
+                  _dragging = false;
+                  _commit();
+                },
+                onHorizontalDragDown: (details) {
+                  _dragging = true;
+                  _updateFromPosition(
+                    details.localPosition,
+                    constraints.maxWidth,
+                  );
+                },
+                onHorizontalDragUpdate: (details) {
+                  _updateFromPosition(
+                    details.localPosition,
+                    constraints.maxWidth,
+                  );
+                },
+                onHorizontalDragEnd: (_) {
+                  _dragging = false;
+                  _commit();
+                },
+                onHorizontalDragCancel: () {
+                  _dragging = false;
+                  setState(() => _dragValue = widget.value);
+                },
                 child: _Track(value: _dragValue, dragging: _dragging),
               ),
             );

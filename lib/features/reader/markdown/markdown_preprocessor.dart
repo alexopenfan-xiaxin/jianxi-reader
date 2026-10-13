@@ -1,10 +1,17 @@
-final _referenceDefinition = RegExp(r'^\[([^\]]+)\]:\s*(\S+)\s*$', multiLine: true);
+final _referenceDefinition = RegExp(
+  r'^\[([^\]]+)\]:\s*(\S+)\s*$',
+  multiLine: true,
+);
 final _referenceLink = RegExp(r'\[([^\]]+)\]\[([^\]]+)\]');
 final _angleEmail = RegExp(r'<([^\s<>]+@[^\s<>]+\.[^\s<>]+)>');
 final _angleUrl = RegExp(r'<(https?://[^\s<>]+)>');
 final _mermaidFence = RegExp(r'```mermaid[\s\S]*?```', multiLine: true);
 final _mermaidTrailingSemicolon = RegExp(r'^(.*?);$', multiLine: true);
-final _htmlUnderline = RegExp(r'<u>(.*?)</u>', caseSensitive: false, dotAll: true);
+final _htmlUnderline = RegExp(
+  r'<u>(.*?)</u>',
+  caseSensitive: false,
+  dotAll: true,
+);
 final _orderedIndent = RegExp(r'^( {2,3})(\d+[.)]\s+)');
 
 String preprocessMarkdown(String raw) {
@@ -19,9 +26,7 @@ String preprocessMarkdown(String raw) {
   });
 
   // 2. Replace [text][id] references
-  processed = processed.replaceAllMapped(_referenceLink, (
-    match,
-  ) {
+  processed = processed.replaceAllMapped(_referenceLink, (match) {
     final id = match.group(2)!;
     final url = refLinks[id];
     if (url != null) {
@@ -41,16 +46,13 @@ String preprocessMarkdown(String raw) {
   );
 
   // 4. Strip trailing ; inside mermaid code blocks
-  processed = processed.replaceAllMapped(
-    _mermaidFence,
-    (match) {
-      var block = match.group(0)!;
-      return block.replaceAllMapped(
-        _mermaidTrailingSemicolon,
-        (m) => m.group(1)!,
-      );
-    },
-  );
+  processed = processed.replaceAllMapped(_mermaidFence, (match) {
+    var block = match.group(0)!;
+    return block.replaceAllMapped(
+      _mermaidTrailingSemicolon,
+      (m) => m.group(1)!,
+    );
+  });
 
   // 5. Convert <u>text</u> to ++text++ for underline rendering
   processed = processed.replaceAllMapped(

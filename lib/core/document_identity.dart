@@ -27,7 +27,9 @@ class DocumentIdentityService {
           final raw = await file.readAsString();
           final decoded = jsonDecode(raw);
           if (decoded is Map) {
-            _idMap = decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+            _idMap = decoded.map(
+              (k, v) => MapEntry(k.toString(), v.toString()),
+            );
           }
         } catch (error) {
           // A damaged map must not permanently poison the service future.

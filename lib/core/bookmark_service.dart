@@ -65,7 +65,9 @@ class BookmarkService {
           if (list is List) {
             _cache = list
                 .whereType<Map>()
-                .map((e) => ReadingBookmark.fromJson(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) => ReadingBookmark.fromJson(Map<String, dynamic>.from(e)),
+                )
                 .toList();
           }
         } catch (error) {

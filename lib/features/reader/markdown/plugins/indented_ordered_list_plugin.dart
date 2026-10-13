@@ -63,10 +63,7 @@ class IndentedOrderedListPlugin extends BlockParserPlugin {
     if (first == null || first.group(1)!.isNotEmpty) {
       return false;
     }
-    final lookaheadEnd = (index + _maxNestedLookahead).clamp(
-      0,
-      lines.length,
-    );
+    final lookaheadEnd = (index + _maxNestedLookahead).clamp(0, lines.length);
     for (var i = index + 1; i < lookaheadEnd; i++) {
       final match = _orderedLine.firstMatch(lines[i]);
       if (match == null) {

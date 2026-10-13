@@ -645,9 +645,9 @@ class _ReaderPageState extends State<ReaderPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('添加书签失败：${describeDocumentError(e)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加书签失败：${describeDocumentError(e)}')),
+        );
       }
     }
   }

@@ -171,7 +171,9 @@ class _RecentDocumentCardState extends State<_RecentDocumentCard> {
   void didUpdateWidget(covariant _RecentDocumentCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.path != widget.document.path) {
-      _progressFuture = ReadingProgressService.loadProgress(widget.document.path);
+      _progressFuture = ReadingProgressService.loadProgress(
+        widget.document.path,
+      );
     }
   }
 
@@ -906,9 +908,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('创建标签失败：${describeDocumentError(error)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('创建标签失败：${describeDocumentError(error)}')),
+        );
       }
     }
   }
@@ -940,9 +942,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
       setState(() => _selectedTags.remove(tag));
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('删除标签失败：${describeDocumentError(error)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除标签失败：${describeDocumentError(error)}')),
+        );
       }
     }
   }
@@ -967,9 +969,9 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
     } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存标签失败：${describeDocumentError(error)}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存标签失败：${describeDocumentError(error)}')),
+        );
       }
     }
   }

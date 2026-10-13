@@ -92,9 +92,9 @@ class _AppShellState extends State<AppShell> {
     } catch (error) {
       debugPrint('[AppShell] open external document failed: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('打开外部文档失败：${describeDocumentError(error)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('打开外部文档失败：${describeDocumentError(error)}')),
+      );
     }
   }
 

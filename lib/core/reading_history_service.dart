@@ -54,7 +54,11 @@ class ReadingHistoryService {
           if (list is List) {
             _cache = list
                 .whereType<Map>()
-                .map((e) => ReadingHistoryEvent.fromJson(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) => ReadingHistoryEvent.fromJson(
+                    Map<String, dynamic>.from(e),
+                  ),
+                )
                 .toList();
           }
         } catch (error) {

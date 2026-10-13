@@ -135,8 +135,7 @@ Widget _dataImageWidget(String url) {
     return Image.memory(
       base64Decode(Uri.decodeComponent(url.substring(comma + 1))),
       fit: BoxFit.contain,
-      errorBuilder: (ctx, error, stackTrace) =>
-          const Icon(Icons.broken_image),
+      errorBuilder: (ctx, error, stackTrace) => const Icon(Icons.broken_image),
     );
   } catch (_) {
     return const Icon(Icons.broken_image);
