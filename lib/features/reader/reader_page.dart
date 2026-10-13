@@ -680,9 +680,7 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 }
 
-Future<_ReaderMenuAction?> _showReaderDocumentMenu(
-  BuildContext context,
-) async {
+Future<_ReaderMenuAction?> _showReaderDocumentMenu(BuildContext context) async {
   // The component library's action sheet pops itself after invoking the
   // action, so the chosen value is captured here instead of returned from
   // Navigator.pop.
@@ -691,10 +689,7 @@ Future<_ReaderMenuAction?> _showReaderDocumentMenu(
     context: context,
     title: '文档操作',
     cancelLabel: '取消',
-    settings: AppGlassSettings.build(
-      context,
-      role: AppGlassRole.staticPanel,
-    ),
+    settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
     quality: GlassQuality.standard,
     actions: [
       GlassActionSheetAction(
@@ -761,9 +756,7 @@ class _ReaderAppBarAction extends StatelessWidget {
             role: AppGlassRole.interactiveControl,
           ),
           useOwnLayer: true,
-          quality: AppGlassSettings.qualityFor(
-            AppGlassRole.interactiveControl,
-          ),
+          quality: AppGlassSettings.qualityFor(AppGlassRole.interactiveControl),
         ),
       ),
     );

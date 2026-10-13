@@ -113,10 +113,7 @@ class _FixedLibraryHeader extends StatelessWidget {
       context: context,
       title: '文档排序',
       cancelLabel: '取消',
-      settings: AppGlassSettings.build(
-        context,
-        role: AppGlassRole.staticPanel,
-      ),
+      settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
       quality: GlassQuality.standard,
       actions: [
         for (final mode in LibrarySortMode.values)

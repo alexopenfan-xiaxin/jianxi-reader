@@ -625,18 +625,13 @@ Future<_DocumentMenuAction?> _showGlassDocumentMenu(
     context: context,
     title: document.name,
     cancelLabel: '取消',
-    settings: AppGlassSettings.build(
-      context,
-      role: AppGlassRole.staticPanel,
-    ),
+    settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
     quality: GlassQuality.standard,
     actions: [
       GlassActionSheetAction(
         label: document.pinned ? '取消置顶' : '置顶',
         icon: Icon(
-          document.pinned
-              ? Icons.push_pin_rounded
-              : Icons.push_pin_outlined,
+          document.pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
         ),
         onPressed: () => selected = _DocumentMenuAction.pin,
       ),
