@@ -43,10 +43,6 @@ class TappableImageBuilder extends MarkdownWidgetBuilder {
           : Image.file(
               File(localPath),
               fit: BoxFit.contain,
-              cacheWidth:
-                  (MediaQuery.sizeOf(context).width *
-                          MediaQuery.devicePixelRatioOf(context))
-                      .round(),
               errorBuilder: (ctx, error, stackTrace) =>
                   const Icon(Icons.broken_image),
             );
@@ -240,7 +236,7 @@ class _CachedMarkdownImageState extends State<CachedMarkdownImage> {
             _inFlight.remove(widget.url);
           }
         },
-        onError: (Object _, StackTrace __) {
+        onError: (Object error, StackTrace stackTrace) {
           if (identical(_inFlight[widget.url], future)) {
             _inFlight.remove(widget.url);
           }

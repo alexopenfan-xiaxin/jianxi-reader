@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 class HapticService {
   const HapticService._();
 
