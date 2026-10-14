@@ -65,19 +65,26 @@ class _FixedLibraryHeader extends StatelessWidget {
       // The header slides with the tab transition. Premium glass tracks
       // sliding transforms through its backdrop group and flashes black on
       // switch, so anything that moves stays on the standard tier.
-      return LiquidGlassSurface(
-        borderRadius: BorderRadius.circular(24),
-        color: liquidGlassHeaderColor(context),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border(
-              bottom: BorderSide(
-                color: palette.hairline.withValues(alpha: 0.20),
-              ),
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: palette.hairline.withValues(alpha: 0.20),
             ),
           ),
-          child: headerContent,
+        ),
+        child: GlassToolbar(
+          height: 72,
+          alignment: MainAxisAlignment.start,
+          padding: EdgeInsets.zero,
+          backgroundColor: Colors.transparent,
+          settings: AppGlassSettings.build(
+            context,
+            role: AppGlassRole.animatedChrome,
+            color: liquidGlassHeaderColor(context),
+          ),
+          quality: AppGlassSettings.qualityFor(AppGlassRole.animatedChrome),
+          children: [Expanded(child: headerContent)],
         ),
       );
     }
@@ -188,10 +195,18 @@ class _SelectionHeader extends StatelessWidget {
     );
 
     if (liquidGlassEnabled(context)) {
-      return LiquidGlassSurface(
-        borderRadius: BorderRadius.circular(24),
-        color: liquidGlassHeaderColor(context),
-        child: content,
+      return GlassToolbar(
+        height: 72,
+        alignment: MainAxisAlignment.start,
+        padding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        settings: AppGlassSettings.build(
+          context,
+          role: AppGlassRole.animatedChrome,
+          color: liquidGlassHeaderColor(context),
+        ),
+        quality: AppGlassSettings.qualityFor(AppGlassRole.animatedChrome),
+        children: [Expanded(child: content)],
       );
     }
 
