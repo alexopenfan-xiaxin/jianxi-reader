@@ -107,9 +107,7 @@ class _FixedSettingsHeader extends StatelessWidget {
       return DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: palette.hairline.withValues(alpha: 0.20),
-            ),
+            bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.20)),
           ),
         ),
         child: GlassToolbar(
