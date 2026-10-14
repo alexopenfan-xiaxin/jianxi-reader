@@ -362,7 +362,7 @@ LiquidGlassSettings buildAppGlassSettings(
 
 ## 10. 文件级 TODO 清单
 
-- [x] `lib/core/widgets/liquid_glass.dart`：新增 `AppGlassRole`/`AppGlassSettings` 单一 material/quality 解析链；`LiquidGlassSurface` 仍用 `AdaptiveGlass` 作自定义 chrome 回退，panel/icon tile/text field/chip/dialog 已接组件库。
+- [x] `lib/core/widgets/liquid_glass.dart`：新增 `AppGlassRole`/`AppGlassSettings` 单一 material/quality 解析链；`LiquidGlassSurface` 仍用 `AdaptiveGlass` 作自定义 chrome 回退；icon tile/text field/chip/dialog 已接组件库；`LiquidGlassPanel`/`LiquidGlassSheetPanel` 按用户要求恢复为迁移前实现（`LiquidGlassSurface` 链），保证排序等 sheet 面板材质与 build 197 一致。
 - [x] `lib/core/widgets/app_card.dart`：玻璃分支接 `GlassCard`。
 - [x] `lib/core/widgets/glass_segmented_control.dart`：玻璃模式接 `GlassSegmentedControl`；经典模式保留原 Material/backdrop 实现。
 - [x] `lib/core/widgets/reading_settings_panel.dart`：chip 与 segmented control 已走组件库；预览面板保留 `AdaptiveGlass`。
@@ -397,7 +397,7 @@ LiquidGlassSettings buildAppGlassSettings(
   - 版本 2.9.8+198；`build-apk.yml` 产物名同步；
   - 验证走 GitHub CI/`Build APK` workflow（本机不运行 Flutter 命令），APK 从 workflow artifact 取回桌面；不打 tag、不建 Release。
 - 2026-10-14 build 199（Phase 3 菜单与 Phase 4 阅读器 chrome 补齐）：
-  - 文库文档菜单、阅读器文档菜单、文档排序菜单曾改 `showGlassActionSheet`，后按用户要求全部回退为原实现（文档菜单回 `showModalBottomSheet` + `LiquidGlassSheetPanel`，排序菜单回 `DraggableScrollableSheet` + `_SortSheet`）；
+  - 文库文档菜单、阅读器文档菜单、文档排序菜单曾改 `showGlassActionSheet`，后按用户要求全部回退为原实现（文档菜单回 `showModalBottomSheet` + `LiquidGlassSheetPanel`，排序菜单回 `DraggableScrollableSheet` + `_SortSheet`）；`LiquidGlassPanel`/`LiquidGlassSheetPanel` 也恢复为迁移前的 `LiquidGlassSurface` 材质链，排序面板材质回到 build 197 观感；
   - 阅读器 app bar 在液态玻璃模式下返回键与操作按钮改 `GlassIconButton`（standard）；经典模式与滚动临时玻璃条继续用 Material `IconButton`；
   - 版本 2.9.9+199；`build-apk.yml` 产物名同步；
   - 真机验证项：三个菜单均为原圆角玻璃面板与拖拽排序 sheet；阅读器 4 个玻璃操作按钮与标题空间。

@@ -454,20 +454,11 @@ class LiquidGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = quality == GlassQuality.premium
-        ? AppGlassRole.staticPanel
-        : AppGlassRole.draggedSurface;
-    return GlassContainer(
+    return LiquidGlassSurface(
+      borderRadius: borderRadius,
       padding: padding,
-      shape: LiquidRoundedSuperellipse(borderRadius: borderRadius.topLeft.x),
-      clipBehavior: Clip.antiAlias,
-      settings: AppGlassSettings.build(
-        context,
-        role: role,
-        color: color ?? liquidGlassCardColor(context),
-        blurOverride: LiquidGlassTokens.panelBlur,
-      ),
-      useOwnLayer: true,
+      color: color ?? liquidGlassCardColor(context),
+      blur: LiquidGlassTokens.panelBlur,
       quality: quality,
       child: child,
     );
@@ -501,31 +492,15 @@ class LiquidGlassSheetPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The panel keeps the library's AdaptiveGlass primitive (the same surface
-    // GlassSheet uses internally) instead of GlassContainer: a sheet hosts
-    // interactive glass controls, and GlassContainer would set
-    // avoidsRefraction for that subtree. The existing DraggableScrollableSheet
-    // host also owns drag/keyboard behavior, so GlassSheet.show is not used.
-    final role = quality == GlassQuality.premium
-        ? AppGlassRole.staticPanel
-        : AppGlassRole.draggedSurface;
     return Padding(
       padding: margin,
-      child: AdaptiveGlass(
-        shape: LiquidRoundedSuperellipse(borderRadius: borderRadius.topLeft.x),
-        settings: AppGlassSettings.build(
-          context,
-          role: role,
-          color: liquidGlassCardColor(context),
-          blurOverride: LiquidGlassTokens.panelBlur,
-        ),
+      child: LiquidGlassPanel(
+        padding: padding,
+        borderRadius: borderRadius,
         quality: quality,
-        child: Padding(
-          padding: padding,
-          child: SafeArea(
-            top: false,
-            child: Material(type: MaterialType.transparency, child: child),
-          ),
+        child: SafeArea(
+          top: false,
+          child: Material(type: MaterialType.transparency, child: child),
         ),
       ),
     );
