@@ -926,7 +926,7 @@ class _TagEditorSheetState extends State<_TagEditorSheet> {
           context,
           role: AppGlassRole.staticPanel,
         ),
-        quality: GlassQuality.standard,
+        quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
         actions: [
           GlassDialogAction(
             label: '取消',

@@ -1011,7 +1011,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
         title: '打开链接',
         maxWidth: 320,
         settings: AppGlassSettings.build(ctx, role: AppGlassRole.staticPanel),
-        quality: GlassQuality.standard,
+        quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
         content: SingleChildScrollView(
           child: Text(
             url,

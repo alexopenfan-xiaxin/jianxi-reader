@@ -15,7 +15,7 @@
 - 本次 build 197 已完成的 pre-work：
   - 液态玻璃底部 tab 使用 `GlassTabBar.bottom`；
   - 底部 tab 宽度恢复到 2.9.5 的 160px（`tabWidth: 80` × 2、`horizontalPadding: 0`、外层 `SizedBox(width: 160)`）；
-  - 删除自定义玻璃强度滑杆，玻璃强度固定为 `AppSettingsController.liquidGlassIntensityDefault`（0.72）。
+  - 删除自定义玻璃强度滑杆，玻璃强度固定为 `AppSettingsController.liquidGlassIntensityDefault`（0.9，build 199 起）。
 - 不动的部分：经典模式 fallback、Markdown 渲染/选区/滚动锚定、TOC、搜索索引、阅读器内容路径。
 
 ## 1. 目标与非目标
@@ -71,7 +71,7 @@
 - 头部/工具栏若仍在 `_TabEntrance` 或页面转场中，必须保持 `standard` quality。
 - 浮层拖拽中的 sheet 必须保持 `standard`；静态 dialog/panel 才可 `premium`。
 - Modal bottom sheet 继续使用 `DraggableScrollableSheet` + `isScrollControlled: true`，除非明确验证组件库 sheet 行为可替代。
-- 玻璃强度固定 0.72；自定义强度滑杆已删除，不要重新引入“自定义模式”分叉。
+- 玻璃强度固定 0.9（build 199 起；build 197-198 为 0.72）；自定义强度滑杆已删除，不要重新引入“自定义模式”分叉。
 
 ## 3. 组件库能力与关键机制
 
@@ -142,7 +142,7 @@
 | 自研 `GlassSegmentedControl` | `GlassSegmentedControl` | 微调 | 泛型 `GlassSegment<T>` 需适配 |
 | `LiquidGlassTextFieldFrame` | `GlassTextField` / `GlassTextArea` / `GlassFormField` | 微调 | controller、校验、autofocus、键盘行为要逐项验证 |
 | `LiquidGlassIconTile` | `GlassIconButton` / `GlassButton` | 直接 | 尺寸/布局微调 |
-| 自定义玻璃强度滑杆 | 无（固定 0.72） | 已删除 | 不要再恢复 custom 模式 |
+| 自定义玻璃强度滑杆 | 无（固定 0.9） | 已删除 | 不要再恢复 custom 模式 |
 | 头部/工具栏 | `GlassToolbar` + `GlassButton`；`GlassAppBar` 仅透明导航 | 微调 | `GlassToolbar` 有 surface；`GlassAppBar` 不是玻璃条；动画头部保持 standard |
 | 卡片/设置分组 | `GlassCard` / `GlassGroupedSection` / `GlassListTile` / `GlassDivider` | 微调 | 遵守反嵌套规则 |
 | Shell/底栏 | `GlassTabBar.bottom`（已用）；`GlassScaffold` 后期可选 | 分阶段 | 见第 7 节 |
@@ -227,7 +227,7 @@ LiquidGlassSettings buildAppGlassSettings(
 - 保持底部 tab 现有 `GlassTabBar.bottom` 默认材质；宽度仍为 160px。
 - 验收：
   - 现有界面视觉与 build 197 基线一致；
-  - 强度固定 0.72；
+  - 强度固定 0.9（build 199 起）；
   - `flutter analyze --fatal-infos`、`flutter test` 通过；
   - 不新增 premium 黑闪。
 - 回滚：适配层只新增不删除，删除即可回到现状。
@@ -401,6 +401,11 @@ LiquidGlassSettings buildAppGlassSettings(
   - 阅读器 app bar 在液态玻璃模式下返回键与操作按钮改 `GlassIconButton`（standard）；经典模式与滚动临时玻璃条继续用 Material `IconButton`；
   - 版本 2.9.9+199；`build-apk.yml` 产物名同步；
   - 真机验证项：三个菜单均为原圆角玻璃面板与拖拽排序 sheet；阅读器 4 个玻璃操作按钮与标题空间。
+- 2026-10-14 build 199 材质调优：
+  - `liquidGlassIntensityDefault` 0.72 -> 0.9；
+  - `chromaticAberration` 0.010 -> 0.2；
+  - 静态 dialog（7 处 `GlassDialog` + 进度 `LiquidGlassDialog`）由 standard 调为 premium；滚动卡片、转场头部、拖拽 sheet、交互控件保持 standard；
+  - 版本保持 2.9.9+199。
 - Phase 5 决策：本次不执行 shell 级 `GlassScaffold`。§7.2 已列出的状态重挂载、SnackBar/键盘差异与横屏 rail 阻塞项未验证，保留现有 Material `Scaffold` 根。
 - 已解决/收敛的 Open questions：
   - 底部 tab 不跟随统一强度，保持 `GlassTabBar.bottom` 默认材质；

@@ -306,7 +306,7 @@ Future<bool?> _confirmBatchAction(
       settings: AppGlassSettings.build(context, role: AppGlassRole.staticPanel),
       // Dialogs animate in with their route, so they stay on the standard
       // tier; premium is reserved for chrome that never transforms.
-      quality: GlassQuality.standard,
+      quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
       actions: [
         GlassDialogAction(
           label: '取消',

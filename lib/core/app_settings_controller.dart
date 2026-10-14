@@ -148,7 +148,7 @@ class AppSettingsController extends ChangeNotifier {
 
   /// Curated liquid-glass intensity. The custom intensity control was
   /// removed in build 197; glass surfaces always render at this value.
-  static const double liquidGlassIntensityDefault = 0.72;
+  static const double liquidGlassIntensityDefault = 0.9;
 
   SharedPreferences? _prefs;
 

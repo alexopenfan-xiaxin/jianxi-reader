@@ -47,7 +47,7 @@ class LiquidGlassTokens {
   static const double thickness = 16.0;
 
   // Chromatic fringing along the refracted edge.
-  static const double chromaticAberration = 0.010;
+  static const double chromaticAberration = 0.2;
 
   // Specular light budget before intensity scaling.
   static const double darkSpecular = 0.42;
@@ -690,7 +690,7 @@ class LiquidGlassDialog extends StatelessWidget {
         useOwnLayer: true,
         // Dialog routes animate their child in; the premium tier tracks
         // transform changes through its backdrop group and can flash black.
-        quality: GlassQuality.standard,
+        quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

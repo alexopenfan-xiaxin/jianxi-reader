@@ -186,7 +186,7 @@ class _AboutPageState extends State<AboutPage> {
               ctx,
               role: AppGlassRole.staticPanel,
             ),
-            quality: GlassQuality.standard,
+            quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
             actions: [
               GlassDialogAction(
                 label: '取消',
@@ -403,7 +403,7 @@ class _AboutPageState extends State<AboutPage> {
         message: '安装更新需要开启「安装未知应用」权限。请先前往设置开启权限，再重新检查更新。',
         maxWidth: 320,
         settings: AppGlassSettings.build(ctx, role: AppGlassRole.staticPanel),
-        quality: GlassQuality.standard,
+        quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
         actions: [
           GlassDialogAction(
             label: '取消',
