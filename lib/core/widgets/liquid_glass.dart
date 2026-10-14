@@ -11,8 +11,6 @@ export 'package:liquid_glass_widgets/types/glass_quality.dart'
 export 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show
         AdaptiveGlass,
-        GlassActionSheetAction,
-        GlassActionSheetStyle,
         GlassCard,
         GlassChip,
         GlassContainer,
@@ -28,8 +26,7 @@ export 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
         GlassTabBar,
         GlassToolbar,
         LiquidGlassSettings,
-        LiquidRoundedSuperellipse,
-        showGlassActionSheet;
+        LiquidRoundedSuperellipse;
 
 /// Liquid glass design constants.
 ///
