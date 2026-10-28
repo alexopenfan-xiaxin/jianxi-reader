@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git ref to build (default test)'
+        description: 'Git ref to build (default main)'
         required: false
-        default: 'test'
+        default: 'main'
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
-          ref: ${{ github.event.inputs.ref || 'test' }}
+          ref: ${{ github.event.inputs.ref || 'main' }}
           fetch-depth: 1
 
       - name: Set up Flutter
