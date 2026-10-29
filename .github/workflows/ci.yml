@@ -113,11 +113,11 @@ jobs:
             || { echo "::error::APK versionCode does not match pubspec ($CODE)"; exit 1; }
           echo "$BADGING" | grep -q "versionName='$NAME'" \
             || { echo "::error::APK versionName does not match pubspec ($NAME)"; exit 1; }
-          echo "$BADGING" | grep -q 'sdkVersion' \
-            || { echo "::error::APK declares no minSdk"; exit 1; }
-          echo "$BADGING" | grep -q 'targetSdkVersion' \
-            || { echo "::error::APK declares no targetSdk"; exit 1; }
           "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" > manifest.xml.txt
           grep -q 'allowBackup.*=false' manifest.xml.txt \
             || { echo "::error::packaged manifest does not set allowBackup=false"; exit 1; }
+          grep -q 'minSdkVersion' manifest.xml.txt \
+            || { echo "::error::packaged manifest declares no minSdkVersion"; exit 1; }
+          grep -q 'targetSdkVersion' manifest.xml.txt \
+            || { echo "::error::packaged manifest declares no targetSdkVersion"; exit 1; }
           echo "APK metadata assertions passed."

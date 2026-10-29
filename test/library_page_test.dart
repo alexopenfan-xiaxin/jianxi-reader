@@ -296,6 +296,11 @@ void main() {
     await tester.tap(find.text('移出'));
     await tester.pumpAndSettle();
 
+    // A single removal now asks for confirmation before touching anything.
+    expect(find.text('移出文档'), findsOneWidget);
+    await tester.tap(find.text('移出').last);
+    await tester.pumpAndSettle();
+
     expect(find.text('article.md'), findsNothing);
     expect(find.byKey(const ValueKey('empty_library')), findsOneWidget);
   });
