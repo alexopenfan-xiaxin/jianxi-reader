@@ -57,4 +57,167 @@ class MetadataFileStore {
       }
     }
   }
+
+  /// Reads a JSON array, dropping (and counting) entries that no longer parse.
+  ///
+  /// A single damaged record used to take the whole file down with it: the
+  /// loader cleared its cache and the next write persisted the empty list. Now
+  /// only the bad entries are lost, and an unreadable file is copied aside
+  /// first so nothing is silently overwritten.
+  static Future<JsonListRead<T>> readJsonList<T>(
+    String fileName,
+    T Function(Map<String, dynamic> json) fromJson,
+  ) async {
+    final decoded = await _decode(fileName);
+    if (decoded.data == null) {
+      return JsonListRead<T>(
+        items: const [],
+        droppedEntries: 0,
+        quarantinePath: decoded.quarantinePath,
+      );
+    }
+    final raw = decoded.data;
+    if (raw is! List) {
+      final quarantine = await _quarantine(await file(fileName));
+      debugPrint('[MetadataFileStore] $fileName is not a JSON array');
+      return JsonListRead<T>(
+        items: const [],
+        droppedEntries: 0,
+        quarantinePath: quarantine,
+      );
+    }
+
+    final items = <T>[];
+    var dropped = 0;
+    for (final entry in raw) {
+      if (entry is! Map) {
+        dropped++;
+        continue;
+      }
+      try {
+        items.add(fromJson(Map<String, dynamic>.from(entry)));
+      } catch (error) {
+        dropped++;
+        debugPrint('[MetadataFileStore] dropped damaged entry in $fileName: '
+            '$error');
+      }
+    }
+    if (dropped > 0) {
+      debugPrint(
+        '[MetadataFileStore] $fileName: kept ${items.length}, '
+        'dropped $dropped damaged entr${dropped == 1 ? 'y' : 'ies'}',
+      );
+    }
+    return JsonListRead<T>(
+      items: items,
+      droppedEntries: dropped,
+      quarantinePath: decoded.quarantinePath,
+    );
+  }
+
+  /// Reads a flat JSON string map, dropping keys whose values are unreadable.
+  static Future<JsonMapRead> readJsonStringMap(String fileName) async {
+    final decoded = await _decode(fileName);
+    if (decoded.data == null) {
+      return JsonMapRead(
+        values: const {},
+        droppedEntries: 0,
+        quarantinePath: decoded.quarantinePath,
+      );
+    }
+    final raw = decoded.data;
+    if (raw is! Map) {
+      final quarantine = await _quarantine(await file(fileName));
+      debugPrint('[MetadataFileStore] $fileName is not a JSON object');
+      return JsonMapRead(
+        values: const {},
+        droppedEntries: 0,
+        quarantinePath: quarantine,
+      );
+    }
+
+    final values = <String, String>{};
+    var dropped = 0;
+    raw.forEach((key, value) {
+      if (key == null || value == null) {
+        dropped++;
+        return;
+      }
+      values[key.toString()] = value.toString();
+    });
+    return JsonMapRead(
+      values: values,
+      droppedEntries: dropped,
+      quarantinePath: decoded.quarantinePath,
+    );
+  }
+
+  static Future<_Decoded> _decode(String fileName) async {
+    final source = await file(fileName);
+    if (!await source.exists()) {
+      return const _Decoded(null);
+    }
+    String raw;
+    try {
+      raw = await source.readAsString();
+    } catch (error) {
+      debugPrint('[MetadataFileStore] cannot read $fileName: $error');
+      return const _Decoded(null);
+    }
+    try {
+      return _Decoded(jsonDecode(raw));
+    } catch (error) {
+      debugPrint('[MetadataFileStore] $fileName is not valid JSON: $error');
+      return _Decoded(null, quarantinePath: await _quarantine(source));
+    }
+  }
+
+  static Future<String?> _quarantine(File source) async {
+    try {
+      final target =
+          '${source.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}';
+      await source.copy(target);
+      debugPrint('[MetadataFileStore] quarantined damaged file to $target');
+      return target;
+    } catch (error) {
+      debugPrint('[MetadataFileStore] failed to quarantine ${source.path}: '
+          '$error');
+      return null;
+    }
+  }
+}
+
+class _Decoded {
+  const _Decoded(this.data, {this.quarantinePath});
+
+  final Object? data;
+  final String? quarantinePath;
+}
+
+/// Outcome of a tolerant JSON array read.
+class JsonListRead<T> {
+  const JsonListRead({
+    required this.items,
+    required this.droppedEntries,
+    this.quarantinePath,
+  });
+
+  final List<T> items;
+  final int droppedEntries;
+
+  /// Copy of the damaged original, when the file could not be parsed at all.
+  final String? quarantinePath;
+}
+
+/// Outcome of a tolerant JSON string-map read.
+class JsonMapRead {
+  const JsonMapRead({
+    required this.values,
+    required this.droppedEntries,
+    this.quarantinePath,
+  });
+
+  final Map<String, String> values;
+  final int droppedEntries;
+  final String? quarantinePath;
 }

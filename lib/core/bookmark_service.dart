@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
-
 import 'metadata_file_store.dart';
 
 /// A reading bookmark anchored to a document and progress ratio.
@@ -56,25 +52,13 @@ class BookmarkService {
 
   static Future<List<ReadingBookmark>> loadAll() async {
     return _loadFuture ??= () async {
-      final file = await MetadataFileStore.file(_fileName);
-      _cache = [];
-      if (await file.exists()) {
-        try {
-          final raw = await file.readAsString();
-          final list = jsonDecode(raw);
-          if (list is List) {
-            _cache = list
-                .whereType<Map>()
-                .map(
-                  (e) => ReadingBookmark.fromJson(Map<String, dynamic>.from(e)),
-                )
-                .toList();
-          }
-        } catch (error) {
-          _cache = [];
-          debugPrint('[BookmarkService] bookmark file damaged: $error');
-        }
-      }
+      // Damaged entries are dropped individually; a damaged file is copied
+      // aside instead of being silently emptied and then overwritten.
+      final read = await MetadataFileStore.readJsonList(
+        _fileName,
+        ReadingBookmark.fromJson,
+      );
+      _cache = read.items;
       return _cache!;
     }();
   }
