@@ -4,7 +4,9 @@
     <application
         android:label="简兮阅读器"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -64,7 +66,6 @@
                 <data android:scheme="file" />
                 <data android:scheme="content" />
                 <data android:mimeType="text/markdown" />
-                <data android:mimeType="text/plain" />
                 <data android:mimeType="text/x-markdown" />
             </intent-filter>
 

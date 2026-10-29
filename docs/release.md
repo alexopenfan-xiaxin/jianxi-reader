@@ -8,6 +8,17 @@ Release mechanics for 简兮阅读器. `main` is the only long-lived branch; nor
 - Never put tokens, keystore passwords, or update-server keys in the repository, command output, or a remote URL. Use an approved credential source.
 - Do not ask for credentials preemptively. If authentication blocks an explicitly requested push or release, explain the failure and ask for a safe credential path.
 
+## Signing key custody
+
+- Treat the `RELEASE_KEYSTORE` Actions secret as the only managed copy of the release private key.
+- GitHub secrets are write-only: they cannot be read, exported, or copied to another repository. A repository transfer may not carry them.
+- Do **not** delete, overwrite, rotate, or transfer the repository without a user-migration plan. Losing the secret means existing installs cannot be updated.
+- Every release must fail when the secret is missing, and must verify the APK certificate after signing:
+  - `apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk`
+  - expected SHA-256: `b76b05e93f2334aa0f8e7d756388e9d038b72db3315ccbd19b94dcd584beab5a`
+- Keep 2FA and recovery codes on the repository owner account, and at least two repository admins.
+- If the secret is lost: stop shipping, publish under a new package name, or require uninstall/reinstall (local bookmarks/progress are lost).
+
 ## Normal path: `publish.yml`
 
 `.github/workflows/publish.yml` is the normal release path; dispatch defaults to `main`.
@@ -22,6 +33,7 @@ Release mechanics for 简兮阅读器. `main` is the only long-lived branch; nor
 - Tag and release title: `v<version>+<build>`.
 - Release asset: `app-arm64-v8a-release.apk`; `build-apk.yml` produces an artifact only (no tag, no release).
 - Before tagging, keep `pubspec.yaml` and `_fallbackBuildNumber` in `about_settings.dart` in sync.
+- Before release, `gh secret list` must show `RELEASE_KEYSTORE`, `KEY_STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, and `UPDATE_SERVER_KEY`. Never rotate `RELEASE_KEYSTORE`.
 - Release notes are generated from commit subjects since the previous tag, so keep the `feat:` / `fix:` / `perf:` / `refactor:` / `style:` prefixes meaningful.
 
 ## TLS exception

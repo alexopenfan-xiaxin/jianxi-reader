@@ -54,15 +54,18 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
-            {
-              echo "storePassword=$STORE_PASSWORD"
-              echo "keyPassword=$KEY_PASSWORD"
-              echo "keyAlias=$KEY_ALIAS"
-              echo "storeFile=app/release-keystore.jks"
-            } > android/key.properties
+          # 与本仓库的发布约定一致：没有正式签名就停下，不产出 debug 签名的 release 包。
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Signing secrets are incomplete; refusing to build a release APK."
+            exit 1
           fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=app/release-keystore.jks"
+          } > android/key.properties
 
       - name: Build release APK (ARM64)
         run: |
@@ -71,12 +74,14 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk             artifacts/jianxi-reader-2.9.9+199-arm64-v8a.apk
+          # 名字从 pubspec.yaml 派生，不再手写第二份版本号。
+          VERSION=$(grep -E '^version:' pubspec.yaml | head -1 | sed -E 's/^version:[[:space:]]*//')
+          cp build/app/outputs/flutter-apk/app-release.apk             "artifacts/jianxi-reader-${VERSION}-arm64-v8a.apk"
           ls -lh artifacts/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jianxi-reader-arm64-v8a
-          path: artifacts/jianxi-reader-2.9.9+199-arm64-v8a.apk
+          path: artifacts/
           retention-days: 14

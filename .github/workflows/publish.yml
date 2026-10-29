@@ -7,6 +7,14 @@ on:
         description: 'Git ref (default main)'
         required: false
         default: 'main'
+      channel:
+        description: 'Release channel: stable or beta'
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+        default: stable
 
 permissions:
   contents: write
@@ -22,9 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     outputs:
-      sha: ${{ github.sha }}
+      # 用实际 checkout 出来的 commit，而不是 dispatch 时选中的 ref：
+      # 两者不同时 tag/notes 会打在错误的 commit 上，APK 与源码不对应。
+      sha: ${{ steps.version.outputs.sha }}
       version_name: ${{ steps.version.outputs.version_name }}
       build_number: ${{ steps.version.outputs.build_number }}
+      apk_sha256: ${{ steps.apk.outputs.apk_sha256 }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,9 +60,37 @@ jobs:
           VERSION_STR=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//')
           VERSION_NAME=$(echo "$VERSION_STR" | cut -d '+' -f 1)
           BUILD_NUMBER=$(echo "$VERSION_STR" | cut -d '+' -f 2)
+          # fail-closed：版本串解析不出来就停下，绝不带空版本号继续发。
+          if [ -z "$VERSION_NAME" ] || ! printf '%s' "$BUILD_NUMBER" | grep -Eq '^[0-9]+$'; then
+            echo "::error::Cannot parse 'version: <name>+<build>' from pubspec.yaml (got '$VERSION_STR')."
+            exit 1
+          fi
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION_STR (name=$VERSION_NAME, build=$BUILD_NUMBER)"
+
+      # 更新服务器只保留一个 APK，alpha/beta 不能被 stable 通道误发出去。
+      - name: Verify version matches the channel
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          CHANNEL: ${{ github.event.inputs.channel || 'stable' }}
+        run: |
+          case "$VERSION_NAME" in
+            *-*)
+              if [ "$CHANNEL" != "beta" ]; then
+                echo "::error::'$VERSION_NAME' is a pre-release; dispatch with channel=beta (got '$CHANNEL')."
+                exit 1
+              fi
+              ;;
+            *)
+              if [ "$CHANNEL" != "stable" ]; then
+                echo "::error::'$VERSION_NAME' is a stable version; dispatch with channel=stable (got '$CHANNEL')."
+                exit 1
+              fi
+              ;;
+          esac
+          echo "Channel '$CHANNEL' accepts version '$VERSION_NAME'."
 
       - name: Configure release signing
         env:
@@ -60,18 +99,25 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
-            {
-              echo "storePassword=$STORE_PASSWORD"
-              echo "keyPassword=$KEY_PASSWORD"
-              echo "keyAlias=$KEY_ALIAS"
-              echo "storeFile=app/release-keystore.jks"
-            } > android/key.properties
-            echo "Release signing configured."
-          else
-            echo "::warning::RELEASE_KEYSTORE secret not set, APK will use debug key."
+          # 缺任一签名 secret 都必须硬失败：debug key 每次随机，
+          # 用它打出的包老用户永远无法覆盖安装。
+          MISSING=""
+          if [ -z "$KEYSTORE_B64" ]; then MISSING="$MISSING RELEASE_KEYSTORE"; fi
+          if [ -z "$STORE_PASSWORD" ]; then MISSING="$MISSING KEY_STORE_PASSWORD"; fi
+          if [ -z "$KEY_ALIAS" ]; then MISSING="$MISSING KEY_ALIAS"; fi
+          if [ -z "$KEY_PASSWORD" ]; then MISSING="$MISSING KEY_PASSWORD"; fi
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing signing secrets:$MISSING — refusing to publish (no debug-key fallback)."
+            exit 1
           fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=app/release-keystore.jks"
+          } > android/key.properties
+          echo "Release signing configured."
 
       - name: Build release APK (arm64)
         run: |
@@ -86,11 +132,33 @@ jobs:
             artifacts/app-arm64-v8a-release.apk
           ls -lh artifacts/
 
+      # 发布可信的第二步：产物必须由正式签名证书签出，且指纹与 v2.9.9+199 一致。
+      # 同时记录 APK SHA256，客户端更新链路与 Release 说明都会用到。
+      - name: Verify signing certificate and record APK SHA-256
+        id: apk
+        run: |
+          APK=artifacts/app-arm64-v8a-release.apk
+          # 与 docs/release.md 记录的发布身份一致（v2.9.9+199 的证书指纹）。
+          EXPECTED_CERT_SHA256=b76b05e93f2334aa0f8e7d756388e9d038b72db3315ccbd19b94dcd584beab5a
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          CERT_SHA256=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" \
+            | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}' | tr 'A-F' 'a-f')
+          echo "Certificate SHA-256: $CERT_SHA256"
+          if [ "$CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signed by '$CERT_SHA256', not the release key ('$EXPECTED_CERT_SHA256')."
+            exit 1
+          fi
+          echo "Certificate matches the pinned release identity."
+          SHA256=$(sha256sum "$APK" | awk '{print $1}')
+          echo "$SHA256  app-arm64-v8a-release.apk" > artifacts/SHA256SUMS
+          echo "apk_sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "APK SHA-256: $SHA256"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-arm64-v8a-release
-          path: artifacts/app-arm64-v8a-release.apk
+          path: artifacts/
           retention-days: 14
 
   publish-release:
@@ -198,6 +266,24 @@ jobs:
           } > body.md
           cat body.md
 
+      - name: Append artifact digest to release notes
+        env:
+          APK_SHA256: ${{ needs.build-apk.outputs.apk_sha256 }}
+        run: |
+          {
+            echo
+            echo "---"
+            echo
+            echo "**SHA256** \`app-arm64-v8a-release.apk\`"
+            echo
+            echo '```'
+            echo "$APK_SHA256  app-arm64-v8a-release.apk"
+            echo '```'
+            echo
+            echo "签名证书 SHA-256：\`b76b05e9…\`（与 v2.9.9+199 一致）"
+          } >> body.md
+          cat artifacts/SHA256SUMS
+
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -205,11 +291,13 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists, refreshing asset and notes."
             gh release upload "$TAG" artifacts/app-arm64-v8a-release.apk --clobber
+            gh release upload "$TAG" artifacts/SHA256SUMS --clobber
             gh release edit "$TAG" \
               --title "v$VERSION_NAME+$BUILD_NUMBER" \
               --notes-file body.md
           else
             gh release create "$TAG" artifacts/app-arm64-v8a-release.apk \
+              artifacts/SHA256SUMS \
               --title "v$VERSION_NAME+$BUILD_NUMBER" \
               --notes-file body.md
             echo "Release $TAG created."
