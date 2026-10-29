@@ -47,6 +47,12 @@ class _FixedLibraryHeader extends StatelessWidget {
             ),
           ),
           _HeaderIconButton(
+            tooltip: '阅读痕迹',
+            icon: Icons.bookmark_border_rounded,
+            onPressed: () => _openTracesPage(context),
+          ),
+          const SizedBox(width: 2),
+          _HeaderIconButton(
             tooltip: '搜索文档',
             icon: Icons.search_rounded,
             onPressed: () => _openSearchPage(context),
@@ -649,4 +655,10 @@ class _SortOptionTile extends StatelessWidget {
       ),
     );
   }
+}
+
+void _openTracesPage(BuildContext context) {
+  Navigator.of(context).push(
+    appPageRoute<void>(builder: (context) => const ReadingTracesPage()),
+  );
 }

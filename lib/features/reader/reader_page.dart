@@ -56,6 +56,7 @@ class ReaderPage extends StatefulWidget {
   const ReaderPage({
     required this.document,
     this.initialSearchQuery,
+    this.initialProgressRatio,
     super.key,
   });
 
@@ -65,6 +66,11 @@ class ReaderPage extends StatefulWidget {
   /// opens a hit so the match is highlighted instead of the reader starting
   /// at the top.
   final String? initialSearchQuery;
+
+  /// Offers this position instead of the stored one, used when a bookmark or a
+  /// history entry opens the document. It only seeds the "continue reading"
+  /// hint, so the stored position is not overwritten until the user agrees.
+  final double? initialProgressRatio;
 
   @override
   State<ReaderPage> createState() => _ReaderPageState();
@@ -215,7 +221,8 @@ class _ReaderPageState extends State<ReaderPage> {
   Future<void> _loadSavedProgress() async {
     final file = File(_document.path);
     if (!file.existsSync()) return;
-    final ratio = await ReadingProgressService.loadProgress(_document.path);
+    final stored = await ReadingProgressService.loadProgress(_document.path);
+    final ratio = widget.initialProgressRatio ?? stored;
     if (ratio == null || ratio < 0.01 || !mounted) return;
     setState(() {
       _savedProgressRatio = ratio;

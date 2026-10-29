@@ -19,6 +19,7 @@ import '../../core/widgets/shimmer_skeleton.dart';
 import '../../core/widgets/success_check.dart';
 import '../../data/search/library_search_index.dart';
 import '../reader/reader_page.dart';
+import '../traces/reading_traces_page.dart';
 import 'document_actions.dart';
 import 'document_entry.dart';
 import 'library_controller.dart';

@@ -1,4 +1,5 @@
-import 'metadata_file_store.dart';
+import '../data/metadata/library_schema.dart';
+import '../data/metadata/metadata_store.dart';
 
 /// A reading bookmark anchored to a document and progress ratio.
 class ReadingBookmark {
@@ -41,31 +42,25 @@ class ReadingBookmark {
   }
 }
 
-/// Stores reading bookmarks in JSON.
-/// File: `metadata/bookmarks.json`
+/// Stores reading bookmarks as [ReadingMark]s in `metadata/library.json`.
+///
+/// 2.x kept them in a standalone `bookmarks.json` keyed by document id, which
+/// meant a document delete, an undo and a migration all had to touch a second
+/// file in lockstep. Marks now live on the same record set as tags, so one
+/// transaction covers both.
 class BookmarkService {
   BookmarkService._();
 
-  static const _fileName = 'bookmarks.json';
-  static List<ReadingBookmark>? _cache;
-  static Future<List<ReadingBookmark>>? _loadFuture;
-
   static Future<List<ReadingBookmark>> loadAll() async {
-    return _loadFuture ??= () async {
-      // Damaged entries are dropped individually; a damaged file is copied
-      // aside instead of being silently emptied and then overwritten.
-      final read = await MetadataFileStore.readJsonList(
-        _fileName,
-        ReadingBookmark.fromJson,
-      );
-      _cache = read.items;
-      return _cache!;
-    }();
+    final snapshot = await MetadataStore.load();
+    return _bookmarksOf(snapshot);
   }
 
   static Future<List<ReadingBookmark>> forDocument(String documentId) async {
-    final all = await loadAll();
-    return all.where((b) => b.documentId == documentId).toList();
+    final snapshot = await MetadataStore.load();
+    return _bookmarksOf(snapshot)
+        .where((bookmark) => bookmark.documentId == documentId)
+        .toList();
   }
 
   static Future<ReadingBookmark> add({
@@ -74,27 +69,25 @@ class BookmarkService {
     required String title,
     String? note,
   }) {
-    return MetadataFileStore.serialize(_fileName, () async {
-      final all = await loadAll();
-      final bookmark = ReadingBookmark(
-        id: 'bm_${DateTime.now().microsecondsSinceEpoch}',
-        documentId: documentId,
-        progressRatio: progressRatio.clamp(0.0, 1.0),
-        title: title,
-        createdAtMillis: DateTime.now().millisecondsSinceEpoch,
-        note: note,
-      );
-      await _replaceAll(all, [...all, bookmark]);
+    final bookmark = ReadingBookmark(
+      id: 'bm_${DateTime.now().microsecondsSinceEpoch}',
+      documentId: documentId,
+      progressRatio: progressRatio.clamp(0.0, 1.0),
+      title: title,
+      createdAtMillis: DateTime.now().millisecondsSinceEpoch,
+      note: note,
+    );
+    return MetadataStore.transaction((snapshot) async {
+      snapshot.marks.add(_toMark(bookmark));
       return bookmark;
     });
   }
 
   static Future<void> remove(String bookmarkId) {
-    return MetadataFileStore.serialize(_fileName, () async {
-      final all = await loadAll();
-      await _replaceAll(
-        all,
-        all.where((bookmark) => bookmark.id != bookmarkId).toList(),
+    return MetadataStore.transaction((snapshot) async {
+      snapshot.marks.removeWhere(
+        (mark) =>
+            mark.kind == ReadingMarkKind.bookmark && mark.id == bookmarkId,
       );
     });
   }
@@ -104,30 +97,31 @@ class BookmarkService {
     String? title,
     String? note,
   }) {
-    return MetadataFileStore.serialize(_fileName, () async {
-      final all = await loadAll();
-      final index = all.indexWhere((b) => b.id == bookmarkId);
+    return MetadataStore.transaction((snapshot) async {
+      final index = snapshot.marks.indexWhere(
+        (mark) =>
+            mark.kind == ReadingMarkKind.bookmark && mark.id == bookmarkId,
+      );
       if (index == -1) return;
-      final old = all[index];
-      final updated = ReadingBookmark(
+      final old = snapshot.marks[index];
+      snapshot.marks[index] = ReadingMark(
         id: old.id,
         documentId: old.documentId,
-        progressRatio: old.progressRatio,
+        kind: ReadingMarkKind.bookmark,
+        ratio: old.ratio,
         title: title ?? old.title,
-        createdAtMillis: old.createdAtMillis,
         note: note ?? old.note,
+        createdAtMillis: old.createdAtMillis,
       );
-      final next = List<ReadingBookmark>.from(all)..[index] = updated;
-      await _replaceAll(all, next);
     });
   }
 
   static Future<void> removeForDocument(String documentId) {
-    return MetadataFileStore.serialize(_fileName, () async {
-      final all = await loadAll();
-      await _replaceAll(
-        all,
-        all.where((bookmark) => bookmark.documentId != documentId).toList(),
+    return MetadataStore.transaction((snapshot) async {
+      snapshot.marks.removeWhere(
+        (mark) =>
+            mark.documentId == documentId &&
+            mark.kind == ReadingMarkKind.bookmark,
       );
     });
   }
@@ -135,29 +129,49 @@ class BookmarkService {
   /// Puts removed bookmarks back after an undo.
   static Future<void> restoreAll(List<ReadingBookmark> restored) {
     if (restored.isEmpty) return Future<void>.value();
-    return MetadataFileStore.serialize(_fileName, () async {
-      final all = await loadAll();
-      final known = all.map((bookmark) => bookmark.id).toSet();
-      await _replaceAll(all, [
-        ...all,
-        ...restored.where((bookmark) => !known.contains(bookmark.id)),
-      ]);
+    return MetadataStore.transaction((snapshot) async {
+      final known = {
+        for (final mark in snapshot.marks)
+          if (mark.kind == ReadingMarkKind.bookmark) mark.id,
+      };
+      for (final bookmark in restored) {
+        if (known.contains(bookmark.id)) continue;
+        snapshot.marks.add(_toMark(bookmark));
+      }
     });
   }
 
-  static Future<void> _replaceAll(
-    List<ReadingBookmark> current,
-    List<ReadingBookmark> next,
-  ) async {
-    final json = next.map((bookmark) => bookmark.toJson()).toList();
-    await MetadataFileStore.writeJson(_fileName, json);
-    current
-      ..clear()
-      ..addAll(next);
+  static void clearCache() {
+    MetadataStore.clearCache();
   }
 
-  static void clearCache() {
-    _cache = null;
-    _loadFuture = null;
+  static List<ReadingBookmark> _bookmarksOf(LibrarySnapshot snapshot) {
+    final bookmarks = <ReadingBookmark>[];
+    for (final mark in snapshot.marks) {
+      if (mark.kind != ReadingMarkKind.bookmark) continue;
+      bookmarks.add(
+        ReadingBookmark(
+          id: mark.id,
+          documentId: mark.documentId,
+          progressRatio: mark.ratio,
+          title: mark.title,
+          createdAtMillis: mark.createdAtMillis,
+          note: mark.note,
+        ),
+      );
+    }
+    return bookmarks;
+  }
+
+  static ReadingMark _toMark(ReadingBookmark bookmark) {
+    return ReadingMark(
+      id: bookmark.id,
+      documentId: bookmark.documentId,
+      kind: ReadingMarkKind.bookmark,
+      ratio: bookmark.progressRatio,
+      title: bookmark.title,
+      note: bookmark.note,
+      createdAtMillis: bookmark.createdAtMillis,
+    );
   }
 }
