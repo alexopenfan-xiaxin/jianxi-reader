@@ -12,11 +12,16 @@ class MetadataFileStore {
   static final Map<String, Future<void>> _queues = {};
   static Directory? _baseDirectoryForTesting;
 
-  static Future<File> file(String fileName) async {
+  static Future<Directory> directory() async {
     final dir =
         _baseDirectoryForTesting ?? await getApplicationDocumentsDirectory();
     final metadataDir = Directory('${dir.path}/metadata');
     await metadataDir.create(recursive: true);
+    return metadataDir;
+  }
+
+  static Future<File> file(String fileName) async {
+    final metadataDir = await directory();
     return File('${metadataDir.path}/$fileName');
   }
 
@@ -56,6 +61,18 @@ class MetadataFileStore {
         await temporary.delete();
       }
     }
+  }
+
+  /// Reads a JSON document of any shape, quarantining it when unparseable.
+  ///
+  /// [data] is null when the file is missing, unreadable or not valid JSON;
+  /// callers then decide whether to rebuild from a legacy source.
+  static Future<JsonObjectRead> readJson(String fileName) async {
+    final decoded = await _decode(fileName);
+    return JsonObjectRead(
+      data: decoded.data,
+      quarantinePath: decoded.quarantinePath,
+    );
   }
 
   /// Reads a JSON array, dropping (and counting) entries that no longer parse.
@@ -223,5 +240,13 @@ class JsonMapRead {
 
   final Map<String, String> values;
   final int droppedEntries;
+  final String? quarantinePath;
+}
+
+/// Outcome of a raw JSON read.
+class JsonObjectRead {
+  const JsonObjectRead({required this.data, this.quarantinePath});
+
+  final Object? data;
   final String? quarantinePath;
 }

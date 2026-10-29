@@ -6,6 +6,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'app.dart';
 import 'core/document_file_service.dart';
 import 'core/widgets/liquid_glass.dart';
+import 'data/metadata/migration.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,9 @@ Future<void> main() async {
   // Sweep parked deletions older than the undo window; a failure here must
   // never block startup, so it is fire-and-forget.
   unawaited(DocumentFileService.purgeExpiredTrash());
+  // Upgrade metadata/ to schema v1 (no-op when it already parses, and it falls
+  // back to the 2.x files instead of throwing).
+  await MetadataMigration.runIfNeeded();
   // Safety net for library widgets that are not handed explicit
   // settings by one of the app wrappers; app surfaces resolve their
   // own AppGlassSettings role.
