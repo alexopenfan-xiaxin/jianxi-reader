@@ -8,6 +8,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// 签名身份不可再生：release 包只能用正式 key 签，绝不允许回退 debug key。
+// 缺 key.properties 时保持未签名，并由下方 package*Release 守卫在打包前硬失败，
+// 这样既不会产出"能装但签名随机"的包，也不会影响 debug 构建与单元测试。
+// Declared at script scope so the task guard below can read it.
+val keystoreFile = rootProject.file("key.properties")
+val hasReleaseSigning = keystoreFile.exists()
+
 android {
     namespace = "com.jianxi.reader"
     compileSdk = flutter.compileSdkVersion
@@ -30,12 +37,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
-
-    // 签名身份不可再生：release 包只能用正式 key 签，绝不允许回退 debug key。
-    // 缺 key.properties 时保持未签名，并由下方 package*Release 守卫在打包前硬失败，
-    // 这样既不会产出"能装但签名随机"的包，也不会影响 debug 构建与单元测试。
-    val keystoreFile = rootProject.file("key.properties")
-    val hasReleaseSigning = keystoreFile.exists()
 
     signingConfigs {
         if (hasReleaseSigning) {
