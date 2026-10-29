@@ -41,7 +41,7 @@ Future<void> writeLegacyLibrary(int documentCount) async {
     for (var i = 0; i < 100; i++)
       {
         'id': 'bm_$i',
-        'documentId': 'doc_${i * 2}',
+        'documentId': 'doc_${(i * 2) % documentCount}',
         'progressRatio': 0.5,
         'title': '书签 $i',
         'createdAtMillis': 1700000000000 + i,
