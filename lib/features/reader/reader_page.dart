@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/accessibility.dart';
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
 import '../../core/document_error_describer.dart';
@@ -263,7 +264,7 @@ class _ReaderPageState extends State<ReaderPage> {
       final target = _scrollController.position.maxScrollExtent * ratio;
       _scrollController.animateTo(
         target,
-        duration: AppMotion.slow,
+        duration: AppAccessibility.duration(context, AppMotion.slow),
         curve: AppMotion.emphasized,
       );
     }

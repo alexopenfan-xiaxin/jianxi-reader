@@ -75,6 +75,18 @@ class _StaggeredEntranceBodyState extends State<_StaggeredEntranceBody>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // "Remove animations" in system settings: show the final frame instead of
+    // running the cascade.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _controller
+        ..stop()
+        ..value = 1.0;
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'core/accessibility.dart';
 import 'core/app_settings_controller.dart';
 import 'core/design_tokens.dart';
 import 'core/document_file_service.dart';
 import 'features/library/library_controller.dart';
 import 'features/shell/app_shell.dart';
+import 'features/shell/whats_new_gate.dart';
 
 class JianxiReaderApp extends StatelessWidget {
   const JianxiReaderApp({super.key, this.documentService});
@@ -49,7 +51,20 @@ class JianxiReaderApp extends StatelessWidget {
                 themeMode: selection.themeMode,
                 themeAnimationDuration: AppMotion.normal,
                 themeAnimationCurve: AppMotion.standard,
-                home: const AppShell(),
+                builder: (context, child) {
+                  final media = MediaQuery.maybeOf(context);
+                  final content = child ?? const SizedBox.shrink();
+                  if (media == null) return content;
+                  return MediaQuery(
+                    data: media.copyWith(
+                      textScaler: AppAccessibility.clampTextScaler(
+                        media.textScaler,
+                      ),
+                    ),
+                    child: content,
+                  );
+                },
+                home: const WhatsNewGate(child: AppShell()),
               );
             },
           ),

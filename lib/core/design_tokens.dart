@@ -5,7 +5,9 @@ class AppColors {
   static const primaryFocus = Color(0xFF0071E3);
   static const ink = Color(0xFF1D1D1F);
   static const inkMuted80 = Color(0xFF333333);
-  static const inkMuted48 = Color(0xFF7A7A7A);
+  // Was 0xFF7A7A7A: 4.29:1 on white and 3.94:1 on parchment, both below the
+  // WCAG AA 4.5:1 floor for body text. 0xFF6B6B6B is 5.33:1 / 4.89:1.
+  static const inkMuted48 = Color(0xFF6B6B6B);
   static const bodyMuted = Color(0xFF7A7A7A);
   static const darkMuted = Color(0xFFCCCCCC);
   static const bodyOnDark = Color(0xFFFFFFFF);
