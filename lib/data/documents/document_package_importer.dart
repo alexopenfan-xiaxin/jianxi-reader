@@ -73,7 +73,7 @@ class DocumentPackageImporter {
     )) {
       final relative = p.relative(entity.path, from: source.path);
       final name = p.basename(entity.path);
-      if (_isHiddenOrNoise(name)) {
+      if (_isHiddenOrNoise(relative) || _isHiddenOrNoise(name)) {
         continue;
       }
       if (entity is! File) {
@@ -157,8 +157,15 @@ class DocumentPackageImporter {
     return p.joinAll(parts.sublist(0, index + 2));
   }
 
-  static bool _isHiddenOrNoise(String name) {
-    return name.startsWith('.') || name == 'Thumbs.db' || name == 'desktop.ini';
+  /// Hidden segments anywhere in the relative path count: `.git/config` is
+  /// noise even though its own name is not.
+  static bool _isHiddenOrNoise(String relativePath) {
+    final segments = p.split(relativePath);
+    if (segments.any((segment) => segment.startsWith('.'))) {
+      return true;
+    }
+    final name = p.basename(relativePath);
+    return name == 'Thumbs.db' || name == 'desktop.ini';
   }
 
   static String _uniquePackageName(Directory packagesRoot, Directory source) {
