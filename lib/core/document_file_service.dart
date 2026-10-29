@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/documents/document_package_importer.dart';
 import '../data/metadata/library_schema.dart';
 import '../data/metadata/metadata_store.dart';
 import '../features/library/document_entry.dart';
@@ -108,10 +109,14 @@ class DocumentFileService implements DocumentLibraryService {
     final preferences = await _preferences();
 
     final directory = await ensureLibraryDirectory();
+    // Recursive so packaged folders are listed; hidden segments are skipped so
+    // parked deletions in `.trash/` never come back as documents.
     final files = await directory
-        .list(followLinks: false)
-        .where(DocumentFileRules.isSupportedFile)
+        .list(recursive: true, followLinks: false)
+        .where((entity) => entity is File)
         .cast<File>()
+        .where(DocumentFileRules.isSupportedFile)
+        .where((file) => !_isHiddenPath(file.path))
         .toList();
 
     for (final file in files) {
@@ -327,46 +332,37 @@ class DocumentFileService implements DocumentLibraryService {
       );
     }
 
-    final preferences = await _preferences();
+    // Copy the folder as a package: structure and resources come along, so
+    // relative images, CSS and cross-document links keep working.
+    final library = await ensureLibraryDirectory();
+    final result = await DocumentPackageImporter.importFolder(
+      Directory(folderPath),
+      libraryRoot: library,
+    );
     final documents = <DocumentEntry>[];
-    var skipped = 0;
-    var failed = 0;
-    await for (final entity in Directory(
-      folderPath,
-    ).list(recursive: true, followLinks: false)) {
-      if (entity is! File || !DocumentFileRules.isSupportedPath(entity.path)) {
-        continue;
-      }
+    for (final file in result.documents) {
       try {
-        final stat = await entity.stat();
-        if (stat.size > DocumentFileRules.maxReadableBytes) {
-          skipped++;
-          continue;
-        }
-        await _rememberReferencedDocument(
-          preferences: preferences,
-          path: entity.path,
-          sourceUri: entity.uri.toString(),
-        );
         documents.add(
           await DocumentEntry.fromFile(
-            entity,
-            isReferenced: true,
-            sourceUri: entity.uri.toString(),
-            tags: _documentTags(entity.path),
-            pinned: _documentPinned(entity.path),
+            file,
+            tags: _documentTags(file.path),
+            pinned: _documentPinned(file.path),
           ),
         );
       } catch (error) {
-        failed++;
-        debugPrint('[DocumentFileService] import folder file failed: $error');
+        debugPrint('[DocumentFileService] import package file failed: $error');
       }
     }
+    invalidateLibraryCache();
     return DocumentFolderImportResult(
       documents: documents,
-      skipped: skipped,
-      failed: failed,
+      skipped: result.skipped,
+      failed: result.failed,
     );
+  }
+
+  static bool _isHiddenPath(String path) {
+    return p.split(path).any((segment) => segment.startsWith('.'));
   }
 
   @override
@@ -595,7 +591,15 @@ class DocumentFileService implements DocumentLibraryService {
         ? (sourceUri != null && Platform.isAndroid)
         : true;
     File? stagedFile;
-    if (isManagedCopy && file.existsSync()) {
+    String? trashedPackagePath;
+    final packagePath = DocumentPackageImporter.packageRootOf(document.path);
+    if (isManagedCopy &&
+        packagePath != null &&
+        Directory(packagePath).existsSync()) {
+      // A package moves as a unit: parking only the .md would leave its images
+      // behind and an undo would restore a document that cannot render.
+      trashedPackagePath = await _stagePackage(packagePath);
+    } else if (isManagedCopy && file.existsSync()) {
       // Park it in .trash instead of deleting: the undo window is the only
       // thing standing between a mis-tap and a lost document.
       stagedFile = await DocumentTrash.stage(file);
@@ -630,6 +634,9 @@ class DocumentFileService implements DocumentLibraryService {
             stagedFile.existsSync() &&
             !file.existsSync()) {
           await stagedFile.rename(file.path);
+        }
+        if (trashedPackagePath != null && packagePath != null) {
+          await _restorePackage(trashedPackagePath, packagePath);
         }
         if (referencedPaths != null) {
           await _persistPreference(
@@ -671,6 +678,8 @@ class DocumentFileService implements DocumentLibraryService {
       removedAtMillis: DateTime.now().millisecondsSinceEpoch,
       documentId: documentId,
       trashedPath: stagedFile?.path,
+      packagePath: packagePath,
+      trashedPackagePath: trashedPackagePath,
       recentOpenedAtMillis: recentOpened,
       pinned: pinned,
       tags: tags ?? const [],
@@ -688,6 +697,12 @@ class DocumentFileService implements DocumentLibraryService {
   Future<void> restoreDocument(DocumentRemoval removal) async {
     final preferences = await _preferences();
     final path = removal.document.path;
+
+    final trashedPackagePath = removal.trashedPackagePath;
+    final packagePath = removal.packagePath;
+    if (trashedPackagePath != null && packagePath != null) {
+      await _restorePackage(trashedPackagePath, packagePath);
+    }
 
     final trashedPath = removal.trashedPath;
     if (trashedPath != null) {
@@ -736,6 +751,36 @@ class DocumentFileService implements DocumentLibraryService {
 
     invalidateLibraryCache();
     _lastRefreshTimes.remove(path);
+  }
+
+  /// Moves a package folder next to itself, into `.trash/<microseconds>/`.
+  static Future<String> _stagePackage(String packagePath) async {
+    final package = Directory(packagePath);
+    final trash = Directory(
+      p.join(
+        package.parent.path,
+        DocumentTrash.directoryName,
+        DateTime.now().microsecondsSinceEpoch.toString(),
+      ),
+    );
+    await trash.create(recursive: true);
+    final moved = await package.rename(
+      p.join(trash.path, p.basename(packagePath)),
+    );
+    return moved.path;
+  }
+
+  /// Puts a parked package back where it was.
+  static Future<void> _restorePackage(
+    String trashedPackagePath,
+    String packagePath,
+  ) async {
+    final parked = Directory(trashedPackagePath);
+    if (!await parked.exists()) return;
+    final parent = Directory(p.dirname(packagePath));
+    await parent.create(recursive: true);
+    await parked.rename(packagePath);
+    await _discardEmptyTrashFolder(trashedPackagePath);
   }
 
   static Future<void> _discardEmptyTrashFolder(String trashedPath) async {

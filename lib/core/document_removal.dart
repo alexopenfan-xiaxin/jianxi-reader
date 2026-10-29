@@ -18,6 +18,8 @@ class DocumentRemoval {
     required this.removedAtMillis,
     this.documentId,
     this.trashedPath,
+    this.packagePath,
+    this.trashedPackagePath,
     this.recentOpenedAtMillis,
     this.pinned,
     this.tags = const [],
@@ -37,6 +39,12 @@ class DocumentRemoval {
   /// Where the file was parked, or null when the app never owned the bytes
   /// (an external source file is never moved or deleted).
   final String? trashedPath;
+
+  /// Package folder the document belonged to, and where it was parked. When a
+  /// document lives in a package the whole folder moves, so its images and CSS
+  /// come back together with it.
+  final String? packagePath;
+  final String? trashedPackagePath;
 
   final int? recentOpenedAtMillis;
   final bool? pinned;
