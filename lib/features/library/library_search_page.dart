@@ -283,7 +283,7 @@ class _SearchTagWrap extends StatelessWidget {
   }
 }
 
-class _LibrarySearchTextField extends StatelessWidget {
+class _LibrarySearchTextField extends StatefulWidget {
   const _LibrarySearchTextField({
     required this.controller,
     required this.libraryController,
@@ -293,7 +293,51 @@ class _LibrarySearchTextField extends StatelessWidget {
   final LibraryController libraryController;
 
   @override
+  State<_LibrarySearchTextField> createState() =>
+      _LibrarySearchTextFieldState();
+}
+
+class _LibrarySearchTextFieldState extends State<_LibrarySearchTextField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_commitQuery);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LibrarySearchTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_commitQuery);
+      widget.controller.addListener(_commitQuery);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_commitQuery);
+    super.dispose();
+  }
+
+  /// CJK input methods hold the pinyin inside the composing region until the
+  /// candidate is committed. Filtering on every keystroke turned `jian` into a
+  /// "no results" flash that vanished a beat later, so the query only follows
+  /// committed text; the commit itself fires a change with no composition.
+  void _commitQuery() {
+    final value = widget.controller.value;
+    if (value.composing.isValid && !value.composing.isCollapsed) {
+      return;
+    }
+    if (value.text == widget.libraryController.searchQuery) {
+      return;
+    }
+    widget.libraryController.updateSearchQuery(value.text);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final libraryController = widget.libraryController;
     return Semantics(
       label: '搜索文档',
       textField: true,
@@ -301,7 +345,6 @@ class _LibrarySearchTextField extends StatelessWidget {
         key: const ValueKey('library_search_field'),
         controller: controller,
         autofocus: true,
-        onChanged: libraryController.updateSearchQuery,
         decoration: InputDecoration(
           hintText: '搜索文档',
           prefixIcon: const Icon(Icons.search_rounded),

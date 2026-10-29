@@ -69,6 +69,11 @@ class _PressScaleState extends State<PressScale>
 
   @override
   Widget build(BuildContext context) {
+    // "Remove animations" means exactly this kind of press feedback; skipping
+    // the listener also skips the spring entirely.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      return widget.child;
+    }
     return AnimatedBuilder(
       animation: _scaleAnim,
       builder: (context, child) =>
