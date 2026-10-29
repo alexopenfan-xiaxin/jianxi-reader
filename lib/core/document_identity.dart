@@ -1,51 +1,46 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'metadata_file_store.dart';
+import '../data/metadata/library_schema.dart';
+import '../data/metadata/metadata_store.dart';
 
-/// Manages stable document identifiers that survive renames and mirror migrations.
+/// Manages stable document identifiers that survive renames and mirror moves.
 ///
-/// ID generation strategy:
-/// - Referenced documents: derived from `sourceUri` (stable across mirror changes).
-/// - Local documents: auto-generated UUID-like string, stored in a path→ID map.
+/// The id lives on the document record in `metadata/library.json`; `path` is an
+/// attribute, so a rename no longer has to keep a second path→id table in sync.
+/// Ids are still derived the same way as in 2.x:
+/// * referenced documents from `sourceUri` (stable across mirror changes);
+/// * local documents from a generated, time-ordered value.
 class DocumentIdentityService {
   DocumentIdentityService._();
 
-  static const _idMapFileName = 'id_map.json';
   static final _random = Random.secure();
-  static Map<String, String>? _idMap;
-  static Future<Map<String, String>>? _idMapFuture;
-
-  static Future<Map<String, String>> _loadIdMap() async {
-    return _idMapFuture ??= () async {
-      // A damaged map must not permanently poison the service future, and it
-      // must not be silently replaced: unreadable files are quarantined first.
-      final read = await MetadataFileStore.readJsonStringMap(_idMapFileName);
-      _idMap = Map<String, String>.from(read.values);
-      return _idMap!;
-    }();
-  }
 
   /// Get or create a stable document ID for the given path.
-  ///
-  /// For referenced documents, [sourceUri] should be provided to derive
-  /// a URI-based ID that survives mirror path changes.
   static Future<String> getOrCreateId({
     required String path,
     String? sourceUri,
-  }) {
-    return MetadataFileStore.serialize(_idMapFileName, () async {
-      final map = await _loadIdMap();
-      final existing = map[path];
-      if (existing != null) return existing;
+  }) async {
+    final snapshot = await MetadataStore.load();
+    final existing = snapshot.recordForPath(path);
+    if (existing != null) return existing.id;
 
-      final id = sourceUri != null && sourceUri.isNotEmpty
+    return MetadataStore.transaction((snapshot) async {
+      // Another caller may have created it while we were waiting in the queue.
+      final current = snapshot.recordForPath(path);
+      if (current != null) return current.id;
+
+      final derived = sourceUri != null && sourceUri.isNotEmpty
           ? sourceIdFor(sourceUri)
+          : null;
+      // Reuse the source-derived id only when no other record owns it, so two
+      // imports of the same URI cannot fork one document's marks.
+      final id =
+          derived != null && snapshot.recordForId(derived) == null
+          ? derived
           : 'doc_${DateTime.now().microsecondsSinceEpoch}_'
                 '${_random.nextInt(1 << 32).toRadixString(16)}';
-      final next = Map<String, String>.from(map)..[path] = id;
-      await MetadataFileStore.writeJson(_idMapFileName, next);
-      _replaceMap(map, next);
+      snapshot.ensureRecord(path, id: id, sourceUri: sourceUri);
       return id;
     });
   }
@@ -63,57 +58,38 @@ class DocumentIdentityService {
 
   /// Get the existing ID for a path, or null if not registered.
   static Future<String?> getIdForPath(String path) async {
-    final map = await _loadIdMap();
-    return map[path];
+    final snapshot = await MetadataStore.load();
+    return snapshot.recordForPath(path)?.id;
   }
 
   /// Update the path mapping when a document is renamed or moved.
   static Future<void> movePath(String oldPath, String newPath) {
-    return MetadataFileStore.serialize(_idMapFileName, () async {
-      final map = await _loadIdMap();
-      final id = map[oldPath];
-      if (id == null) return;
-      final next = Map<String, String>.from(map)
-        ..remove(oldPath)
-        ..[newPath] = id;
-      await MetadataFileStore.writeJson(_idMapFileName, next);
-      _replaceMap(map, next);
+    return MetadataStore.transaction((snapshot) async {
+      final record = snapshot.recordForPath(oldPath);
+      if (record == null) return;
+      snapshot.upsertRecord(record.copyWith(path: newPath));
     });
   }
 
   /// Remove a path from the identity map.
   static Future<void> removePath(String path) {
-    return MetadataFileStore.serialize(_idMapFileName, () async {
-      final map = await _loadIdMap();
-      if (!map.containsKey(path)) return;
-      final next = Map<String, String>.from(map)..remove(path);
-      await MetadataFileStore.writeJson(_idMapFileName, next);
-      _replaceMap(map, next);
+    return MetadataStore.transaction((snapshot) async {
+      if (snapshot.recordForPath(path) == null) return;
+      snapshot.removeRecordForPath(path);
     });
   }
 
+  /// Re-attach an id to a path (used when a removal is rolled back).
   static Future<void> restorePath(String path, String id) {
-    return MetadataFileStore.serialize(_idMapFileName, () async {
-      final map = await _loadIdMap();
-      if (map[path] == id) return;
-      final next = Map<String, String>.from(map)..[path] = id;
-      await MetadataFileStore.writeJson(_idMapFileName, next);
-      _replaceMap(map, next);
+    return MetadataStore.transaction((snapshot) async {
+      final existing = snapshot.recordForPath(path);
+      if (existing?.id == id) return;
+      snapshot.upsertRecord(DocumentRecord(id: id, path: path));
     });
-  }
-
-  static void _replaceMap(
-    Map<String, String> current,
-    Map<String, String> next,
-  ) {
-    current
-      ..clear()
-      ..addAll(next);
   }
 
   /// Clear the in-memory cache (for testing).
   static void clearCache() {
-    _idMap = null;
-    _idMapFuture = null;
+    MetadataStore.clearCache();
   }
 }
