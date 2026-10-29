@@ -658,7 +658,7 @@ class _SortOptionTile extends StatelessWidget {
 }
 
 void _openTracesPage(BuildContext context) {
-  Navigator.of(context).push(
-    appPageRoute<void>(builder: (context) => const ReadingTracesPage()),
-  );
+  Navigator.of(
+    context,
+  ).push(appPageRoute<void>(builder: (context) => const ReadingTracesPage()));
 }

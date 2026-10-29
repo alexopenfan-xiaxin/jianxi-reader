@@ -38,9 +38,7 @@ List<String> tokenize(String text) {
         end++;
       }
       for (var position = index; position + 1 < end; position++) {
-        tokens.add(
-          String.fromCharCodes(runes.sublist(position, position + 2)),
-        );
+        tokens.add(String.fromCharCodes(runes.sublist(position, position + 2)));
       }
       index = end;
       continue;

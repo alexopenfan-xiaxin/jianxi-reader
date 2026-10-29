@@ -58,9 +58,9 @@ class BookmarkService {
 
   static Future<List<ReadingBookmark>> forDocument(String documentId) async {
     final snapshot = await MetadataStore.load();
-    return _bookmarksOf(snapshot)
-        .where((bookmark) => bookmark.documentId == documentId)
-        .toList();
+    return _bookmarksOf(
+      snapshot,
+    ).where((bookmark) => bookmark.documentId == documentId).toList();
   }
 
   static Future<ReadingBookmark> add({

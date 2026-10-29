@@ -525,8 +525,7 @@ class _FullTextHitTile extends StatelessWidget {
       orElse: () => DocumentEntry(
         path: hit.path,
         name: hit.title,
-        type:
-            DocumentFileRules.typeForPath(hit.path) ?? DocumentType.markdown,
+        type: DocumentFileRules.typeForPath(hit.path) ?? DocumentType.markdown,
         sizeBytes: 0,
         modifiedAt: DateTime.now(),
       ),
@@ -539,4 +538,3 @@ class _FullTextHitTile extends StatelessWidget {
     );
   }
 }
-

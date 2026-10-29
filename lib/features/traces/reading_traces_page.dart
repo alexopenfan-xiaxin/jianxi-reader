@@ -70,9 +70,9 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
             .where((entry) => entry.id != bookmark.id)
             .toList();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已删除书签')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已删除书签')));
     } catch (error) {
       debugPrint('[ReadingTraces] delete failed: $error');
     }
@@ -84,9 +84,9 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
     final path = record?.path;
     if (path == null || path.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('这篇文档已不在文档库里')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('这篇文档已不在文档库里')));
       return;
     }
 
@@ -94,9 +94,9 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
     DocumentEntry entry;
     if (type == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('不支持的文档类型')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('不支持的文档类型')));
       return;
     }
     if (File(path).existsSync()) {
@@ -116,10 +116,8 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
     if (!mounted) return;
     await Navigator.of(context).push(
       appPageRoute<void>(
-        builder: (context) => ReaderPage(
-          document: entry,
-          initialProgressRatio: ratio,
-        ),
+        builder: (context) =>
+            ReaderPage(document: entry, initialProgressRatio: ratio),
       ),
     );
     await _load();
@@ -303,20 +301,16 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         _timeLabel(event.openedAtMillis),
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(
-                              color: palette.muted,
-                              fontSize: 12,
-                              letterSpacing: 0,
-                            ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: palette.muted,
+                          fontSize: 12,
+                          letterSpacing: 0,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: palette.muted,
-                ),
+                Icon(Icons.chevron_right_rounded, color: palette.muted),
               ],
             ),
           ),
@@ -336,10 +330,9 @@ class _ReadingTracesPageState extends State<ReadingTracesPage> {
       child: Text(
         message,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: palette.muted,
-          height: 1.6,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: palette.muted, height: 1.6),
       ),
     );
   }
