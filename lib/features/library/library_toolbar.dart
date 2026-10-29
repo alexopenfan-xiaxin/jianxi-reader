@@ -11,7 +11,7 @@ class _FixedLibraryHeader extends StatelessWidget {
     final liquidGlass = context.select<AppSettingsController, bool>(
       (settings) => settings.liquidGlassEnabled,
     );
-    final headerContent = Padding(
+    final rawHeader = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
@@ -67,6 +67,14 @@ class _FixedLibraryHeader extends StatelessWidget {
       ),
     );
 
+    // Chrome copy stays near its designed size when the system font is large:
+    // the bar is a fixed height and everything below it is laid out against
+    // that height, so scaling the title without scaling the bar overflows it.
+    final headerContent = MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.2,
+      child: rawHeader,
+    );
+
     if (liquidGlass) {
       // The header slides with the tab transition. Premium glass tracks
       // sliding transforms through its backdrop group and flashes black on
@@ -86,7 +94,7 @@ class _FixedLibraryHeader extends StatelessWidget {
           color: liquidGlassHeaderColor(context),
           blur: LiquidGlassTokens.chromeBlur,
           quality: GlassQuality.standard,
-          child: SizedBox(height: 72, child: headerContent),
+          child: SizedBox(height: AppChrome.headerHeight, child: headerContent),
         ),
       );
     }
@@ -95,7 +103,10 @@ class _FixedLibraryHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.parchment.withValues(alpha: 0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
+          bottom: BorderSide(
+            color: palette.hairline.withValues(alpha: 0.34),
+            width: AppHairline.width,
+          ),
         ),
       ),
       child: ClipRect(
@@ -216,7 +227,10 @@ class _SelectionHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.parchment.withValues(alpha: 0.94),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
+          bottom: BorderSide(
+            color: palette.hairline.withValues(alpha: 0.34),
+            width: AppHairline.width,
+          ),
         ),
       ),
       child: ClipRect(
@@ -646,7 +660,12 @@ class _SortOptionTile extends StatelessWidget {
         child: Container(
           height: 72,
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: context.palette.hairline)),
+            border: Border(
+              bottom: BorderSide(
+                color: context.palette.hairline,
+                width: AppHairline.width,
+              ),
+            ),
           ),
           child: row,
         ),

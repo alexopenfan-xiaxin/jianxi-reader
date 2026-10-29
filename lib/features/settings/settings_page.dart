@@ -20,6 +20,7 @@ import '../../core/widgets/glass_segmented_control.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/reading_settings_panel.dart';
+import '../../core/widgets/scroll_edge_fade.dart';
 import '../../core/widgets/shimmer_skeleton.dart';
 import '../../core/widgets/success_check.dart';
 
@@ -36,23 +37,26 @@ class SettingsPage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: LayoutBuilder(
-              builder: (context, constraints) => ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  82,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                children: [
-                  _SettingsResponsiveCards(
-                    wide: _isWideSettingsLayout(context, constraints),
-                    children: const [
-                      _AppearanceEntry(),
-                      _ReadingSettingsEntry(),
-                      _AboutEntry(),
-                    ],
+              builder: (context, constraints) => ScrollEdgeFade(
+                topInset: AppChrome.headerExtent,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppChrome.contentInset,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
                   ),
-                ],
+                  children: [
+                    _SettingsResponsiveCards(
+                      wide: _isWideSettingsLayout(context, constraints),
+                      children: const [
+                        _AppearanceEntry(),
+                        _ReadingSettingsEntry(),
+                        _AboutEntry(),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -77,7 +81,7 @@ class _FixedSettingsHeader extends StatelessWidget {
     final liquidGlass = context.select<AppSettingsController, bool>(
       (s) => s.liquidGlassEnabled,
     );
-    final headerContent = Padding(
+    final rawHeader = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
@@ -103,6 +107,13 @@ class _FixedSettingsHeader extends StatelessWidget {
       ),
     );
 
+    // Same clamp as the library header: the bar has a fixed height, so the
+    // title must not grow past it at large system text sizes.
+    final headerContent = MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.2,
+      child: rawHeader,
+    );
+
     if (liquidGlass) {
       // Same floating bar as the library header: rounded, inset, no hairline.
       return Padding(
@@ -117,7 +128,7 @@ class _FixedSettingsHeader extends StatelessWidget {
           color: liquidGlassHeaderColor(context),
           blur: LiquidGlassTokens.chromeBlur,
           quality: GlassQuality.standard,
-          child: SizedBox(height: 72, child: headerContent),
+          child: SizedBox(height: AppChrome.headerHeight, child: headerContent),
         ),
       );
     }
@@ -126,7 +137,10 @@ class _FixedSettingsHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.parchment.withValues(alpha: 0.92),
         border: Border(
-          bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.34)),
+          bottom: BorderSide(
+            color: palette.hairline.withValues(alpha: 0.34),
+            width: AppHairline.width,
+          ),
         ),
       ),
       child: ClipRect(

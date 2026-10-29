@@ -125,6 +125,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: palette.hairline.withValues(alpha: 0.72),
+                      width: AppHairline.width,
                     ),
                     borderRadius: borderRadius,
                   ),

@@ -384,7 +384,7 @@ class LiquidGlassSurface extends StatelessWidget {
         borderRadius: radius,
         side: borderColor == null
             ? BorderSide.none
-            : BorderSide(color: borderColor!, width: 1),
+            : BorderSide(color: borderColor!, width: AppHairline.width),
       ),
       settings: settings,
       quality: quality,
@@ -538,7 +538,7 @@ class LiquidGlassIconTile extends StatelessWidget {
         borderRadius: radius,
         side: BorderSide(
           color: AppColors.primary.withValues(alpha: 0.20),
-          width: 1,
+          width: AppHairline.width,
         ),
       ),
       clipBehavior: Clip.antiAlias,

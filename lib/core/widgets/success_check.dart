@@ -253,7 +253,10 @@ class _SuccessToastState extends State<_SuccessToast>
                         decoration: BoxDecoration(
                           color: palette.card.withValues(alpha: 0.88),
                           borderRadius: BorderRadius.circular(AppRadii.pill),
-                          border: Border.all(color: palette.hairline),
+                          border: Border.all(
+                            color: palette.hairline,
+                            width: AppHairline.width,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

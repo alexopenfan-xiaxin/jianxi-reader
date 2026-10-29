@@ -375,7 +375,7 @@ class _ImageLoadingState extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.card,
         borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: palette.hairline),
+        border: Border.all(color: palette.hairline, width: AppHairline.width),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

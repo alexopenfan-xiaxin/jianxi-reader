@@ -130,7 +130,10 @@ class LibrarySkeletonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.card,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: palette.hairline.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: palette.hairline.withValues(alpha: 0.5),
+          width: AppHairline.width,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

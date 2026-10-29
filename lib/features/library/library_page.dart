@@ -15,6 +15,7 @@ import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/entrance.dart';
 import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
+import '../../core/widgets/scroll_edge_fade.dart';
 import '../../core/widgets/shimmer_skeleton.dart';
 import '../../core/widgets/success_check.dart';
 import '../../data/search/library_search_index.dart';
@@ -78,38 +79,43 @@ class _LibraryPageState extends State<LibraryPage> {
                 child: GestureDetector(
                   onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                   behavior: HitTestBehavior.translucent,
-                  child: CustomScrollView(
-                    slivers: [
-                      if (controller.errorMessage != null)
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            82,
-                            AppSpacing.lg,
-                            0,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: _ErrorBanner(
-                              message: controller.errorMessage!,
+                  child: ScrollEdgeFade(
+                    topInset: AppChrome.headerExtent,
+                    child: CustomScrollView(
+                      slivers: [
+                        if (controller.errorMessage != null)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.lg,
+                              AppChrome.contentInset,
+                              AppSpacing.lg,
+                              0,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _ErrorBanner(
+                                message: controller.errorMessage!,
+                              ),
                             ),
                           ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            controller.errorMessage == null
+                                ? AppChrome.contentInset
+                                : AppSpacing.md,
+                            AppSpacing.lg,
+                            landscape ? AppSpacing.lg : 118,
+                          ),
+                          sliver: _LibraryAnimatedContent(
+                            controller: controller,
+                            viewMode: settings,
+                            selectedPaths: _selectedPaths,
+                            onToggleSelection: _toggleSelection,
+                            onStartSelection: _startSelection,
+                          ),
                         ),
-                      SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          controller.errorMessage == null ? 82 : AppSpacing.md,
-                          AppSpacing.lg,
-                          landscape ? AppSpacing.lg : 118,
-                        ),
-                        sliver: _LibraryAnimatedContent(
-                          controller: controller,
-                          viewMode: settings,
-                          selectedPaths: _selectedPaths,
-                          onToggleSelection: _toggleSelection,
-                          onStartSelection: _startSelection,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

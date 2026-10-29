@@ -230,6 +230,7 @@ class _ClassicTrack extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
                 color: palette.hairline.withValues(alpha: 0.42),
+                width: AppHairline.width,
               ),
             ),
           ),

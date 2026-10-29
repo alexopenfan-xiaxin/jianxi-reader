@@ -116,7 +116,10 @@ class _MindmapDiagramState extends State<MindmapDiagram> {
         decoration: BoxDecoration(
           color: context.palette.card,
           borderRadius: BorderRadius.circular(AppRadii.md),
-          border: Border.all(color: context.palette.hairline),
+          border: Border.all(
+            color: context.palette.hairline,
+            width: AppHairline.width,
+          ),
         ),
         child: Text(
           '无法解析 mindmap',

@@ -131,6 +131,45 @@ class AppSpacing {
   static const xxl = 48.0;
 }
 
+/// Geometry of the floating page chrome.
+///
+/// Both the library and the settings page stack a fixed header on top of a
+/// full-bleed scroll view. Before this existed those pages padded their lists
+/// with a bare `82`, so changing the bar height (or the system text size) could
+/// silently push the first card underneath the glass.
+class AppChrome {
+  static const double headerHeight = 72;
+
+  /// Glass bar plus its top inset: where the header visually ends.
+  static const double headerExtent = AppSpacing.xs + headerHeight;
+
+  /// Where page content starts, leaving a breathing gap under the bar.
+  static const double contentInset = headerExtent + AppSpacing.xxs;
+}
+
+/// Device-pixel-exact hairlines.
+///
+/// A 1.0 logical-pixel [BorderSide] covers three physical pixels on a 3x
+/// screen, which is what made the chrome edges read as a grey haze. A real
+/// hairline is one *physical* pixel: `1 / devicePixelRatio`, resolved once at
+/// startup because a theme-level border cannot read `MediaQuery`.
+class AppHairline {
+  AppHairline._();
+
+  static double _width = 1 / 3;
+
+  /// Width in logical pixels that paints exactly one physical pixel.
+  static double get width => _width;
+
+  /// Called from `main()` before the first frame is built.
+  static void configure(double devicePixelRatio) {
+    if (!devicePixelRatio.isFinite || devicePixelRatio <= 0) {
+      return;
+    }
+    _width = (1 / devicePixelRatio).clamp(0.25, 1.0).toDouble();
+  }
+}
+
 class AppMotion {
   static const micro = Duration(milliseconds: 110);
   static const fast = Duration(milliseconds: 160);
@@ -221,13 +260,13 @@ class AppTheme {
           color: palette.ink,
           fontFamily: resolvedFontFamily,
           fontSize: 17,
-          fontWeight: FontWeight.w600,
+          fontWeight: _weight(FontWeight.w600, brightness),
           height: 1,
           letterSpacing: 0,
         ),
         iconTheme: IconThemeData(color: palette.ink),
       ),
-      textTheme: _textTheme(palette, resolvedFontFamily),
+      textTheme: _textTheme(palette, resolvedFontFamily, brightness),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -265,11 +304,17 @@ class AppTheme {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          borderSide: BorderSide(color: palette.hairline),
+          borderSide: BorderSide(
+            color: palette.hairline,
+            width: AppHairline.width,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          borderSide: BorderSide(color: palette.hairline),
+          borderSide: BorderSide(
+            color: palette.hairline,
+            width: AppHairline.width,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -287,13 +332,33 @@ class AppTheme {
     );
   }
 
-  static TextTheme _textTheme(AppPalette palette, String fontFamily) {
+  /// Light-on-dark glyphs bloom: the same w600 that looks crisp on `#FFFFFF`
+  /// reads heavier on `#0A0A0C`. Dark mode therefore drops display and heading
+  /// weights one step; body sizes stay untouched so CJK strokes keep their
+  /// weight at small sizes.
+  static FontWeight _weight(FontWeight base, Brightness brightness) {
+    if (brightness == Brightness.light) {
+      return base;
+    }
+    final index = base.index;
+    if (index >= FontWeight.w600.index) {
+      return FontWeight.values[index - 1];
+    }
+    return base;
+  }
+
+  static TextTheme _textTheme(
+    AppPalette palette,
+    String fontFamily,
+    Brightness brightness,
+  ) {
+    FontWeight w(FontWeight base) => _weight(base, brightness);
     return TextTheme(
       displayLarge: TextStyle(
         color: palette.ink,
         fontFamily: fontFamily,
         fontSize: 40,
-        fontWeight: FontWeight.w600,
+        fontWeight: w(FontWeight.w600),
         height: 1.10,
         letterSpacing: 0,
       ),
@@ -301,7 +366,7 @@ class AppTheme {
         color: palette.ink,
         fontFamily: fontFamily,
         fontSize: 34,
-        fontWeight: FontWeight.w600,
+        fontWeight: w(FontWeight.w600),
         height: 1.18,
         letterSpacing: -0.374,
       ),
@@ -309,7 +374,7 @@ class AppTheme {
         color: palette.ink,
         fontFamily: fontFamily,
         fontSize: 21,
-        fontWeight: FontWeight.w600,
+        fontWeight: w(FontWeight.w600),
         height: 1.19,
         letterSpacing: 0.231,
       ),
@@ -317,7 +382,7 @@ class AppTheme {
         color: palette.ink,
         fontFamily: fontFamily,
         fontSize: 17,
-        fontWeight: FontWeight.w600,
+        fontWeight: w(FontWeight.w600),
         height: 1.24,
         letterSpacing: -0.374,
       ),

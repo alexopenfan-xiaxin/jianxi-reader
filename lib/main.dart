@@ -4,12 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'app.dart';
+import 'core/design_tokens.dart';
 import 'core/document_file_service.dart';
 import 'core/widgets/liquid_glass.dart';
 import 'data/metadata/migration.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Hairlines are one physical pixel wide, which needs the screen's DPR before
+  // the first theme is built.
+  final views = WidgetsBinding.instance.platformDispatcher.views;
+  if (views.isNotEmpty) {
+    AppHairline.configure(views.first.devicePixelRatio);
+  }
   await LiquidGlassWidgets.initialize();
   // Sweep parked deletions older than the undo window; a failure here must
   // never block startup, so it is fire-and-forget.
