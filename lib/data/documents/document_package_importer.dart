@@ -100,8 +100,10 @@ class DocumentPackageImporter {
         }
       } catch (error) {
         failed++;
-        debugPrint('[DocumentPackageImporter] copy failed for $relative: '
-            '$error');
+        debugPrint(
+          '[DocumentPackageImporter] copy failed for $relative: '
+          '$error',
+        );
       }
     }
 
@@ -139,10 +141,7 @@ class DocumentPackageImporter {
 
   /// True when [path] lives inside the package area.
   static bool isInsidePackage(String path, Directory libraryRoot) {
-    return p.isWithin(
-      p.join(libraryRoot.path, packagesDirectoryName),
-      path,
-    );
+    return p.isWithin(p.join(libraryRoot.path, packagesDirectoryName), path);
   }
 
   /// The package folder that owns [path], or null when it is a loose document.

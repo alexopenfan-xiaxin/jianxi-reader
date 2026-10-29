@@ -17,7 +17,8 @@ void main() {
   setUp(() {
     root = Directory.systemTemp.createTempSync('jianxi_package_');
     source = Directory(p.join(root.path, 'my-notes'))..createSync();
-    library = Directory(p.join(root.path, 'library'))..createSync(recursive: true);
+    library = Directory(p.join(root.path, 'library'))
+      ..createSync(recursive: true);
     MetadataFileStore.setBaseDirectoryForTesting(root);
     MetadataStore.clearCache();
     SharedPreferences.setMockInitialValues({});
@@ -66,10 +67,7 @@ void main() {
     expect(css.existsSync(), isTrue);
 
     // Noise is not copied.
-    expect(
-      File(p.join(package.path, '.git', 'config')).existsSync(),
-      isFalse,
-    );
+    expect(File(p.join(package.path, '.git', 'config')).existsSync(), isFalse);
     expect(File(p.join(package.path, 'Thumbs.db')).existsSync(), isFalse);
   });
 
