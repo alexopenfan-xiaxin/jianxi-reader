@@ -207,10 +207,41 @@ jobs:
             echo "Created and pushed tag $TAG"
           fi
 
-      - name: Build release notes from commit history
+      # The release page should read like the in-app update log, so the notes
+      # come from the Chinese changelog section for this exact build. The
+      # commit-subject grouping below is only a fallback for versions that were
+      # never written up; commit subjects are English and read badly on a page
+      # our users actually open.
+      - name: Build release notes from the changelog
         run: |
+          TAG_TITLE="## $VERSION_NAME (build $BUILD_NUMBER)"
+          # Trailing whitespace (a CR from a CRLF checkout, stray spaces)
+          # is trimmed so the heading compares equal either way.
+          awk -v title="$TAG_TITLE" '
+            { line = $0; sub(/[[:space:]]+$/, "", line) }
+            line == title { inside = 1; print line; next }
+            inside && /^## / { exit }
+            inside { print line }
+          ' updatelog.md > /tmp/section.md
+
           LAST_TAG=$(git tag --list 'v*' --sort=-v:refname | grep -Fxv "$TAG" | head -1 || true)
           echo "Previous tag: ${LAST_TAG:-<none>}"
+
+          if [ -s /tmp/section.md ]; then
+            echo "Notes taken from updatelog.md: $TAG_TITLE"
+            cp /tmp/section.md body.md
+            if [ -n "$LAST_TAG" ]; then
+              {
+                echo
+                echo "---"
+                echo
+                echo "完整变更：$LAST_TAG → $TAG"
+              } >> body.md
+            fi
+            cat body.md
+            exit 0
+          fi
+          echo "No '$TAG_TITLE' section in updatelog.md; deriving notes from commits."
           if [ -n "$LAST_TAG" ]; then
             git log --no-merges --pretty=format:%s "$LAST_TAG..HEAD" > /tmp/raw.txt
           else

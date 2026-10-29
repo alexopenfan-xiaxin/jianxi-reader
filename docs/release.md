@@ -34,7 +34,8 @@ Release mechanics for 简兮阅读器. `main` is the only long-lived branch; nor
 - Release asset: `app-arm64-v8a-release.apk`; `build-apk.yml` produces an artifact only (no tag, no release).
 - Before tagging, keep `pubspec.yaml` and `_fallbackBuildNumber` in `about_settings.dart` in sync.
 - Before release, `gh secret list` must show `RELEASE_KEYSTORE`, `KEY_STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, and `UPDATE_SERVER_KEY`. Never rotate `RELEASE_KEYSTORE`.
-- Release notes are generated from commit subjects since the previous tag, so keep the `feat:` / `fix:` / `perf:` / `refactor:` / `style:` prefixes meaningful.
+- Release notes come from the `## <version> (build <N>)` section of `updatelog.md`, so that section must exist before dispatching — the page users open should read like the in-app update log, not like commit subjects.
+- If that section is missing, the workflow falls back to grouping commit subjects since the previous tag; that fallback is English, so keep the `feat:` / `fix:` / `perf:` / `refactor:` / `style:` prefixes meaningful for it.
 
 ## TLS exception
 

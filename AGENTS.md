@@ -38,7 +38,7 @@
 
 - `main` is the only long-lived branch; do not recreate `test`.
 - Commit only task files and push to `origin/main` by default unless the user asks otherwise; never force-push. If `origin/main` advanced, integrate before pushing.
-- `pubspec.yaml` is the version source of truth. Bump `version` and the build number at a release boundary, not on every edit; keep `_fallbackBuildNumber` in `about_settings.dart` in sync. End commit subjects with `(build N)` for the current build; `publish.yml` strips it when generating notes.
+- `pubspec.yaml` is the version source of truth. Bump `version` and the build number at a release boundary, not on every edit; keep `_fallbackBuildNumber` in `about_settings.dart` in sync. End commit subjects with `(build N)` for the current build. Release notes are taken from the `## <version> (build N)` section of `updatelog.md` — write that section in Chinese at every release boundary; `publish.yml` only falls back to commit subjects (and strips the `(build N)` suffix) when the section is missing.
 - "run" or an ordinary code change is not release authorization. Build, GitHub Release, and update-server upload need an explicit full-release request.
 - Release path: `.github/workflows/publish.yml` (dispatch defaults to `main`) builds once, checks `v<version>+<build>`, publishes notes and APK, and uploads to the update server. Manual fallback, credentials, and failure handling: `docs/release.md`.
 - Release signing key custody: the `RELEASE_KEYSTORE` Actions secret is the only managed copy of the private key. Never delete, rotate, or transfer it without a user-migration plan; `publish.yml` must fail when it is missing, and the signed APK certificate SHA-256 must be `b76b05e9…`.
