@@ -102,27 +102,20 @@ class _FixedSettingsHeader extends StatelessWidget {
     );
 
     if (liquidGlass) {
-      // The header slides with the tab transition. Premium glass tracks
-      // sliding transforms through its backdrop group and flashes black on
-      // switch, so anything that moves stays on the standard tier.
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: palette.hairline.withValues(alpha: 0.20)),
-          ),
+      // Same floating bar as the library header: rounded, inset, no hairline.
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xs,
+          AppSpacing.xs,
+          AppSpacing.xs,
+          0,
         ),
-        child: GlassToolbar(
-          height: 72,
-          alignment: MainAxisAlignment.start,
-          padding: EdgeInsets.zero,
-          backgroundColor: Colors.transparent,
-          settings: AppGlassSettings.build(
-            context,
-            role: AppGlassRole.animatedChrome,
-            color: liquidGlassHeaderColor(context),
-          ),
-          quality: AppGlassSettings.qualityFor(AppGlassRole.animatedChrome),
-          children: [Expanded(child: headerContent)],
+        child: LiquidGlassSurface(
+          borderRadius: const BorderRadius.all(Radius.circular(AppRadii.lg)),
+          color: liquidGlassHeaderColor(context),
+          blur: LiquidGlassTokens.chromeBlur,
+          quality: GlassQuality.standard,
+          child: SizedBox(height: 72, child: headerContent),
         ),
       );
     }

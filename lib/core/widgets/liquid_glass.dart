@@ -47,7 +47,8 @@ class LiquidGlassTokens {
   static const double thickness = 16.0;
 
   // Chromatic fringing along the refracted edge.
-  static const double chromaticAberration = 0.2;
+  // Was 0.2: the fringe reads as a grey halo on a bright page.
+  static const double chromaticAberration = 0.08;
 
   // Specular light budget before intensity scaling.
   static const double darkSpecular = 0.42;
@@ -62,13 +63,17 @@ class LiquidGlassTokens {
   // Full-perimeter edge highlight ring, before intensity scaling. The premium
   // shader renders no ring at ambientRim 0; ~1.5–2 reads as a clearly visible
   // but not gaudy highlight.
-  static const double edgeRim = 2.0;
+  // Was 2.0: the ring was wide enough to look like a fog band around every
+  // surface except the bottom tab (which uses the package's own defaults).
+  static const double edgeRim = 0.9;
 
   // Meniscus rim darkening, before intensity scaling. iOS light glass takes
   // its edge definition from the highlight ring, so a dark meniscus band over
   // a bright page reads as a grey outline; light mode keeps only a hint.
-  static const double darkEdgeAbsorption = 0.12;
-  static const double lightEdgeAbsorption = 0.05;
+  static const double darkEdgeAbsorption = 0.10;
+  // Light glass takes its edge from the highlight only; any dark meniscus over
+  // a bright page reads as a grey outline.
+  static const double lightEdgeAbsorption = 0.0;
 
   // Light-mode whitening veil, luminance gated by the package so text and
   // icons under the glass stay crisp. Without it a light surface can only mute

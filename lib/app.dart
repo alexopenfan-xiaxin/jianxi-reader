@@ -8,7 +8,6 @@ import 'core/design_tokens.dart';
 import 'core/document_file_service.dart';
 import 'features/library/library_controller.dart';
 import 'features/shell/app_shell.dart';
-import 'features/shell/whats_new_gate.dart';
 
 class JianxiReaderApp extends StatelessWidget {
   const JianxiReaderApp({super.key, this.documentService});
@@ -64,7 +63,7 @@ class JianxiReaderApp extends StatelessWidget {
                     child: content,
                   );
                 },
-                home: const WhatsNewGate(child: AppShell()),
+                home: const AppShell(),
               );
             },
           ),
