@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '199';
+  static const _fallbackBuildNumber = '290';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -308,11 +308,25 @@ class _AboutPageState extends State<AboutPage> {
       if (total > _maxApkBytes) {
         throw const HttpException('更新包超过 200 MB 限制');
       }
+      // 没有摘要的更新包一律不装：宁可更新失败，也不把未校验的字节交给安装器。
+      final expectedSha256 = _expectedApkSha256(response);
+      if (expectedSha256 == null) {
+        await response.drain<void>();
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('更新包缺少 SHA256 摘要，已拒绝安装')),
+          );
+        }
+        return;
+      }
+      final digest = Sha256();
       sink = partialFile.openWrite();
       var received = 0;
 
       await for (final chunk in response) {
         sink.add(chunk);
+        digest.add(chunk);
         received += chunk.length;
         if (received > _maxApkBytes) {
           throw const HttpException('更新包超过 200 MB 限制');
@@ -329,6 +343,15 @@ class _AboutPageState extends State<AboutPage> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('下载失败：更新包不完整')));
+        }
+        return;
+      }
+      if (digest.finish() != expectedSha256) {
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('更新包校验失败，已放弃本次更新')));
         }
         return;
       }
@@ -505,16 +528,52 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   Future<HttpClientResponse> _openUpdateRequest(HttpClient client) async {
-    final request = await client.getUrl(_buildUpdateUri());
-    request.headers.set(
-      HttpHeaders.acceptHeader,
-      '$_apkContentType, application/json',
-    );
-    return request.close();
+    var uri = _buildUpdateUri();
+    for (var hop = 0; hop < 4; hop++) {
+      final request = await client.getUrl(uri);
+      // 不自动跟随跳转：只允许跳回更新主机自身，避免被引到第三方下载源。
+      request.followRedirects = false;
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        '$_apkContentType, application/json',
+      );
+      final response = await request.close();
+      if (!_isRedirectStatus(response.statusCode)) {
+        return response;
+      }
+      final location = response.headers.value(HttpHeaders.locationHeader);
+      await response.drain<void>();
+      if (location == null || location.isEmpty) {
+        throw const HttpException('更新服务返回了无目标的跳转');
+      }
+      final next = uri.resolve(location);
+      if (next.scheme != 'https' || next.host != _updateHost) {
+        throw HttpException('更新服务跳转到了未授权的主机：${next.host}');
+      }
+      uri = next;
+    }
+    throw const HttpException('更新服务跳转次数过多');
+  }
+
+  static bool _isRedirectStatus(int statusCode) {
+    return statusCode == HttpStatus.movedPermanently ||
+        statusCode == HttpStatus.found ||
+        statusCode == HttpStatus.seeOther ||
+        statusCode == HttpStatus.temporaryRedirect ||
+        statusCode == HttpStatus.permanentRedirect;
   }
 
   Uri _buildUpdateUri() {
     return Uri.parse('$_updateEndpoint?request&local=${_currentBuildNumber()}');
+  }
+
+  /// Reads the `x-apk-sha256` header, or null when it is missing/malformed.
+  String? _expectedApkSha256(HttpClientResponse response) {
+    final raw = response.headers.value('x-apk-sha256')?.trim().toLowerCase();
+    if (raw == null || !isSha256Hex(raw)) {
+      return null;
+    }
+    return raw;
   }
 
   bool _isApkResponse(HttpClientResponse response) {
@@ -524,8 +583,14 @@ class _AboutPageState extends State<AboutPage> {
 
   bool _isNewerBuildResponse(HttpClientResponse response) {
     final latestBuild = _responseBuildNumber(response);
+    // fail-closed：服务端没给版本号时不能假设"有新版本"，
+    // 否则任意一个 200 响应都会把用户推到下载/安装流程。
     if (latestBuild == null) {
-      return true;
+      debugPrint(
+        '[AboutPage] update response lacks x-apk-build/x-apk-version; '
+        'treating as up to date.',
+      );
+      return false;
     }
     return latestBuild > _currentBuildNumberValue();
   }

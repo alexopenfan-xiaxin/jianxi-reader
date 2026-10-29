@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_settings_controller.dart';
 import '../../core/design_tokens.dart';
+import '../../core/sha256.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_page_route.dart';
 import '../../core/widgets/glass_segmented_control.dart';
