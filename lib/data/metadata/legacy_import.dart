@@ -67,16 +67,11 @@ class LegacyMetadataImport {
         DocumentRecord(
           id: id,
           path: path,
-          sourceUri: preferences.getString(
-            '$referencedSourceUriPrefix$path',
-          ),
+          sourceUri: preferences.getString('$referencedSourceUriPrefix$path'),
           pinned: preferences.getBool('$documentPinnedPrefix$path') ?? false,
           tags:
-              preferences.getStringList('$documentTagsPrefix$path') ??
-              const [],
-          recentOpenedAtMillis: preferences.getInt(
-            '$recentOpenedPrefix$path',
-          ),
+              preferences.getStringList('$documentTagsPrefix$path') ?? const [],
+          recentOpenedAtMillis: preferences.getInt('$recentOpenedPrefix$path'),
         ),
       );
     }

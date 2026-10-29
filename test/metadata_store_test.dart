@@ -28,9 +28,7 @@ Future<void> writeLegacyLibrary(int documentCount) async {
       preferences['document.recentOpened.$path'] = 1700000000000 + i;
     }
   }
-  preferences['document.tags'] = <String>[
-    for (var i = 0; i < 7; i++) '标签$i',
-  ];
+  preferences['document.tags'] = <String>[for (var i = 0; i < 7; i++) '标签$i'];
   preferences['document.tags.pinned'] = <String>['标签0'];
   preferences['referenced.paths'] = <String>['/library/doc_0.md'];
   preferences['referenced.sourceUri./library/doc_0.md'] = 'content://docs/0';
