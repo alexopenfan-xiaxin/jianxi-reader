@@ -776,9 +776,7 @@ class DocumentFileService implements DocumentLibraryService {
         sourceUri: document.sourceUri,
       );
       snapshot.upsertRecord(
-        record.copyWith(
-          recentOpenedAtMillis: openedAt.millisecondsSinceEpoch,
-        ),
+        record.copyWith(recentOpenedAtMillis: openedAt.millisecondsSinceEpoch),
       );
     });
     invalidateLibraryCache();
