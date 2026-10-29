@@ -340,11 +340,12 @@ class AppTheme {
     if (brightness == Brightness.light) {
       return base;
     }
-    final index = base.index;
-    if (index >= FontWeight.w600.index) {
-      return FontWeight.values[index - 1];
+    // `FontWeight.values` runs w100..w900, so the step below w600 is w500.
+    final step = (base.value - FontWeight.w100.value) ~/ 100;
+    if (step < 5) {
+      return base;
     }
-    return base;
+    return FontWeight.values[step - 1];
   }
 
   static TextTheme _textTheme(
