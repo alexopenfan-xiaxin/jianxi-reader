@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/design_tokens.dart';
 import '../../core/widgets/liquid_glass.dart';
 
 /// Shows the "what 3.0 is" card once, then never again.
