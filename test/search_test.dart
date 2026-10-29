@@ -26,8 +26,7 @@ void main() {
     });
 
     test('builds a snippet around the first hit', () {
-      final text =
-          '${'a'.padRight(100, 'a')}缓存失效${'b'.padRight(100, 'b')}';
+      final text = '${'a'.padRight(100, 'a')}缓存失效${'b'.padRight(100, 'b')}';
       final snippet = snippetAround(text, ['缓存']);
       expect(snippet, contains('缓存失效'));
       expect(snippet.startsWith('…'), isTrue);
