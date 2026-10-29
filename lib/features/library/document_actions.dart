@@ -25,6 +25,35 @@ Future<bool> removeDocumentFromLibrary(
   BuildContext context,
   DocumentEntry document,
 ) async {
+  // Same guard as the batch flow: a destructive action always asks first.
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => GlassDialog(
+      title: '移出文档',
+      message: '将把“${document.name}”移出文档库，应用内的副本会被删除。',
+      maxWidth: 320,
+      settings: AppGlassSettings.build(
+        dialogContext,
+        role: AppGlassRole.staticPanel,
+      ),
+      quality: AppGlassSettings.qualityFor(AppGlassRole.staticPanel),
+      actions: [
+        GlassDialogAction(
+          label: '取消',
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+        ),
+        GlassDialogAction(
+          label: '移出',
+          isDestructive: true,
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) {
+    return false;
+  }
+
   final controller = context.read<LibraryController>();
   final messenger = ScaffoldMessenger.of(context);
 

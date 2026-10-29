@@ -540,8 +540,14 @@ class DocumentFileService implements DocumentLibraryService {
       document.path,
     );
     final file = File(document.path);
+    // Only ever delete a copy this app owns. A referenced document's on-disk
+    // path is the Android mirror; on any other platform it is the user's own
+    // file, so the metadata is removed and the file is left untouched.
+    final isManagedCopy = document.isReferenced
+        ? (sourceUri != null && Platform.isAndroid)
+        : true;
     File? stagedFile;
-    if ((!document.isReferenced || sourceUri != null) && file.existsSync()) {
+    if (isManagedCopy && file.existsSync()) {
       final stagedName =
           '${p.basenameWithoutExtension(file.path)}.deleting-'
           '${DateTime.now().microsecondsSinceEpoch}${p.extension(file.path)}';

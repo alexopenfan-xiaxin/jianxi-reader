@@ -225,5 +225,33 @@ void main() {
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.getStringList('referenced.paths'), isEmpty);
     });
+
+    test('removing a mirror keeps the source URI file', () async {
+      final targetDir = Directory.systemTemp.createTempSync('jianxi_mirror_');
+      addTearDown(() => targetDir.deleteSync(recursive: true));
+
+      final file = File(p.join(targetDir.path, 'mirror.md'));
+      await file.writeAsString('# Mirror');
+      SharedPreferences.setMockInitialValues({
+        'referenced.paths': [file.path],
+        'referenced.sourceUri.${file.path}': 'content://docs/1',
+      });
+      final document = await DocumentEntry.fromFile(
+        file,
+        isReferenced: true,
+        sourceUri: 'content://docs/1',
+      );
+
+      await DocumentFileService().removeDocument(document);
+
+      // Tests run on the non-Android path, where `path` is the user's own
+      // file: "移出" must drop the entry without touching the bytes.
+      expect(file.existsSync(), isTrue);
+      final preferences = await SharedPreferences.getInstance();
+      expect(
+        preferences.getString('referenced.sourceUri.${file.path}'),
+        isNull,
+      );
+    });
   });
 }
