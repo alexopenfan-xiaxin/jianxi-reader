@@ -184,7 +184,7 @@ class MarkdownViewerState extends State<MarkdownViewer>
       _isReloading = false;
       if (_pendingReload) {
         _pendingReload = false;
-        _guardedLoadFile();
+        unawaited(_guardedLoadFile());
       }
     }
   }

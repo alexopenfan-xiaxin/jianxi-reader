@@ -249,7 +249,7 @@ class _AboutPageState extends State<AboutPage> {
     final progress = ValueNotifier<double>(0.0);
     final client = _createUpdateClient();
 
-    showDialog(
+    final dialog = showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => LiquidGlassDialog(
@@ -281,6 +281,8 @@ class _AboutPageState extends State<AboutPage> {
         ),
       ),
     );
+    // The download dialog is closed explicitly at every exit below.
+    unawaited(dialog);
 
     IOSink? sink;
     try {
@@ -464,7 +466,7 @@ class _AboutPageState extends State<AboutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已清理缓存：${_formatBytes(clearedBytes)}')),
       );
-      _estimateCacheSize();
+      unawaited(_estimateCacheSize());
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(

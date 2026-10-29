@@ -577,9 +577,11 @@ class _ReaderPageState extends State<ReaderPage> {
             sourceUri: opened.sourceUri,
           )
           .then((docId) {
-            ReadingHistoryService.record(documentId: docId).catchError((e) {
-              debugPrint('[ReaderPage] record history failed: $e');
-            });
+            unawaited(
+              ReadingHistoryService.record(documentId: docId).catchError((e) {
+                debugPrint('[ReaderPage] record history failed: $e');
+              }),
+            );
           })
           .catchError((e) {
             debugPrint('[ReaderPage] get document id failed: $e');
@@ -596,7 +598,7 @@ class _ReaderPageState extends State<ReaderPage> {
         // For Markdown, load progress immediately.
         // For HTML, defer until the WebView page is ready (_onHtmlPageReady).
         if (!_isHtmlDocument) {
-          _loadSavedProgress();
+          unawaited(_loadSavedProgress());
         }
       }
     } catch (error) {
