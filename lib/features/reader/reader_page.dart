@@ -85,6 +85,11 @@ class _ReaderPageState extends State<ReaderPage> {
   double? _savedProgressRatio;
   bool _showProgressHint = false;
   bool _progressHintVisible = false;
+
+  /// Set once this session has a real reading position (a scroll happened or
+  /// the user jumped to the saved spot). Without it, `dispose` would report
+  /// pixel 0 for a document the user only glanced at and wipe the saved spot.
+  bool _hasProgressPosition = false;
   Timer? _saveProgressTimer;
   Timer? _hideProgressTimer;
   Timer? _hideProgressDelayedTimer;
@@ -133,6 +138,9 @@ class _ReaderPageState extends State<ReaderPage> {
     final ratio = position.maxScrollExtent > 0
         ? position.pixels / position.maxScrollExtent
         : 0.0;
+    if (position.pixels > 0) {
+      _hasProgressPosition = true;
+    }
     _progressController.update(ratio);
     _scheduleProgressSave();
   }
@@ -140,6 +148,9 @@ class _ReaderPageState extends State<ReaderPage> {
   /// Called by [HtmlDocumentView.onScroll] with the current scroll ratio.
   void _handleHtmlScroll(double ratio) {
     _htmlScrollRatio = ratio;
+    if (ratio > 0) {
+      _hasProgressPosition = true;
+    }
     _progressController.update(ratio);
     // Forward to SmartScrollbar for speed detection.
     _smartScrollbarKey.currentState?.reportScroll(ratio);
@@ -168,6 +179,9 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   Future<void> _saveProgressNow() async {
+    // Only a session that actually reached a position may write progress:
+    // "opened and closed" must leave the stored position untouched.
+    if (!_hasProgressPosition) return;
     final double ratio;
     if (_isHtmlDocument) {
       ratio = _htmlScrollRatio;
@@ -213,6 +227,13 @@ class _ReaderPageState extends State<ReaderPage> {
   void _jumpToSavedProgress() {
     final ratio = _savedProgressRatio;
     if (ratio == null) return;
+
+    // The user chose a position, so this session owns the stored progress now.
+    _hasProgressPosition = true;
+    if (_isHtmlDocument) {
+      // The WebView may not report the new ratio back before dispose.
+      _htmlScrollRatio = ratio;
+    }
 
     if (_isHtmlDocument) {
       _htmlViewKey.currentState?.jumpToRatio(ratio);

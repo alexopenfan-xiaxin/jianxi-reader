@@ -10,14 +10,16 @@ class ReadingProgressService {
   static Future<void> _pendingMutation = Future<void>.value();
 
   /// Save the scroll progress ratio (0.0 – 1.0) for the given document.
+  ///
+  /// Saving never deletes. Treating "near the very top" as "no progress" meant
+  /// that opening a document and leaving immediately erased the saved spot,
+  /// because the reader reported pixel 0. Callers that mean to clear state use
+  /// [clearProgress] instead.
   static Future<void> saveProgress(String path, double ratio) {
     return _serializeMutation(() async {
       final clamped = ratio.clamp(0.0, 1.0).toDouble();
       final preferences = await SharedPreferences.getInstance();
-      // Skip saving when near the very top — treat as "no progress".
-      final succeeded = clamped < 0.01
-          ? await preferences.remove(_key(path))
-          : await preferences.setDouble(_key(path), clamped);
+      final succeeded = await preferences.setDouble(_key(path), clamped);
       if (!succeeded) {
         throw const FileSystemException('无法保存阅读进度');
       }
@@ -32,7 +34,7 @@ class ReadingProgressService {
   }
 
   /// Remove stored progress for a document.
-  static Future<void> removeProgress(String path) {
+  static Future<void> clearProgress(String path) {
     return _serializeMutation(() async {
       final preferences = await SharedPreferences.getInstance();
       if (!await preferences.remove(_key(path))) {

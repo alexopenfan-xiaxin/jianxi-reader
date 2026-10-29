@@ -112,15 +112,20 @@ void main() {
       expect(await ReadingProgressService.loadProgress('/tmp/a.md'), isNull);
       expect(await ReadingProgressService.loadProgress('/tmp/b.md'), 0.6);
 
-      await ReadingProgressService.removeProgress('/tmp/b.md');
+      await ReadingProgressService.clearProgress('/tmp/b.md');
 
       expect(await ReadingProgressService.loadProgress('/tmp/b.md'), isNull);
     });
 
-    test('near-top progress clears the stored value', () async {
+    test('near-top progress is stored, and clearing stays explicit', () async {
       await ReadingProgressService.saveProgress('/tmp/a.md', 0.5);
       await ReadingProgressService.saveProgress('/tmp/a.md', 0.001);
 
+      // Opening a document and leaving reports pixel 0; that must not erase
+      // the stored spot, so only clearProgress() may delete it.
+      expect(await ReadingProgressService.loadProgress('/tmp/a.md'), 0.001);
+
+      await ReadingProgressService.clearProgress('/tmp/a.md');
       expect(await ReadingProgressService.loadProgress('/tmp/a.md'), isNull);
     });
 
