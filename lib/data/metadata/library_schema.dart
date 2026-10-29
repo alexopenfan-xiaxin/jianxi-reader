@@ -1,10 +1,10 @@
-/// The on-disk shape of `metadata/library.json` (schema v1).
-///
-/// Why a single file with a schema number: the 2.x layout scattered one key per
-/// attribute into `SharedPreferences` and kept ids/bookmarks in three separate
-/// JSON files, so nothing could be migrated, snapshotted or validated as a
-/// unit. Everything user-visible about a document now hangs off one record with
-/// a stable `id`; `path` is just an attribute that may change.
+// The on-disk shape of `metadata/library.json` (schema v1).
+//
+// Why a single file with a schema number: the 2.x layout scattered one key per
+// attribute into `SharedPreferences` and kept ids/bookmarks in three separate
+// JSON files, so nothing could be migrated, snapshotted or validated as a unit.
+// Everything user-visible about a document now hangs off one record with a
+// stable `id`; `path` is just an attribute that may change.
 
 /// Schema version written by this build. Bump only with a matching migration.
 const int librarySchemaVersion = 1;
@@ -288,32 +288,32 @@ class LibrarySnapshot {
     return LibrarySnapshot(
       schema: schema,
       updatedAtMillis: updatedAtMillis,
-      documents: documents.map(
-        (record) => DocumentRecord(
-          id: record.id,
-          path: record.path,
-          sourceUri: record.sourceUri,
-          pinned: record.pinned,
-          tags: record.tags,
-          recentOpenedAtMillis: record.recentOpenedAtMillis,
-        ),
-      ),
+      documents: [
+        for (final record in documents)
+          DocumentRecord(
+            id: record.id,
+            path: record.path,
+            sourceUri: record.sourceUri,
+            pinned: record.pinned,
+            tags: record.tags,
+            recentOpenedAtMillis: record.recentOpenedAtMillis,
+          ),
+      ],
       tags: tags,
       pinnedTags: pinnedTags,
-      marks: marks
-          .map(
-            (mark) => ReadingMark(
-              id: mark.id,
-              documentId: mark.documentId,
-              kind: mark.kind,
-              ratio: mark.ratio,
-              title: mark.title,
-              note: mark.note,
-              createdAtMillis: mark.createdAtMillis,
-            ),
-          )
-          .toList(),
-    )..updatedAtMillis = updatedAtMillis;
+      marks: [
+        for (final mark in marks)
+          ReadingMark(
+            id: mark.id,
+            documentId: mark.documentId,
+            kind: mark.kind,
+            ratio: mark.ratio,
+            title: mark.title,
+            note: mark.note,
+            createdAtMillis: mark.createdAtMillis,
+          ),
+      ],
+    );
   }
 
   static List<String> _cleanTagList(Iterable<String> input) {
