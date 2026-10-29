@@ -99,6 +99,26 @@ class ReadingHistoryService {
     });
   }
 
+  /// Puts removed events back after an undo, without duplicating them.
+  static Future<void> restoreAll(List<ReadingHistoryEvent> restored) {
+    if (restored.isEmpty) return Future<void>.value();
+    return MetadataFileStore.serialize(_fileName, () async {
+      final all = await loadAll();
+      String keyOf(ReadingHistoryEvent event) =>
+          '${event.documentId}@${event.openedAtMillis}';
+      final known = all.map(keyOf).toSet();
+      final next = [
+        ...all,
+        ...restored.where((event) => !known.contains(keyOf(event))),
+      ];
+      if (next.length > _maxEvents) {
+        next.sort((a, b) => a.openedAtMillis.compareTo(b.openedAtMillis));
+        next.removeRange(0, next.length - _maxEvents);
+      }
+      await _replaceAll(all, next);
+    });
+  }
+
   static Future<void> _replaceAll(
     List<ReadingHistoryEvent> current,
     List<ReadingHistoryEvent> next,

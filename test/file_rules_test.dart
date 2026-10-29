@@ -5,6 +5,7 @@ import 'package:jianxi_reader/core/bookmark_service.dart';
 import 'package:jianxi_reader/core/document_error_describer.dart';
 import 'package:jianxi_reader/core/document_file_service.dart';
 import 'package:jianxi_reader/core/document_identity.dart';
+import 'package:jianxi_reader/core/document_removal.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
 import 'package:jianxi_reader/core/metadata_file_store.dart';
 import 'package:jianxi_reader/core/reading_history_service.dart';
@@ -252,6 +253,41 @@ void main() {
         preferences.getString('referenced.sourceUri.${file.path}'),
         isNull,
       );
+    });
+
+    test('undo puts a removed document back with its progress', () async {
+      final targetDir = Directory.systemTemp.createTempSync('jianxi_undo_');
+      addTearDown(() => targetDir.deleteSync(recursive: true));
+
+      final file = File(p.join(targetDir.path, 'undo.md'));
+      await file.writeAsString('# Undo');
+      final document = await DocumentEntry.fromFile(file);
+      await ReadingProgressService.saveProgress(document.path, 0.42);
+
+      final service = DocumentFileService();
+      final removal = await service.removeDocument(document);
+
+      expect(file.existsSync(), isFalse);
+      expect(removal.trashedPath, isNotNull);
+
+      await service.restoreDocument(removal);
+
+      expect(await File(document.path).readAsString(), '# Undo');
+      expect(await ReadingProgressService.loadProgress(document.path), 0.42);
+    });
+
+    test('purges trash folders older than the undo window', () async {
+      final libraryDir = Directory.systemTemp.createTempSync('jianxi_trash_');
+      addTearDown(() => libraryDir.deleteSync(recursive: true));
+
+      final parked = Directory(p.join(libraryDir.path, '.trash', '123456'));
+      await parked.create(recursive: true);
+      await File(p.join(parked.path, 'a.md')).writeAsString('# A');
+
+      // Give the directory mtime a moment so it lands before the cutoff.
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      expect(await DocumentTrash.purge(libraryDir, maxAge: Duration.zero), 1);
+      expect(parked.existsSync(), isFalse);
     });
   });
 }

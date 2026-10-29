@@ -1,4 +1,5 @@
 import 'package:jianxi_reader/core/document_file_service.dart';
+import 'package:jianxi_reader/core/document_removal.dart';
 import 'package:jianxi_reader/core/file_rules.dart';
 import 'package:jianxi_reader/features/library/document_entry.dart';
 
@@ -71,8 +72,20 @@ class FakeDocumentService implements DocumentLibraryService {
   }
 
   @override
-  Future<void> removeDocument(DocumentEntry document) async {
+  Future<DocumentRemoval> removeDocument(DocumentEntry document) async {
     _documents.removeWhere((entry) => entry.path == document.path);
+    return DocumentRemoval(
+      document: document,
+      removedAtMillis: DateTime(2026, 6, 7, 12).millisecondsSinceEpoch,
+    );
+  }
+
+  @override
+  Future<void> restoreDocument(DocumentRemoval removal) async {
+    if (_documents.any((entry) => entry.path == removal.document.path)) {
+      return;
+    }
+    _documents.add(removal.document);
   }
 
   @override

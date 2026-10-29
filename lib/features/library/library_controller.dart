@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/document_error_describer.dart';
 import '../../core/document_file_service.dart';
+import '../../core/document_removal.dart';
 import '../../core/reading_progress_service.dart';
 import 'document_entry.dart';
 
@@ -46,6 +47,9 @@ class LibraryController extends ChangeNotifier {
   // Cached computed lists — invalidated on data change.
   List<DocumentEntry>? _cachedDocuments;
   int _loadGeneration = 0;
+
+  /// Undo receipt for the most recent single removal.
+  DocumentRemoval? _lastRemoval;
 
   List<DocumentEntry> get documents {
     return _cachedDocuments ??= _computeDocuments(
@@ -242,11 +246,27 @@ class LibraryController extends ChangeNotifier {
     return renamed;
   }
 
-  Future<void> removeDocument(DocumentEntry document) async {
-    await documentService.removeDocument(document);
+  Future<DocumentRemoval> removeDocument(DocumentEntry document) async {
+    final removal = await documentService.removeDocument(document);
+    _lastRemoval = removal;
     _removeDocument(document.path);
     _errorMessage = null;
     notifyListeners();
+    return removal;
+  }
+
+  /// Puts the most recent single removal back. Returns false when there is
+  /// nothing to undo (the window expired or a batch removal superseded it).
+  Future<bool> undoLastRemoval() async {
+    final removal = _lastRemoval;
+    if (removal == null) {
+      return false;
+    }
+    _lastRemoval = null;
+    await documentService.restoreDocument(removal);
+    _errorMessage = null;
+    await loadDocuments();
+    return true;
   }
 
   Future<LibraryBatchResult> removeDocuments(

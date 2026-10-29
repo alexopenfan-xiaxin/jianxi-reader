@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/library/document_entry.dart';
 import 'document_identity.dart';
+import 'document_removal.dart';
 import 'file_rules.dart';
 import 'bookmark_service.dart';
 import 'reading_history_service.dart';
@@ -31,7 +32,11 @@ abstract class DocumentLibraryService {
 
   Future<DocumentEntry> renameDocument(DocumentEntry document, String baseName);
 
-  Future<void> removeDocument(DocumentEntry document);
+  /// Removes [document] from the library and returns an undo receipt.
+  Future<DocumentRemoval> removeDocument(DocumentEntry document);
+
+  /// Puts a document removed by [removeDocument] back.
+  Future<void> restoreDocument(DocumentRemoval removal);
 
   Future<DocumentEntry> setDocumentPinned(DocumentEntry document, bool pinned);
 
@@ -524,7 +529,7 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   @override
-  Future<void> removeDocument(DocumentEntry document) async {
+  Future<DocumentRemoval> removeDocument(DocumentEntry document) async {
     final preferences = await _preferences();
     final referencedPaths = document.isReferenced
         ? preferences.getStringList(_referencedPathsKey) ?? []
@@ -539,6 +544,15 @@ class DocumentFileService implements DocumentLibraryService {
     final documentId = await DocumentIdentityService.getIdForPath(
       document.path,
     );
+    // Capture what is about to be deleted so "撤销" can put it back.
+    final bookmarks = documentId == null
+        ? const <ReadingBookmark>[]
+        : await BookmarkService.forDocument(documentId);
+    final history = documentId == null
+        ? const <ReadingHistoryEvent>[]
+        : (await ReadingHistoryService.loadAll())
+              .where((event) => event.documentId == documentId)
+              .toList();
     final file = File(document.path);
     // Only ever delete a copy this app owns. A referenced document's on-disk
     // path is the Android mirror; on any other platform it is the user's own
@@ -548,10 +562,9 @@ class DocumentFileService implements DocumentLibraryService {
         : true;
     File? stagedFile;
     if (isManagedCopy && file.existsSync()) {
-      final stagedName =
-          '${p.basenameWithoutExtension(file.path)}.deleting-'
-          '${DateTime.now().microsecondsSinceEpoch}${p.extension(file.path)}';
-      stagedFile = await file.rename(p.join(file.parent.path, stagedName));
+      // Park it in .trash instead of deleting: the undo window is the only
+      // thing standing between a mis-tap and a lost document.
+      stagedFile = await DocumentTrash.stage(file);
     }
 
     try {
@@ -576,9 +589,6 @@ class DocumentFileService implements DocumentLibraryService {
             '[DocumentFileService] remove bookmark/history failed: $error',
           );
         }
-      }
-      if (stagedFile != null && stagedFile.existsSync()) {
-        await stagedFile.delete();
       }
     } catch (error, stackTrace) {
       try {
@@ -621,6 +631,108 @@ class DocumentFileService implements DocumentLibraryService {
     }
     invalidateLibraryCache();
     _lastRefreshTimes.remove(document.path);
+
+    return DocumentRemoval(
+      document: document,
+      removedAtMillis: DateTime.now().millisecondsSinceEpoch,
+      documentId: documentId,
+      trashedPath: stagedFile?.path,
+      recentOpenedAtMillis: recentOpened,
+      pinned: pinned,
+      tags: tags ?? const [],
+      progress: progress,
+      referencedPaths: referencedPaths,
+      sourceUri: sourceUri,
+      bookmarks: bookmarks,
+      history: history,
+    );
+  }
+
+  /// Puts a removed document back, including its file, tags, bookmarks and
+  /// reading state. Best effort: a missing parked file still restores metadata.
+  @override
+  Future<void> restoreDocument(DocumentRemoval removal) async {
+    final preferences = await _preferences();
+    final path = removal.document.path;
+
+    final trashedPath = removal.trashedPath;
+    if (trashedPath != null) {
+      final parked = File(trashedPath);
+      if (await parked.exists()) {
+        final target = File(path);
+        await target.parent.create(recursive: true);
+        await parked.rename(path);
+      }
+      await _discardEmptyTrashFolder(trashedPath);
+    }
+
+    if (removal.referencedPaths != null) {
+      final paths = List<String>.from(
+        preferences.getStringList(_referencedPathsKey) ?? const <String>[],
+      );
+      if (!paths.contains(path)) {
+        paths.add(path);
+      }
+      await _persistPreference(
+        preferences.setStringList(_referencedPathsKey, paths),
+      );
+      final sourceUri = removal.sourceUri;
+      if (sourceUri != null) {
+        await _persistPreference(
+          preferences.setString(_referencedSourceUriKey(path), sourceUri),
+        );
+      }
+    }
+
+    await _restoreDocumentMetadata(
+      preferences,
+      path,
+      recentOpened: removal.recentOpenedAtMillis,
+      pinned: removal.pinned,
+      tags: removal.tags,
+      progress: removal.progress,
+    );
+
+    final documentId = removal.documentId;
+    if (documentId != null) {
+      await DocumentIdentityService.restorePath(path, documentId);
+      await BookmarkService.restoreAll(removal.bookmarks);
+      await ReadingHistoryService.restoreAll(removal.history);
+    }
+
+    invalidateLibraryCache();
+    _lastRefreshTimes.remove(path);
+  }
+
+  static Future<void> _discardEmptyTrashFolder(String trashedPath) async {
+    final folder = Directory(p.dirname(trashedPath));
+    if (p.basename(folder.path) == DocumentTrash.directoryName) {
+      return;
+    }
+    if (p.basename(folder.parent.path) != DocumentTrash.directoryName) {
+      return;
+    }
+    try {
+      if (await folder.exists()) {
+        await folder.delete(recursive: true);
+      }
+    } catch (error) {
+      debugPrint('[DocumentFileService] cannot clean trash folder: $error');
+    }
+  }
+
+  /// Drops parked files older than 24 hours. Called once at startup.
+  static Future<int> purgeExpiredTrash() async {
+    try {
+      final appDirectory = await getApplicationDocumentsDirectory();
+      final libraryDirectory = Directory(
+        p.join(appDirectory.path, libraryFolderName),
+      );
+      return await DocumentTrash.purge(libraryDirectory);
+    } catch (error) {
+      debugPrint('[DocumentFileService] trash purge skipped: $error');
+      return 0;
+    }
   }
 
   @override

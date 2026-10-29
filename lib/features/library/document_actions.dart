@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -59,13 +60,42 @@ Future<bool> removeDocumentFromLibrary(
 
   try {
     await controller.removeDocument(document);
-    messenger.showSnackBar(SnackBar(content: Text('已移出 ${document.name}')));
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('已移出 ${document.name}'),
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: '撤销',
+            onPressed: () {
+              unawaited(_undoRemoval(controller, messenger));
+            },
+          ),
+        ),
+      );
     return true;
   } catch (error) {
     messenger.showSnackBar(
       SnackBar(content: Text('移出失败：${describeDocumentError(error)}')),
     );
     return false;
+  }
+}
+
+Future<void> _undoRemoval(
+  LibraryController controller,
+  ScaffoldMessengerState messenger,
+) async {
+  try {
+    final restored = await controller.undoLastRemoval();
+    messenger.showSnackBar(
+      SnackBar(content: Text(restored ? '已撤销移出' : '无法撤销：已超过撤销时段')),
+    );
+  } catch (error) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('撤销失败：${describeDocumentError(error)}')),
+    );
   }
 }
 

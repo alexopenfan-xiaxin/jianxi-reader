@@ -132,6 +132,19 @@ class BookmarkService {
     });
   }
 
+  /// Puts removed bookmarks back after an undo.
+  static Future<void> restoreAll(List<ReadingBookmark> restored) {
+    if (restored.isEmpty) return Future<void>.value();
+    return MetadataFileStore.serialize(_fileName, () async {
+      final all = await loadAll();
+      final known = all.map((bookmark) => bookmark.id).toSet();
+      await _replaceAll(all, [
+        ...all,
+        ...restored.where((bookmark) => !known.contains(bookmark.id)),
+      ]);
+    });
+  }
+
   static Future<void> _replaceAll(
     List<ReadingBookmark> current,
     List<ReadingBookmark> next,
