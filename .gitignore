@@ -54,3 +54,7 @@ git推送指南.md
 .codex/
 .zcode/
 .tmp_notes.md
+
+# Python bytecode from tool/ helpers
+__pycache__/
+*.pyc
