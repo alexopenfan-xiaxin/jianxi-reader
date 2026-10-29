@@ -34,8 +34,8 @@ Release mechanics for 简兮阅读器. `main` is the only long-lived branch; nor
 - Release asset: `app-arm64-v8a-release.apk`; `build-apk.yml` produces an artifact only (no tag, no release).
 - Before tagging, keep `pubspec.yaml` and `_fallbackBuildNumber` in `about_settings.dart` in sync.
 - Before release, `gh secret list` must show `RELEASE_KEYSTORE`, `KEY_STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, and `UPDATE_SERVER_KEY`. Never rotate `RELEASE_KEYSTORE`.
-- Release notes come from the `## <version> (build <N>)` section of `updatelog.md`, so that section must exist before dispatching — the page users open should read like the in-app update log, not like commit subjects.
-- If that section is missing, the workflow falls back to grouping commit subjects since the previous tag; that fallback is English, so keep the `feat:` / `fix:` / `perf:` / `refactor:` / `style:` prefixes meaningful for it.
+- Release notes are authored, not derived: write `docs/releases/<tag>.md` (e.g. `docs/releases/v3.0.0+300.md`) in the same shape as the previous release pages — `## vX.Y.Z 更新详情`, a one-line lead, then `### 🚀 新功能` / `### ⚡ 体验优化` / `### 🐛 问题修复` / `### 🔧 其他` with `- **短语** — 说明。` bullets. The workflow appends the `完整变更：<prev> → <tag>` line and the SHA256 block itself.
+- Two fallbacks exist and both read worse: the `## <version> (build <N>)` section of `updatelog.md`, then grouped commit subjects (English). Keep the `feat:` / `fix:` / `perf:` / `refactor:` / `style:` prefixes meaningful for the last one.
 
 ## TLS exception
 
