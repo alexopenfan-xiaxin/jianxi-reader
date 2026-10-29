@@ -44,9 +44,7 @@ void main() {
     });
 
     test('produces the same digest however the input is chunked', () {
-      final payload = utf8.encode(
-        List.filled(7, 'the quick brown fox').join(),
-      );
+      final payload = utf8.encode(List.filled(7, 'the quick brown fox').join());
       final whole = Sha256.hashBytes(payload);
 
       final byteAtATime = Sha256();

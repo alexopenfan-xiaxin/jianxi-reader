@@ -98,8 +98,10 @@ class MetadataFileStore {
         items.add(fromJson(Map<String, dynamic>.from(entry)));
       } catch (error) {
         dropped++;
-        debugPrint('[MetadataFileStore] dropped damaged entry in $fileName: '
-            '$error');
+        debugPrint(
+          '[MetadataFileStore] dropped damaged entry in $fileName: '
+          '$error',
+        );
       }
     }
     if (dropped > 0) {
@@ -180,8 +182,10 @@ class MetadataFileStore {
       debugPrint('[MetadataFileStore] quarantined damaged file to $target');
       return target;
     } catch (error) {
-      debugPrint('[MetadataFileStore] failed to quarantine ${source.path}: '
-          '$error');
+      debugPrint(
+        '[MetadataFileStore] failed to quarantine ${source.path}: '
+        '$error',
+      );
       return null;
     }
   }
