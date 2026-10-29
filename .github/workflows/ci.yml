@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Verify release metadata
+        run: python3 tool/ci_checks.py
+
       - name: Verify formatting
         id: formatting
         run: |
@@ -53,3 +56,68 @@ jobs:
 
       - name: Test
         run: flutter test --reporter expanded
+
+  android-build:
+    name: Android release build and manifest assertions
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      # Release builds refuse to fall back to the debug key, so CI signs with a
+      # throwaway key of its own. This also proves the guard accepts a real
+      # key.properties instead of only failing.
+      - name: Create throwaway signing key
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/ci-release.jks \
+            -storepass cipassword -keypass cipassword \
+            -alias cirelease -keyalg RSA -keysize 2048 -validity 3650 \
+            -dname "CN=CI, OU=CI, O=CI, C=CN"
+          {
+            echo "storePassword=cipassword"
+            echo "keyPassword=cipassword"
+            echo "keyAlias=cirelease"
+            echo "storeFile=app/ci-release.jks"
+          } > android/key.properties
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --target-platform android-arm64 \
+            --android-skip-build-dependency-validation
+
+      - name: Assert APK metadata
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          VERSION=$(grep -E '^version:' pubspec.yaml | head -1 | sed -E 's/^version:[[:space:]]*//')
+          NAME=${VERSION%%+*}
+          CODE=${VERSION##*+}
+          BADGING=$("$BUILD_TOOLS/aapt2" dump badging "$APK")
+          echo "$BADGING" | grep -E '^package:'
+          echo "$BADGING" | grep -q "versionCode='$CODE'" \
+            || { echo "::error::APK versionCode does not match pubspec ($CODE)"; exit 1; }
+          echo "$BADGING" | grep -q "versionName='$NAME'" \
+            || { echo "::error::APK versionName does not match pubspec ($NAME)"; exit 1; }
+          echo "$BADGING" | grep -q 'sdkVersion' \
+            || { echo "::error::APK declares no minSdk"; exit 1; }
+          echo "$BADGING" | grep -q 'targetSdkVersion' \
+            || { echo "::error::APK declares no targetSdk"; exit 1; }
+          "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" > manifest.xml.txt
+          grep -q 'allowBackup.*=false' manifest.xml.txt \
+            || { echo "::error::packaged manifest does not set allowBackup=false"; exit 1; }
+          echo "APK metadata assertions passed."
