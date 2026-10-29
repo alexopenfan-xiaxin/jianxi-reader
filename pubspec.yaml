@@ -38,6 +38,6 @@ flutter:
   assets:
     - assets/emoji.json
   fonts:
-    - family: LXGWWenKai
+    - family: JianxiWenKai
       fonts:
-        - asset: assets/fonts/LXGWWenKai-Regular.ttf
+        - asset: assets/fonts/JianxiWenKai-Regular.ttf

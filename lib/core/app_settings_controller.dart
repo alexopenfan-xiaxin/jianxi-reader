@@ -25,7 +25,7 @@ enum ReadingTheme {
 
 enum ReadingFontFamily {
   system('默认', null),
-  wenkai('落霞孤鹜', 'LXGWWenKai');
+  wenkai('落霞孤鹜', 'JianxiWenKai');
 
   const ReadingFontFamily(this.label, this.fontFamily);
 
@@ -64,7 +64,7 @@ enum AppVisualMode {
 
 enum AppFontFamily {
   system('默认', null),
-  lxgw('落霞孤鹜', 'LXGWWenKai');
+  lxgw('落霞孤鹜', 'JianxiWenKai');
 
   const AppFontFamily(this.label, this.fontFamily);
 

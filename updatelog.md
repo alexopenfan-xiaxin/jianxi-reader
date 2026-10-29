@@ -18,12 +18,13 @@
 ### 数据
 - **损坏隔离** — 书签、阅读历史、文档 ID 表逐条容错；整文件损坏先复制为 `*.corrupt-<ts>`，不再清空后覆盖。
 - **进度不再被误清** — 只有本次会话真正读过（或从提示跳转）才保存进度；“接近顶部”不再等同于清除，清除改用 `clearProgress()`。
+- **移出可撤销** — 单个“移出”先确认，之后 10 秒内可在提示条里撤销；被移出的文件暂存在 `.trash/` 而不是直接删除，启动时清理超过 24 小时的残留。
 - **加载不再卡死** — 文档库并发加载时 `isLoading` 必定回落。
 
 ### 隐私与合规
 - **关闭系统备份** — `allowBackup=false`，导入的文档镜像与阅读记录不再进入系统云备份。
 - **收敛文件关联** — 移除 `text/plain` 的 VIEW 声明，简兮不再出现在所有 `.txt` 的“打开方式”里。
-- **字体授权** — 随包附上 LXGW WenKai 的 OFL 1.1 授权文本（`assets/fonts/OFL.txt`）。
+- **字体授权与体积** — 随包附上 LXGW WenKai 的 OFL 1.1 授权文本；字体子集化到 GB2312 全字集 + 界面字符（24.4 MiB → 3.6 MiB），并按 OFL 的保留字体名条款改名 `JianxiWenKai`（`assets/fonts/README.md` 记录改动）。
 
 ### 工程
 - **CI 门禁** — 新增 Android release 构建与清单断言（versionCode/versionName/allowBackup/minSdk），以及版本元数据脚本检查。

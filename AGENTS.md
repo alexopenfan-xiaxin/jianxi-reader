@@ -25,7 +25,7 @@
 
 ## 4. Constraints
 
-- Flutter 3.44; one font-family name (the bundled font is `LXGWWenKai`), never a CSS-style stack.
+- Flutter 3.44; one font-family name (the bundled font is `JianxiWenKai`, a subset of LXGW WenKai renamed per its OFL Reserved Font Name; see `assets/fonts/README.md`), never a CSS-style stack.
 - Navigation: keep the shell's `IndexedStack` keyless; use `appPageRoute`. Pushes use horizontal `SharedAxisTransition`, pops `FadeThroughTransition`; root pages may opt into `AppPageTransition.fadeThrough`. The left-edge swipe handles interactive back; do not reintroduce predictive-back branches.
 - Drag or scroll bottom sheets use `DraggableScrollableSheet` with `isScrollControlled: true`.
 - Animations must terminate; no repeating animations in widget-test trees. Stagger with controller `Interval`s, not delayed timers; cancel hold timers in `dispose`.
