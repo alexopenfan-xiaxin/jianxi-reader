@@ -818,7 +818,7 @@ class DocumentFileService implements DocumentLibraryService {
     await _persistPreference(preferences.remove(_recentOpenedKey(path)));
     await _persistPreference(preferences.remove(_documentPinnedKey(path)));
     await _persistPreference(preferences.remove(_documentTagsKey(path)));
-    await ReadingProgressService.removeProgress(path);
+    await ReadingProgressService.clearProgress(path);
   }
 
   static Future<void> _restoreDocumentMetadata(

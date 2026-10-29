@@ -106,35 +106,40 @@ class LibraryController extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
 
-    // Phase 1: show cached results immediately if available.
+    // One try/finally around both phases: phase 1 can bail out while a newer
+    // load owns the flag, and that early return used to skip the only place
+    // that cleared `_isLoading`, leaving the library loading forever.
     try {
-      final cached = await documentService.scanLibraryCached();
-      if (generation != _loadGeneration) {
-        return;
+      // Phase 1: show cached results immediately if available.
+      try {
+        final cached = await documentService.scanLibraryCached();
+        if (generation != _loadGeneration) {
+          return;
+        }
+        if (cached.isNotEmpty) {
+          _allDocuments = cached;
+          await _loadTags();
+          _invalidateCache();
+          notifyListeners();
+        }
+      } catch (error) {
+        debugPrint('[LibraryController] cached scan failed: $error');
       }
-      if (cached.isNotEmpty) {
-        _allDocuments = cached;
+
+      // Phase 2: one full background refresh.
+      try {
+        final scanned = await documentService.scanLibrary();
+        if (generation != _loadGeneration) {
+          return;
+        }
+        _allDocuments = scanned;
         await _loadTags();
         _invalidateCache();
-        notifyListeners();
-      }
-    } catch (error) {
-      debugPrint('[LibraryController] cached scan failed: $error');
-    }
-
-    // Phase 2: one full background refresh.
-    try {
-      final scanned = await documentService.scanLibrary();
-      if (generation != _loadGeneration) {
-        return;
-      }
-      _allDocuments = scanned;
-      await _loadTags();
-      _invalidateCache();
-    } catch (error) {
-      debugPrint('[LibraryController] load documents failed: $error');
-      if (generation == _loadGeneration) {
-        _errorMessage = '读取文档库失败：${describeDocumentError(error)}';
+      } catch (error) {
+        debugPrint('[LibraryController] load documents failed: $error');
+        if (generation == _loadGeneration) {
+          _errorMessage = '读取文档库失败：${describeDocumentError(error)}';
+        }
       }
     } finally {
       if (generation == _loadGeneration) {
@@ -409,7 +414,7 @@ class LibraryController extends ChangeNotifier {
     var failure = 0;
     for (final document in documents) {
       try {
-        await ReadingProgressService.removeProgress(document.path);
+        await ReadingProgressService.clearProgress(document.path);
         success += 1;
       } catch (error) {
         debugPrint('[LibraryController] clear progress failed: $error');
