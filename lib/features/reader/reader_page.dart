@@ -571,21 +571,24 @@ class _ReaderPageState extends State<ReaderPage> {
         throw FileSystemException('文档过大', refreshed.path);
       }
       final opened = await _libraryController.markDocumentOpened(refreshed);
-      // Record reading history with stable document ID.
-      DocumentIdentityService.getOrCreateId(
-            path: opened.path,
-            sourceUri: opened.sourceUri,
-          )
-          .then((docId) {
-            unawaited(
-              ReadingHistoryService.record(documentId: docId).catchError((e) {
+      // Record reading history with stable document ID. Fire-and-forget on
+      // purpose: opening a document must not wait on the history file.
+      unawaited(
+        DocumentIdentityService.getOrCreateId(
+              path: opened.path,
+              sourceUri: opened.sourceUri,
+            )
+            .then((docId) {
+              return ReadingHistoryService.record(
+                documentId: docId,
+              ).catchError((e) {
                 debugPrint('[ReaderPage] record history failed: $e');
-              }),
-            );
-          })
-          .catchError((e) {
-            debugPrint('[ReaderPage] get document id failed: $e');
-          });
+              });
+            })
+            .catchError((e) {
+              debugPrint('[ReaderPage] get document id failed: $e');
+            }),
+      );
       if (mounted) {
         _isHtmlDocument = opened.type == DocumentType.html;
         setState(() {
