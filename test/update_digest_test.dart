@@ -31,10 +31,7 @@ void main() {
 
   test('a mismatching digest is refused', () {
     expect(
-      UpdateDigest.evaluate(
-        expected: digest,
-        actual: 'b'.padRight(64, 'b'),
-      ),
+      UpdateDigest.evaluate(expected: digest, actual: 'b'.padRight(64, 'b')),
       UpdateDigestStatus.mismatch,
     );
   });
