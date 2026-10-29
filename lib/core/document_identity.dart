@@ -79,11 +79,27 @@ class DocumentIdentityService {
   }
 
   /// Re-attach an id to a path (used when a removal is rolled back).
+  ///
+  /// Existing attributes (tags, pinning, recency) are preserved: the id is the
+  /// only thing the caller is asserting here.
   static Future<void> restorePath(String path, String id) {
     return MetadataStore.transaction((snapshot) async {
       final existing = snapshot.recordForPath(path);
       if (existing?.id == id) return;
-      snapshot.upsertRecord(DocumentRecord(id: id, path: path));
+      if (existing == null) {
+        snapshot.upsertRecord(DocumentRecord(id: id, path: path));
+        return;
+      }
+      snapshot.upsertRecord(
+        DocumentRecord(
+          id: id,
+          path: path,
+          sourceUri: existing.sourceUri,
+          pinned: existing.pinned,
+          tags: existing.tags,
+          recentOpenedAtMillis: existing.recentOpenedAtMillis,
+        ),
+      );
     });
   }
 

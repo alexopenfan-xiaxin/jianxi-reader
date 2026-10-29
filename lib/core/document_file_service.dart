@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/metadata/library_schema.dart';
+import '../data/metadata/metadata_store.dart';
 import '../features/library/document_entry.dart';
 import 'document_identity.dart';
 import 'document_removal.dart';
@@ -84,13 +86,8 @@ class DocumentFileService implements DocumentLibraryService {
   static const _documentAccessChannel = MethodChannel(
     'com.jianxi.reader/document_access',
   );
-  static const _recentOpenedPrefix = 'document.recentOpened.';
-  static const _documentPinnedPrefix = 'document.pinned.';
   static const _referencedPathsKey = 'referenced.paths';
   static const _referencedSourceUriPrefix = 'referenced.sourceUri.';
-  static const _tagsKey = 'document.tags';
-  static const _pinnedTagsKey = 'document.tags.pinned';
-  static const _documentTagsPrefix = 'document.tags.';
   static const _cacheMaxAge = Duration(minutes: 5);
   static final _prefixedMirrorNamePattern = RegExp(r'^\d{10,}_(.+)$');
   Future<SharedPreferences>? _preferencesFuture;
@@ -105,6 +102,8 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<List<DocumentEntry>> scanLibrary() async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     final entries = <DocumentEntry>[];
     final preferences = await _preferences();
 
@@ -120,9 +119,9 @@ class DocumentFileService implements DocumentLibraryService {
         entries.add(
           await DocumentEntry.fromFile(
             file,
-            recentOpenedAt: _recentOpenedAt(preferences, file.path),
-            tags: _documentTags(preferences, file.path),
-            pinned: _documentPinned(preferences, file.path),
+            recentOpenedAt: _recentOpenedAt(file.path),
+            tags: _documentTags(file.path),
+            pinned: _documentPinned(file.path),
           ),
         );
       } catch (error) {
@@ -156,13 +155,13 @@ class DocumentFileService implements DocumentLibraryService {
         entries.add(
           await DocumentEntry.fromFile(
             file,
-            recentOpenedAt: _recentOpenedAt(preferences, refreshedPath),
+            recentOpenedAt: _recentOpenedAt(refreshedPath),
             isReferenced: true,
             sourceUri: preferences.getString(
               _referencedSourceUriKey(refreshedPath),
             ),
-            tags: _documentTags(preferences, refreshedPath),
-            pinned: _documentPinned(preferences, refreshedPath),
+            tags: _documentTags(refreshedPath),
+            pinned: _documentPinned(refreshedPath),
           ),
         );
       } catch (error) {
@@ -189,6 +188,8 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<List<DocumentEntry>> scanLibraryCached() async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     if (_cachedEntries != null &&
         _cacheTimestamp != null &&
         DateTime.now().difference(_cacheTimestamp!) < _cacheMaxAge) {
@@ -207,6 +208,8 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<List<DocumentEntry>> pickAndImportDocuments() async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     if (Platform.isAndroid) {
       try {
         final androidDocuments = await _pickAndroidReferencedDocuments();
@@ -258,8 +261,8 @@ class DocumentFileService implements DocumentLibraryService {
             source,
             isReferenced: true,
             sourceUri: source.uri.toString(),
-            tags: _documentTags(preferences, sourcePath),
-            pinned: _documentPinned(preferences, sourcePath),
+            tags: _documentTags(sourcePath),
+            pinned: _documentPinned(sourcePath),
           ),
         );
       } catch (error) {
@@ -281,6 +284,8 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<DocumentFolderImportResult> pickAndImportFolderDocuments() async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     if (Platform.isAndroid) {
       try {
         return _pickAndroidReferencedFolderDocuments();
@@ -326,8 +331,8 @@ class DocumentFileService implements DocumentLibraryService {
             entity,
             isReferenced: true,
             sourceUri: entity.uri.toString(),
-            tags: _documentTags(preferences, entity.path),
-            pinned: _documentPinned(preferences, entity.path),
+            tags: _documentTags(entity.path),
+            pinned: _documentPinned(entity.path),
           ),
         );
       } catch (error) {
@@ -344,6 +349,8 @@ class DocumentFileService implements DocumentLibraryService {
 
   @override
   Future<DocumentEntry> importExternalUri(Uri uri) async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     if (Platform.isAndroid) {
       try {
         final imported = await _importAndroidExternalUri(uri);
@@ -382,13 +389,15 @@ class DocumentFileService implements DocumentLibraryService {
       source,
       isReferenced: true,
       sourceUri: uri.toString(),
-      tags: _documentTags(preferences, sourcePath),
-      pinned: _documentPinned(preferences, sourcePath),
+      tags: _documentTags(sourcePath),
+      pinned: _documentPinned(sourcePath),
     );
   }
 
   @override
   Future<DocumentEntry> refreshDocument(DocumentEntry document) async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     final preferences = await _preferences();
     final refreshedPath = document.isReferenced
         ? await _refreshReferencedMirror(preferences, document.path)
@@ -400,13 +409,13 @@ class DocumentFileService implements DocumentLibraryService {
     }
     final refreshed = await DocumentEntry.fromFile(
       file,
-      recentOpenedAt: _recentOpenedAt(preferences, path),
+      recentOpenedAt: _recentOpenedAt(path),
       isReferenced: document.isReferenced,
       sourceUri:
           document.sourceUri ??
           preferences.getString(_referencedSourceUriKey(path)),
-      tags: _documentTags(preferences, path),
-      pinned: _documentPinned(preferences, path),
+      tags: _documentTags(path),
+      pinned: _documentPinned(path),
     );
     invalidateLibraryCache();
     return refreshed;
@@ -430,6 +439,8 @@ class DocumentFileService implements DocumentLibraryService {
     DocumentEntry document,
     String baseName,
   ) async {
+    // Read helpers below are synchronous; make sure the metadata cache is warm.
+    await MetadataStore.load();
     var cleanBaseName = DocumentFileRules.validateBaseName(baseName);
     final source = File(document.path);
     final sourceExtension = p.extension(document.path);
@@ -461,7 +472,7 @@ class DocumentFileService implements DocumentLibraryService {
     final preferences = await _preferences();
     final renamedFile = await source.rename(destinationPath);
     try {
-      await _moveDocumentMetadata(preferences, document.path, renamedFile.path);
+      await _moveDocumentMetadata(document.path, renamedFile.path);
       if (document.isReferenced) {
         await _updateReferencedPath(
           preferences,
@@ -489,7 +500,7 @@ class DocumentFileService implements DocumentLibraryService {
             source.path,
           );
         }
-        await _moveDocumentMetadata(preferences, renamedFile.path, source.path);
+        await _moveDocumentMetadata(renamedFile.path, source.path);
       } catch (rollbackError) {
         throw FileSystemException(
           '重命名失败，且自动回滚未完成：$rollbackError',
@@ -505,11 +516,11 @@ class DocumentFileService implements DocumentLibraryService {
     }
     return DocumentEntry.fromFile(
       renamedFile,
-      recentOpenedAt: _recentOpenedAt(preferences, renamedFile.path),
+      recentOpenedAt: _recentOpenedAt(renamedFile.path),
       isReferenced: document.isReferenced,
       sourceUri: document.sourceUri,
-      tags: _documentTags(preferences, renamedFile.path),
-      pinned: _documentPinned(preferences, renamedFile.path),
+      tags: _documentTags(renamedFile.path),
+      pinned: _documentPinned(renamedFile.path),
     );
   }
 
@@ -537,9 +548,10 @@ class DocumentFileService implements DocumentLibraryService {
     final sourceUri = document.isReferenced
         ? preferences.getString(_referencedSourceUriKey(document.path))
         : null;
-    final recentOpened = preferences.getInt(_recentOpenedKey(document.path));
-    final pinned = preferences.getBool(_documentPinnedKey(document.path));
-    final tags = preferences.getStringList(_documentTagsKey(document.path));
+    final captured = (await MetadataStore.load()).recordForPath(document.path);
+    final recentOpened = captured?.recentOpenedAtMillis;
+    final pinned = captured?.pinned;
+    final tags = captured == null ? null : List<String>.of(captured.tags);
     final progress = await ReadingProgressService.loadProgress(document.path);
     final documentId = await DocumentIdentityService.getIdForPath(
       document.path,
@@ -578,7 +590,7 @@ class DocumentFileService implements DocumentLibraryService {
           preferences.remove(_referencedSourceUriKey(document.path)),
         );
       }
-      await _clearDocumentMetadata(preferences, document.path);
+      await _clearDocumentMetadata(document.path);
       await DocumentIdentityService.removePath(document.path);
       if (documentId != null) {
         try {
@@ -611,8 +623,8 @@ class DocumentFileService implements DocumentLibraryService {
           }
         }
         await _restoreDocumentMetadata(
-          preferences,
           document.path,
+          documentId: documentId,
           recentOpened: recentOpened,
           pinned: pinned,
           tags: tags,
@@ -685,8 +697,8 @@ class DocumentFileService implements DocumentLibraryService {
     }
 
     await _restoreDocumentMetadata(
-      preferences,
       path,
+      documentId: removal.documentId,
       recentOpened: removal.recentOpenedAtMillis,
       pinned: removal.pinned,
       tags: removal.tags,
@@ -740,100 +752,93 @@ class DocumentFileService implements DocumentLibraryService {
     DocumentEntry document,
     bool pinned,
   ) async {
-    final preferences = await _preferences();
-    if (pinned) {
-      await _persistPreference(
-        preferences.setBool(_documentPinnedKey(document.path), true),
+    final id = await _idFor(document);
+    await MetadataStore.transaction((snapshot) async {
+      final record = snapshot.ensureRecord(
+        document.path,
+        id: id,
+        sourceUri: document.sourceUri,
       );
-    } else {
-      await _persistPreference(
-        preferences.remove(_documentPinnedKey(document.path)),
-      );
-    }
+      snapshot.upsertRecord(record.copyWith(pinned: pinned));
+    });
     invalidateLibraryCache();
     return document.copyWith(pinned: pinned);
   }
 
   @override
   Future<DateTime> markDocumentOpened(DocumentEntry document) async {
-    final preferences = await _preferences();
     final openedAt = DateTime.now();
-    await _persistPreference(
-      preferences.setInt(
-        _recentOpenedKey(document.path),
-        openedAt.millisecondsSinceEpoch,
-      ),
-    );
+    final id = await _idFor(document);
+    await MetadataStore.transaction((snapshot) async {
+      final record = snapshot.ensureRecord(
+        document.path,
+        id: id,
+        sourceUri: document.sourceUri,
+      );
+      snapshot.upsertRecord(
+        record.copyWith(
+          recentOpenedAtMillis: openedAt.millisecondsSinceEpoch,
+        ),
+      );
+    });
     invalidateLibraryCache();
     return openedAt;
   }
 
   @override
   Future<List<String>> loadTags() async {
-    final preferences = await _preferences();
-    return _allTags(preferences);
+    final snapshot = await MetadataStore.load();
+    return _cleanTags(snapshot.tags);
   }
 
   @override
   Future<List<String>> loadPinnedTags() async {
-    final preferences = await _preferences();
-    return _cleanTags(preferences.getStringList(_pinnedTagsKey) ?? []);
+    final snapshot = await MetadataStore.load();
+    return _cleanTags(snapshot.pinnedTags);
   }
 
   @override
   Future<void> createTag(String name) async {
     final tag = _validateTagName(name);
-    final preferences = await _preferences();
-    final tags = _allTags(preferences);
-    if (!tags.contains(tag)) {
-      tags.add(tag);
-      tags.sort();
-      await _persistPreference(preferences.setStringList(_tagsKey, tags));
-    }
+    await MetadataStore.transaction((snapshot) async {
+      if (!snapshot.tags.contains(tag)) {
+        snapshot.tags
+          ..add(tag)
+          ..sort();
+      }
+    });
     invalidateLibraryCache();
   }
 
   @override
   Future<void> deleteTag(String name) async {
     final tag = _validateTagName(name);
-    final preferences = await _preferences();
-    final tags = _allTags(preferences)..remove(tag);
-    await _persistPreference(preferences.setStringList(_tagsKey, tags));
-    final pinnedTags = _cleanTags(
-      preferences.getStringList(_pinnedTagsKey) ?? [],
-    )..remove(tag);
-    await _persistPreference(
-      preferences.setStringList(_pinnedTagsKey, pinnedTags),
-    );
-
-    for (final key in preferences.getKeys()) {
-      if (!key.startsWith(_documentTagsPrefix)) {
-        continue;
+    await MetadataStore.transaction((snapshot) async {
+      snapshot.tags.remove(tag);
+      snapshot.pinnedTags.remove(tag);
+      for (final record in List<DocumentRecord>.of(snapshot.documents)) {
+        if (!record.tags.contains(tag)) continue;
+        snapshot.upsertRecord(
+          record.copyWith(
+            tags: record.tags.where((existing) => existing != tag).toList(),
+          ),
+        );
       }
-      final documentTags = preferences.getStringList(key) ?? [];
-      if (documentTags.remove(tag)) {
-        await _persistPreference(preferences.setStringList(key, documentTags));
-      }
-    }
+    });
     invalidateLibraryCache();
   }
 
   @override
   Future<void> setTagPinned(String name, bool pinned) async {
     final tag = _validateTagName(name);
-    final preferences = await _preferences();
-    final pinnedTags = _cleanTags(
-      preferences.getStringList(_pinnedTagsKey) ?? [],
-    );
-    if (pinned && !pinnedTags.contains(tag)) {
-      pinnedTags.add(tag);
-    } else if (!pinned) {
-      pinnedTags.remove(tag);
-    }
-    pinnedTags.sort();
-    await _persistPreference(
-      preferences.setStringList(_pinnedTagsKey, pinnedTags),
-    );
+    await MetadataStore.transaction((snapshot) async {
+      snapshot.pinnedTags.remove(tag);
+      if (pinned) {
+        snapshot.pinnedTags
+          ..add(tag)
+          ..sort();
+      }
+    });
     invalidateLibraryCache();
   }
 
@@ -842,62 +847,56 @@ class DocumentFileService implements DocumentLibraryService {
     DocumentEntry document,
     List<String> tags,
   ) async {
-    final preferences = await _preferences();
     final cleanTags = _cleanTags(tags).map(_validateTagName).toList();
-    final allTags = _allTags(preferences);
-    for (final tag in cleanTags) {
-      if (!allTags.contains(tag)) {
-        allTags.add(tag);
-      }
-    }
-    allTags.sort();
-    await _persistPreference(preferences.setStringList(_tagsKey, allTags));
-    await _persistPreference(
-      preferences.setStringList(_documentTagsKey(document.path), cleanTags),
-    );
+    final id = await _idFor(document);
+    final allTags = await MetadataStore.transaction((snapshot) async {
+      final record = snapshot.ensureRecord(
+        document.path,
+        id: id,
+        sourceUri: document.sourceUri,
+      );
+      snapshot.upsertRecord(record.copyWith(tags: cleanTags));
+      snapshot.registerTags(cleanTags);
+      return List<String>.of(snapshot.tags);
+    });
     invalidateLibraryCache();
     return DocumentTagUpdate(documentTags: cleanTags, allTags: allTags);
   }
 
-  static DateTime? _recentOpenedAt(SharedPreferences preferences, String path) {
-    final milliseconds = preferences.getInt(_recentOpenedKey(path));
+  /// The stable id for [document], creating the record when needed.
+  static Future<String> _idFor(DocumentEntry document) {
+    return DocumentIdentityService.getOrCreateId(
+      path: document.path,
+      sourceUri: document.sourceUri,
+    );
+  }
+
+  /// Read helpers below run inside scan/import loops, so they read the cached
+  /// snapshot synchronously. Every entry point awaits `MetadataStore.load()`
+  /// first, which makes the cache authoritative.
+
+  static DateTime? _recentOpenedAt(String path) {
+    final milliseconds = MetadataStore.cachedSnapshot
+        ?.recordForPath(path)
+        ?.recentOpenedAtMillis;
     if (milliseconds == null) {
       return null;
     }
     return DateTime.fromMillisecondsSinceEpoch(milliseconds);
   }
 
-  static String _recentOpenedKey(String path) {
-    return '$_recentOpenedPrefix$path';
-  }
-
-  static String _documentPinnedKey(String path) {
-    return '$_documentPinnedPrefix$path';
-  }
-
   static String _referencedSourceUriKey(String path) {
     return '$_referencedSourceUriPrefix$path';
   }
 
-  static String _documentTagsKey(String path) {
-    return '$_documentTagsPrefix$path';
-  }
-
-  static List<String> _allTags(SharedPreferences preferences) {
-    final tags = preferences.getStringList(_tagsKey) ?? [];
+  static List<String> _documentTags(String path) {
+    final tags =
+        MetadataStore.cachedSnapshot?.recordForPath(path)?.tags ?? const [];
     return _cleanTags(tags);
   }
 
-  static List<String> _documentTags(
-    SharedPreferences preferences,
-    String path,
-  ) {
-    final tags = preferences.getStringList(_documentTagsKey(path)) ?? [];
-    return _cleanTags(tags);
-  }
-
-  static bool _documentPinned(SharedPreferences preferences, String path) {
-    return preferences.getBool(_documentPinnedKey(path)) ?? false;
+  static bool _documentPinned(String path) {
+    return MetadataStore.cachedSnapshot?.recordForPath(path)?.pinned ?? false;
   }
 
   static List<String> _cleanTags(List<String> tags) {
@@ -929,72 +928,53 @@ class DocumentFileService implements DocumentLibraryService {
     }
   }
 
-  static Future<void> _clearDocumentMetadata(
-    SharedPreferences preferences,
-    String path,
-  ) async {
-    await _persistPreference(preferences.remove(_recentOpenedKey(path)));
-    await _persistPreference(preferences.remove(_documentPinnedKey(path)));
-    await _persistPreference(preferences.remove(_documentTagsKey(path)));
+  static Future<void> _clearDocumentMetadata(String path) async {
+    await MetadataStore.transaction((snapshot) async {
+      snapshot.removeRecordForPath(path);
+    });
     await ReadingProgressService.clearProgress(path);
   }
 
   static Future<void> _restoreDocumentMetadata(
-    SharedPreferences preferences,
     String path, {
+    required String? documentId,
     required int? recentOpened,
     required bool? pinned,
     required List<String>? tags,
     required double? progress,
   }) async {
-    if (recentOpened != null) {
-      await _persistPreference(
-        preferences.setInt(_recentOpenedKey(path), recentOpened),
+    final id =
+        documentId ??
+        await DocumentIdentityService.getIdForPath(path) ??
+        'doc_${DateTime.now().microsecondsSinceEpoch}';
+    await MetadataStore.transaction((snapshot) async {
+      final existing = snapshot.recordForPath(path);
+      final record = existing ?? DocumentRecord(id: id, path: path);
+      snapshot.upsertRecord(
+        record.copyWith(
+          pinned: pinned ?? record.pinned,
+          tags: tags ?? record.tags,
+          recentOpenedAtMillis: recentOpened,
+          clearRecentOpenedAt: recentOpened == null,
+        ),
       );
-    }
-    if (pinned != null) {
-      await _persistPreference(
-        preferences.setBool(_documentPinnedKey(path), pinned),
-      );
-    }
-    if (tags != null) {
-      await _persistPreference(
-        preferences.setStringList(_documentTagsKey(path), tags),
-      );
-    }
+    });
     if (progress != null) {
       await ReadingProgressService.saveProgress(path, progress);
     }
   }
 
   static Future<void> _moveDocumentMetadata(
-    SharedPreferences preferences,
     String oldPath,
     String newPath,
   ) async {
-    final recentOpened = preferences.getInt(_recentOpenedKey(oldPath));
-    final pinned = preferences.getBool(_documentPinnedKey(oldPath));
-    final tags = preferences.getStringList(_documentTagsKey(oldPath));
-    if (recentOpened != null) {
-      await _persistPreference(
-        preferences.setInt(_recentOpenedKey(newPath), recentOpened),
-      );
-    }
-    if (pinned == true) {
-      await _persistPreference(
-        preferences.setBool(_documentPinnedKey(newPath), true),
-      );
-    }
-    if (tags != null) {
-      await _persistPreference(
-        preferences.setStringList(_documentTagsKey(newPath), tags),
-      );
-    }
+    await MetadataStore.transaction((snapshot) async {
+      final record = snapshot.recordForPath(oldPath);
+      if (record == null) return;
+      snapshot.removeRecordForPath(oldPath);
+      snapshot.upsertRecord(record.copyWith(path: newPath));
+    });
     await ReadingProgressService.moveProgress(oldPath, newPath);
-    await DocumentIdentityService.movePath(oldPath, newPath);
-    await _persistPreference(preferences.remove(_recentOpenedKey(oldPath)));
-    await _persistPreference(preferences.remove(_documentPinnedKey(oldPath)));
-    await _persistPreference(preferences.remove(_documentTagsKey(oldPath)));
   }
 
   static Future<void> _moveReferencedSourceUri(
@@ -1053,8 +1033,8 @@ class DocumentFileService implements DocumentLibraryService {
             File(path),
             isReferenced: true,
             sourceUri: sourceUri,
-            tags: _documentTags(preferences, path),
-            pinned: _documentPinned(preferences, path),
+            tags: _documentTags(path),
+            pinned: _documentPinned(path),
           ),
         );
       } catch (error) {
@@ -1107,8 +1087,8 @@ class DocumentFileService implements DocumentLibraryService {
           await DocumentEntry.fromFile(
             File(path),
             isReferenced: true,
-            tags: _documentTags(preferences, path),
-            pinned: _documentPinned(preferences, path),
+            tags: _documentTags(path),
+            pinned: _documentPinned(path),
           ),
         );
       } catch (error) {
@@ -1160,8 +1140,8 @@ class DocumentFileService implements DocumentLibraryService {
       File(path),
       isReferenced: true,
       sourceUri: sourceUri,
-      tags: _documentTags(preferences, path),
-      pinned: _documentPinned(preferences, path),
+      tags: _documentTags(path),
+      pinned: _documentPinned(path),
     );
   }
 
@@ -1188,7 +1168,7 @@ class DocumentFileService implements DocumentLibraryService {
         preferences.setString(_referencedSourceUriKey(path), sourceUri),
       );
       if (previousPath != null) {
-        await _moveDocumentMetadata(preferences, previousPath, path);
+        await _moveDocumentMetadata(previousPath, path);
         paths.remove(previousPath);
       }
       if (!paths.contains(path)) {
@@ -1308,7 +1288,7 @@ class DocumentFileService implements DocumentLibraryService {
       await destinationDirectory.create(recursive: true);
       final destinationPath = p.join(destinationDirectory.path, restoredName);
       migratedFile = await file.rename(destinationPath);
-      await _moveDocumentMetadata(preferences, path, migratedFile.path);
+      await _moveDocumentMetadata(path, migratedFile.path);
       await _moveReferencedSourceUri(preferences, path, migratedFile.path);
       return migratedFile.path;
     } catch (error) {
