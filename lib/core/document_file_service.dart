@@ -1298,11 +1298,7 @@ class DocumentFileService implements DocumentLibraryService {
           !file.existsSync()) {
         try {
           await migratedFile.rename(file.path);
-          await _moveDocumentMetadata(
-            preferences,
-            migratedFile.path,
-            file.path,
-          );
+          await _moveDocumentMetadata(migratedFile.path, file.path);
           await _moveReferencedSourceUri(
             preferences,
             migratedFile.path,
