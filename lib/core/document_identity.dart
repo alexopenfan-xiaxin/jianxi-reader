@@ -35,8 +35,7 @@ class DocumentIdentityService {
           : null;
       // Reuse the source-derived id only when no other record owns it, so two
       // imports of the same URI cannot fork one document's marks.
-      final id =
-          derived != null && snapshot.recordForId(derived) == null
+      final id = derived != null && snapshot.recordForId(derived) == null
           ? derived
           : 'doc_${DateTime.now().microsecondsSinceEpoch}_'
                 '${_random.nextInt(1 << 32).toRadixString(16)}';
