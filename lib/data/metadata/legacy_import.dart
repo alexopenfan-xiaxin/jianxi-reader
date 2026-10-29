@@ -91,6 +91,24 @@ class LegacyMetadataImport {
     return snapshot;
   }
 
+  /// Reads the 2.x `readingProgress.<path>` values, keyed by document id.
+  static Future<Map<String, double>> readProgress(
+    LibrarySnapshot snapshot,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    const prefix = 'readingProgress.';
+    final byId = <String, double>{};
+    for (final key in preferences.getKeys()) {
+      if (!key.startsWith(prefix)) continue;
+      final value = preferences.getDouble(key);
+      if (value == null) continue;
+      final record = snapshot.recordForPath(key.substring(prefix.length));
+      if (record == null) continue;
+      byId[record.id] = value.clamp(0.0, 1.0);
+    }
+    return byId;
+  }
+
   static Future<Map<String, String>> _readIdMap() async {
     final read = await MetadataFileStore.readJson(idMapFileName);
     final data = read.data;

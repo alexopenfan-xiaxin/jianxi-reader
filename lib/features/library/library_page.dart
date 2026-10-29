@@ -286,7 +286,16 @@ class _LibraryPageState extends State<LibraryPage> {
       return;
     }
     _clearSelection();
-    _showBatchResult(context, result, '已移出 ${result.success} 个文档');
+    _showBatchResult(
+      context,
+      result,
+      '已移出 ${result.success} 个文档',
+      onUndo: result.success == 0
+          ? null
+          : () {
+              unawaited(controller.undoLastRemoval());
+            },
+    );
   }
 }
 
@@ -326,12 +335,21 @@ Future<bool?> _confirmBatchAction(
 void _showBatchResult(
   BuildContext context,
   LibraryBatchResult result,
-  String successMessage,
-) {
+  String successMessage, {
+  VoidCallback? onUndo,
+}) {
   final message = result.hasFailure
       ? '$successMessage，${result.failure} 个失败'
       : successMessage;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 10),
+      action: onUndo == null
+          ? null
+          : SnackBarAction(label: '撤销', onPressed: onUndo),
+    ),
+  );
 }
 
 Future<_ImportAction?> _showImportSheet(BuildContext context) {
@@ -484,6 +502,9 @@ Future<void> _openReader(BuildContext context, DocumentEntry document) {
 }
 
 String _documentSummary(DocumentEntry document) {
+  if (document.isMissing) {
+    return '文件缺失 · 标签与阅读位置已保留';
+  }
   final timePrefix = document.recentOpenedAt == null ? '修改' : '最近阅读';
   final time = document.recentOpenedAt ?? document.modifiedAt;
   return '$timePrefix ${_timeLabel(time)}';

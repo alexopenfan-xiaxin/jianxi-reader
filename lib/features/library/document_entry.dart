@@ -16,6 +16,7 @@ class DocumentEntry {
     this.sourceUri,
     this.tags = const [],
     this.pinned = false,
+    this.isMissing = false,
   });
 
   final String path;
@@ -29,6 +30,11 @@ class DocumentEntry {
   final List<String> tags;
   final bool pinned;
 
+  /// True when the record survived but the file behind it is gone (foreign
+  /// rename, revoked SAF grant). The library keeps the entry so tags, bookmarks
+  /// and the reading position are not silently dropped.
+  final bool isMissing;
+
   DocumentEntry copyWith({
     String? path,
     String? name,
@@ -40,6 +46,7 @@ class DocumentEntry {
     String? sourceUri,
     List<String>? tags,
     bool? pinned,
+    bool? isMissing,
   }) {
     return DocumentEntry(
       path: path ?? this.path,
@@ -52,6 +59,32 @@ class DocumentEntry {
       sourceUri: sourceUri ?? this.sourceUri,
       tags: List.unmodifiable(tags ?? this.tags),
       pinned: pinned ?? this.pinned,
+      isMissing: isMissing ?? this.isMissing,
+    );
+  }
+
+  /// A placeholder for a document whose file is gone.
+  factory DocumentEntry.missing({
+    required String path,
+    required DocumentType type,
+    DateTime? recentOpenedAt,
+    bool isReferenced = true,
+    String? sourceUri,
+    List<String> tags = const [],
+    bool pinned = false,
+  }) {
+    return DocumentEntry(
+      path: path,
+      name: p.basename(path),
+      type: type,
+      sizeBytes: 0,
+      modifiedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      recentOpenedAt: recentOpenedAt,
+      isReferenced: isReferenced,
+      sourceUri: sourceUri,
+      tags: List.unmodifiable(tags),
+      pinned: pinned,
+      isMissing: true,
     );
   }
 

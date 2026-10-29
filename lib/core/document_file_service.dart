@@ -149,8 +149,30 @@ class DocumentFileService implements DocumentLibraryService {
       final refreshedPath =
           await _refreshReferencedMirror(preferences, path) ?? path;
       final file = File(refreshedPath);
-      if (!file.existsSync()) continue;
-      if (!DocumentFileRules.isSupportedPath(refreshedPath)) continue;
+      final type = DocumentFileRules.typeForPath(refreshedPath);
+      if (!file.existsSync() || type == null) {
+        // Keep a placeholder instead of dropping the entry: tags, bookmarks and
+        // the reading position live on the record and must survive a missing
+        // file (foreign rename, revoked SAF grant).
+        final record = MetadataStore.cachedSnapshot?.recordForPath(
+          refreshedPath,
+        );
+        if (record != null && type != null) {
+          entries.add(
+            DocumentEntry.missing(
+              path: refreshedPath,
+              type: type,
+              recentOpenedAt: _recentOpenedAt(refreshedPath),
+              sourceUri: preferences.getString(
+                _referencedSourceUriKey(refreshedPath),
+              ),
+              tags: _documentTags(refreshedPath),
+              pinned: _documentPinned(refreshedPath),
+            ),
+          );
+        }
+        continue;
+      }
       try {
         entries.add(
           await DocumentEntry.fromFile(
@@ -927,10 +949,12 @@ class DocumentFileService implements DocumentLibraryService {
   }
 
   static Future<void> _clearDocumentMetadata(String path) async {
+    // Clear the position while the record still exists: once it is gone the
+    // path no longer resolves to an id and the entry would be orphaned.
+    await ReadingProgressService.clearProgress(path);
     await MetadataStore.transaction((snapshot) async {
       snapshot.removeRecordForPath(path);
     });
-    await ReadingProgressService.clearProgress(path);
   }
 
   static Future<void> _restoreDocumentMetadata(

@@ -17,10 +17,13 @@ class MetadataStore {
   MetadataStore._();
 
   static const String fileName = 'library.json';
+  static const String progressFileName = 'progress.json';
   static const String backupsDirectoryName = 'backups';
 
   static LibrarySnapshot? _cache;
   static Future<LibrarySnapshot>? _loadFuture;
+  static Map<String, double>? _progress;
+  static Future<Map<String, double>>? _progressFuture;
 
   /// Loads the snapshot once per process.
   ///
@@ -158,14 +161,29 @@ class MetadataStore {
     });
   }
 
-  /// Drops marks that point at documents this library no longer has.
-  static Future<int> collectGarbage() {
-    return transaction((snapshot) async {
+  /// Drops marks and reading positions for documents this library lost.
+  static Future<int> collectGarbage() async {
+    var dropped = 0;
+    await transaction((snapshot) async {
       final known = {for (final record in snapshot.documents) record.id};
       final before = snapshot.marks.length;
       snapshot.marks.removeWhere((mark) => !known.contains(mark.documentId));
-      return before - snapshot.marks.length;
+      dropped += before - snapshot.marks.length;
     });
+
+    final known = {for (final record in documents()) record.id};
+    final orphans = (await loadProgress()).keys
+        .where((documentId) => !known.contains(documentId))
+        .toList();
+    for (final documentId in orphans) {
+      await clearProgressRatio(documentId);
+      dropped++;
+    }
+    return dropped;
+  }
+
+  static List<DocumentRecord> documents() {
+    return _cache?.documents ?? const [];
   }
 
   /// Copies the metadata directory into `backups/<label>-<timestamp>/`.
@@ -201,9 +219,68 @@ class MetadataStore {
     return target.path;
   }
 
+  /// Reading progress by document id.
+  ///
+  /// Separate from `library.json` on purpose: it is high-frequency and
+  /// low-value, and a scroll should never rewrite the whole library file.
+  static Future<Map<String, double>> loadProgress() {
+    return _progressFuture ??= () async {
+      final read = await MetadataFileStore.readJson(progressFileName);
+      final data = read.data;
+      if (data is Map) {
+        final progress = <String, double>{};
+        data.forEach((key, value) {
+          if (key is String && value is num) {
+            progress[key] = value.toDouble().clamp(0.0, 1.0);
+          }
+        });
+        return _progress = progress;
+      }
+      // Missing or unreadable: import the 2.x per-path values exactly once.
+      final imported = await LegacyMetadataImport.readProgress(await load());
+      if (imported.isNotEmpty) {
+        await MetadataFileStore.writeJson(progressFileName, imported);
+        debugPrint(
+          '[MetadataStore] imported ${imported.length} reading positions',
+        );
+      }
+      return _progress = imported;
+    }();
+  }
+
+  static Future<void> saveProgressRatio(String documentId, double ratio) {
+    return MetadataFileStore.serialize(progressFileName, () async {
+      final progress = Map<String, double>.of(await _progressForWrite());
+      progress[documentId] = ratio.clamp(0.0, 1.0);
+      await MetadataFileStore.writeJson(progressFileName, progress);
+      _progress = progress;
+      _progressFuture = Future<Map<String, double>>.value(progress);
+    });
+  }
+
+  static Future<void> clearProgressRatio(String documentId) async {
+    final current = await _progressForWrite();
+    if (!current.containsKey(documentId)) return;
+    await MetadataFileStore.serialize(progressFileName, () async {
+      final progress = Map<String, double>.of(await _progressForWrite())
+        ..remove(documentId);
+      await MetadataFileStore.writeJson(progressFileName, progress);
+      _progress = progress;
+      _progressFuture = Future<Map<String, double>>.value(progress);
+    });
+  }
+
+  static Future<Map<String, double>> _progressForWrite() async {
+    final cached = _progress;
+    if (cached != null) return cached;
+    return loadProgress();
+  }
+
   static void clearCache() {
     _cache = null;
     _loadFuture = null;
+    _progress = null;
+    _progressFuture = null;
   }
 
   static LibrarySnapshot? get cachedSnapshot => _cache;

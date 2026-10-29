@@ -1,13 +1,12 @@
-import 'dart:io';
+import '../data/metadata/metadata_store.dart';
+import 'document_identity.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
-/// Persists reading scroll-progress ratio per document path.
+/// Persists reading scroll progress per document id.
+///
+/// The id comes from the document record, so a rename no longer needs a
+/// path-keyed migration: the position simply follows the document.
 class ReadingProgressService {
   const ReadingProgressService._();
-
-  static const _prefix = 'readingProgress.';
-  static Future<void> _pendingMutation = Future<void>.value();
 
   /// Save the scroll progress ratio (0.0 – 1.0) for the given document.
   ///
@@ -15,64 +14,29 @@ class ReadingProgressService {
   /// that opening a document and leaving immediately erased the saved spot,
   /// because the reader reported pixel 0. Callers that mean to clear state use
   /// [clearProgress] instead.
-  static Future<void> saveProgress(String path, double ratio) {
-    return _serializeMutation(() async {
-      final clamped = ratio.clamp(0.0, 1.0).toDouble();
-      final preferences = await SharedPreferences.getInstance();
-      final succeeded = await preferences.setDouble(_key(path), clamped);
-      if (!succeeded) {
-        throw const FileSystemException('无法保存阅读进度');
-      }
-    });
+  static Future<void> saveProgress(String path, double ratio) async {
+    final documentId = await DocumentIdentityService.getOrCreateId(path: path);
+    await MetadataStore.saveProgressRatio(documentId, ratio);
   }
 
   /// Load the previously saved progress ratio, or `null` if none exists.
   static Future<double?> loadProgress(String path) async {
-    await _pendingMutation;
-    final preferences = await SharedPreferences.getInstance();
-    return preferences.getDouble(_key(path));
+    final documentId = await DocumentIdentityService.getIdForPath(path);
+    if (documentId == null) return null;
+    final progress = await MetadataStore.loadProgress();
+    return progress[documentId];
   }
 
   /// Remove stored progress for a document.
-  static Future<void> clearProgress(String path) {
-    return _serializeMutation(() async {
-      final preferences = await SharedPreferences.getInstance();
-      if (!await preferences.remove(_key(path))) {
-        throw const FileSystemException('无法清除阅读进度');
-      }
-    });
+  static Future<void> clearProgress(String path) async {
+    final documentId = await DocumentIdentityService.getIdForPath(path);
+    if (documentId == null) return;
+    await MetadataStore.clearProgressRatio(documentId);
   }
 
-  /// Move stored progress when a document path changes.
+  /// Kept for callers that still think in paths: the id carries the position,
+  /// so moving the document is what actually moves its progress.
   static Future<void> moveProgress(String oldPath, String newPath) {
-    return _serializeMutation(() async {
-      final preferences = await SharedPreferences.getInstance();
-      final value = preferences.getDouble(_key(oldPath));
-      final previousNewValue = preferences.getDouble(_key(newPath));
-      if (value != null && !await preferences.setDouble(_key(newPath), value)) {
-        throw const FileSystemException('无法迁移阅读进度');
-      }
-      if (!await preferences.remove(_key(oldPath))) {
-        // Best-effort rollback so the old path keeps the only authoritative
-        // copy instead of silently duplicating it.
-        if (previousNewValue == null) {
-          await preferences.remove(_key(newPath));
-        } else {
-          await preferences.setDouble(_key(newPath), previousNewValue);
-        }
-        throw const FileSystemException('无法迁移阅读进度');
-      }
-    });
-  }
-
-  static String _key(String path) => '$_prefix$path';
-
-  static Future<void> _serializeMutation(Future<void> Function() mutation) {
-    final result = _pendingMutation.then((_) => mutation());
-    _pendingMutation = result.then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
-    return result;
+    return DocumentIdentityService.movePath(oldPath, newPath);
   }
 }

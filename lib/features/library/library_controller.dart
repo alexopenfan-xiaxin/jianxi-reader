@@ -48,8 +48,8 @@ class LibraryController extends ChangeNotifier {
   List<DocumentEntry>? _cachedDocuments;
   int _loadGeneration = 0;
 
-  /// Undo receipt for the most recent single removal.
-  DocumentRemoval? _lastRemoval;
+  /// Undo receipts for the most recent removal (one entry, or a batch).
+  List<DocumentRemoval> _lastRemovals = const [];
 
   List<DocumentEntry> get documents {
     return _cachedDocuments ??= _computeDocuments(
@@ -248,24 +248,33 @@ class LibraryController extends ChangeNotifier {
 
   Future<DocumentRemoval> removeDocument(DocumentEntry document) async {
     final removal = await documentService.removeDocument(document);
-    _lastRemoval = removal;
+    _lastRemovals = [removal];
     _removeDocument(document.path);
     _errorMessage = null;
     notifyListeners();
     return removal;
   }
 
-  /// Puts the most recent single removal back. Returns false when there is
-  /// nothing to undo (the window expired or a batch removal superseded it).
+  /// Puts the most recent removal back (single or batch). Returns false when
+  /// there is nothing to undo.
   Future<bool> undoLastRemoval() async {
-    final removal = _lastRemoval;
-    if (removal == null) {
+    final removals = _lastRemovals;
+    if (removals.isEmpty) {
       return false;
     }
-    _lastRemoval = null;
-    await documentService.restoreDocument(removal);
+    _lastRemovals = const [];
+    for (final removal in removals) {
+      await documentService.restoreDocument(removal);
+      // Put the entry back in place instead of rescanning: an undo must not
+      // wait on the library directory.
+      if (!_allDocuments.any((entry) => entry.path == removal.document.path)) {
+        _allDocuments = [..._allDocuments, removal.document];
+      }
+    }
+    await _loadTags();
     _errorMessage = null;
-    await loadDocuments();
+    _invalidateCache();
+    notifyListeners();
     return true;
   }
 
@@ -274,15 +283,19 @@ class LibraryController extends ChangeNotifier {
   ) async {
     var success = 0;
     var failure = 0;
+    final removals = <DocumentRemoval>[];
     for (final document in documents) {
       try {
-        await documentService.removeDocument(document);
+        removals.add(await documentService.removeDocument(document));
         _removeDocument(document.path);
         success += 1;
       } catch (error) {
         debugPrint('[LibraryController] remove document failed: $error');
         failure += 1;
       }
+    }
+    if (removals.isNotEmpty) {
+      _lastRemovals = removals;
     }
     _errorMessage = failure == 0 ? null : '部分文档移出失败：$failure 个';
     _invalidateCache();
