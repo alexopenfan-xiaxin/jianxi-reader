@@ -66,23 +66,22 @@ class _ScrollEdgeFadeState extends State<ScrollEdgeFade> {
 
   @override
   Widget build(BuildContext context) {
-    final child = NotificationListener<ScrollMetricsNotification>(
-      onNotification: (notification) =>
-          _sync(notification.metrics, widget.topFade, widget.bottomFade),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) =>
-            _sync(notification.metrics, widget.topFade, widget.bottomFade),
-        child: widget.child,
-      ),
-    );
-
-    if (_topBand <= 0 && _bottomBand <= 0) {
-      return child;
-    }
+    // The returned widget type must not change between rebuilds: swapping
+    // `child` for `ShaderMask(child)` deactivates the whole scroll subtree and
+    // drops the scroll offset. `_shader` paints an all-opaque mask at rest, so
+    // keeping the mask mounted is free visually.
     return ShaderMask(
       blendMode: BlendMode.dstIn,
       shaderCallback: _shader,
-      child: child,
+      child: NotificationListener<ScrollMetricsNotification>(
+        onNotification: (notification) =>
+            _sync(notification.metrics, widget.topFade, widget.bottomFade),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) =>
+              _sync(notification.metrics, widget.topFade, widget.bottomFade),
+          child: widget.child,
+        ),
+      ),
     );
   }
 

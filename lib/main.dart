@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -13,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Hairlines are one physical pixel wide, which needs the screen's DPR before
   // the first theme is built.
-  final views = WidgetsBinding.instance.platformDispatcher.views;
+  final views = PlatformDispatcher.instance.views;
   if (views.isNotEmpty) {
     AppHairline.configure(views.first.devicePixelRatio);
   }

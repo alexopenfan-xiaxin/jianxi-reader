@@ -11,12 +11,15 @@ void main() {
     return transform.transform.storage[0];
   }
 
-  Widget harness({bool enabled = true}) {
+  Widget harness({bool enabled = true, bool disableAnimations = false}) {
     return MaterialApp(
-      home: Center(
-        child: PressScale(
-          enabled: enabled,
-          child: SizedBox(key: boxKey, width: 100, height: 100),
+      home: MediaQuery(
+        data: MediaQueryData(disableAnimations: disableAnimations),
+        child: Center(
+          child: PressScale(
+            enabled: enabled,
+            child: SizedBox(key: boxKey, width: 100, height: 100),
+          ),
         ),
       ),
     );
@@ -51,6 +54,20 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
     expect(scaleX(tester), 1.0);
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('honours the system "remove animations" switch', (tester) async {
+    await tester.pumpWidget(harness(disableAnimations: true));
+    // No transform at all: the listener and its spring are skipped.
+    expect(find.byType(Transform), findsNothing);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(boxKey)),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(Transform), findsNothing);
     await gesture.up();
     await tester.pumpAndSettle();
   });

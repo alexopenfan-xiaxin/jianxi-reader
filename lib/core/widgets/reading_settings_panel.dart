@@ -443,7 +443,7 @@ class _ReadingValueSliderState extends State<_ReadingValueSlider> {
                 color: selected
                     ? AppColors.primary.withValues(alpha: 0.28)
                     : palette.hairline,
-                    width: AppHairline.width,
+                width: AppHairline.width,
               ),
               onPressed: () => _commit(preset.value),
             );
