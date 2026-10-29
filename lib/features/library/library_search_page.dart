@@ -7,23 +7,71 @@ class _LibrarySearchPage extends StatefulWidget {
   State<_LibrarySearchPage> createState() => _LibrarySearchPageState();
 }
 
+enum _SearchScope { title, fullText }
+
 class _LibrarySearchPageState extends State<_LibrarySearchPage> {
   late final TextEditingController _controller;
   late final LibraryController _libraryController;
+  _SearchScope _scope = _SearchScope.title;
+  List<SearchHit> _hits = const [];
+  bool _isSearchingText = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _libraryController = context.read<LibraryController>();
     _controller = TextEditingController(text: _libraryController.searchQuery);
+    _controller.addListener(_handleQueryChanged);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _controller.removeListener(_handleQueryChanged);
     _libraryController.updateSearchQuery('');
     _libraryController.updateSelectedTag(null);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _handleQueryChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 280), _runFullTextSearch);
+  }
+
+  void _setScope(_SearchScope scope) {
+    if (_scope == scope) return;
+    setState(() {
+      _scope = scope;
+      _hits = const [];
+    });
+    if (scope == _SearchScope.fullText) {
+      _runFullTextSearch();
+    }
+  }
+
+  Future<void> _runFullTextSearch() async {
+    final query = _controller.text.trim();
+    if (_scope != _SearchScope.fullText || query.isEmpty) {
+      if (mounted && _hits.isNotEmpty) {
+        setState(() => _hits = const []);
+      }
+      return;
+    }
+    setState(() => _isSearchingText = true);
+    try {
+      await LibrarySearchIndex.refresh(_libraryController.allDocuments);
+      final hits = await LibrarySearchIndex.search(query);
+      if (!mounted) return;
+      setState(() => _hits = hits);
+    } catch (error) {
+      debugPrint('[LibrarySearchPage] full-text search failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isSearchingText = false);
+      }
+    }
   }
 
   @override
@@ -95,23 +143,53 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       _SearchTagWrap(controller: controller),
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.lg),
+                      _SearchScopeToggle(scope: _scope, onChanged: _setScope),
+                      const SizedBox(height: AppSpacing.lg),
                       Text(
-                        '找到 ${documents.length} 个文档',
+                        _scope == _SearchScope.fullText
+                            ? (_isSearchingText
+                                  ? '正在检索正文…'
+                                  : '正文命中 ${_hits.length} 处')
+                            : '找到 ${documents.length} 个文档',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: palette.muted,
                           letterSpacing: 0,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      if (documents.isEmpty)
+                      if (_scope == _SearchScope.fullText
+                          ? _hits.isEmpty && !_isSearchingText
+                          : documents.isEmpty)
                         _SearchEmptyState(
                           hasQuery: controller.searchQuery.isNotEmpty,
                         ),
                     ]),
                   ),
                 ),
-                if (documents.isNotEmpty)
+                if (_scope == _SearchScope.fullText && _hits.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _FullTextHitTile(
+                            hit: _hits[index],
+                            query: _controller.text.trim(),
+                            documents: controller.allDocuments,
+                          ),
+                        ),
+                        childCount: _hits.length,
+                      ),
+                    ),
+                  ),
+                if (_scope == _SearchScope.title && documents.isNotEmpty)
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.lg,
@@ -330,3 +408,135 @@ class _SearchResultTile extends StatelessWidget {
     );
   }
 }
+
+class _SearchScopeToggle extends StatelessWidget {
+  const _SearchScopeToggle({required this.scope, required this.onChanged});
+
+  final _SearchScope scope;
+  final ValueChanged<_SearchScope> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _SearchScopeChip(
+          label: '标题',
+          selected: scope == _SearchScope.title,
+          onTap: () => onChanged(_SearchScope.title),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _SearchScopeChip(
+          label: '全文',
+          selected: scope == _SearchScope.fullText,
+          onTap: () => onChanged(_SearchScope.fullText),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchScopeChip extends StatelessWidget {
+  const _SearchScopeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '搜索范围：$label',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 72),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : palette.dividerSoft,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: selected ? Colors.white : palette.muted,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullTextHitTile extends StatelessWidget {
+  const _FullTextHitTile({
+    required this.hit,
+    required this.query,
+    required this.documents,
+  });
+
+  final SearchHit hit;
+  final String query;
+  final List<DocumentEntry> documents;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return AppCard(
+      onTap: () => _openHit(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            hit.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            hit.snippet,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: palette.muted,
+              fontSize: 12,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openHit(BuildContext context) {
+    final document = documents.firstWhere(
+      (entry) => entry.path == hit.path,
+      orElse: () => DocumentEntry(
+        path: hit.path,
+        name: hit.title,
+        type:
+            DocumentFileRules.typeForPath(hit.path) ?? DocumentType.markdown,
+        sizeBytes: 0,
+        modifiedAt: DateTime.now(),
+      ),
+    );
+    Navigator.of(context).push(
+      appPageRoute<void>(
+        builder: (context) =>
+            ReaderPage(document: document, initialSearchQuery: query),
+      ),
+    );
+  }
+}
+

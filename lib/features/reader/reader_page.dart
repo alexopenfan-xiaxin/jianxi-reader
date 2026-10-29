@@ -53,9 +53,18 @@ typedef _ReaderDisplaySettings = ({
 });
 
 class ReaderPage extends StatefulWidget {
-  const ReaderPage({required this.document, super.key});
+  const ReaderPage({
+    required this.document,
+    this.initialSearchQuery,
+    super.key,
+  });
 
   final DocumentEntry document;
+
+  /// Pre-fills the in-document search, used when the library full-text search
+  /// opens a hit so the match is highlighted instead of the reader starting
+  /// at the top.
+  final String? initialSearchQuery;
 
   @override
   State<ReaderPage> createState() => _ReaderPageState();
@@ -110,6 +119,11 @@ class _ReaderPageState extends State<ReaderPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settleEntranceAfterTransition();
       _prepareDocument();
+      final initialQuery = widget.initialSearchQuery?.trim() ?? '';
+      if (initialQuery.isNotEmpty) {
+        _openSearch();
+        _searchController.updateQuery(initialQuery);
+      }
     });
   }
 

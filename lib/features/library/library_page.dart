@@ -17,6 +17,7 @@ import '../../core/widgets/liquid_glass.dart';
 import '../../core/widgets/press_scale.dart';
 import '../../core/widgets/shimmer_skeleton.dart';
 import '../../core/widgets/success_check.dart';
+import '../../data/search/library_search_index.dart';
 import '../reader/reader_page.dart';
 import 'document_actions.dart';
 import 'document_entry.dart';
