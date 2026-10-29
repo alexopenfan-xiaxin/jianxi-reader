@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
+import '../../core/app_settings_controller.dart';
 import '../../core/bookmark_service.dart';
 import '../../core/design_tokens.dart';
 import '../../core/file_rules.dart';
