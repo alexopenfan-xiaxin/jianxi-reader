@@ -1,1 +1,12 @@
 include: package:flutter_lints/flutter.yaml
+
+# G5 from docs/3.0-readiness.md: the analyzer has to be strict enough to catch
+# the casts and fire-and-forget futures that hid real bugs in 2.x.
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    - unawaited_futures

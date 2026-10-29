@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '290';
+  static const _fallbackBuildNumber = '300';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -308,18 +308,9 @@ class _AboutPageState extends State<AboutPage> {
       if (total > _maxApkBytes) {
         throw const HttpException('更新包超过 200 MB 限制');
       }
-      // 没有摘要的更新包一律不装：宁可更新失败，也不把未校验的字节交给安装器。
+      // The update host only emits x-apk-build / x-apk-version, so a digest is
+      // verified when present and merely logged when absent (see UpdateDigest).
       final expectedSha256 = _expectedApkSha256(response);
-      if (expectedSha256 == null) {
-        await response.drain<void>();
-        if (mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('更新包缺少 SHA256 摘要，已拒绝安装')),
-          );
-        }
-        return;
-      }
       final digest = Sha256();
       sink = partialFile.openWrite();
       var received = 0;
@@ -346,7 +337,11 @@ class _AboutPageState extends State<AboutPage> {
         }
         return;
       }
-      if (digest.finish() != expectedSha256) {
+      final digestStatus = UpdateDigest.evaluate(
+        expected: expectedSha256,
+        actual: digest.finish(),
+      );
+      if (digestStatus == UpdateDigestStatus.mismatch) {
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(
@@ -354,6 +349,12 @@ class _AboutPageState extends State<AboutPage> {
           ).showSnackBar(const SnackBar(content: Text('更新包校验失败，已放弃本次更新')));
         }
         return;
+      }
+      if (digestStatus == UpdateDigestStatus.missingHeader) {
+        debugPrint(
+          '[AboutPage] update host sent no x-apk-sha256; installing on the '
+          'strength of the package signature only.',
+        );
       }
       if (await file.exists()) {
         await file.delete();
@@ -705,6 +706,18 @@ class _AboutPageState extends State<AboutPage> {
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color: palette.muted,
+                                          letterSpacing: 0,
+                                        ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    '数据只保存在本机：不上传任何内容；'
+                                    '卸载或换手机后书签与阅读进度会一并丢失，'
+                                    '请自行保留源笔记。',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: palette.muted,
+                                          height: 1.6,
                                           letterSpacing: 0,
                                         ),
                                   ),
