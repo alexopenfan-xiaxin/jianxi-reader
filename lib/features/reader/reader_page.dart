@@ -579,11 +579,11 @@ class _ReaderPageState extends State<ReaderPage> {
               sourceUri: opened.sourceUri,
             )
             .then((docId) {
-              return ReadingHistoryService.record(
-                documentId: docId,
-              ).catchError((e) {
-                debugPrint('[ReaderPage] record history failed: $e');
-              });
+              return ReadingHistoryService.record(documentId: docId).catchError(
+                (e) {
+                  debugPrint('[ReaderPage] record history failed: $e');
+                },
+              );
             })
             .catchError((e) {
               debugPrint('[ReaderPage] get document id failed: $e');
