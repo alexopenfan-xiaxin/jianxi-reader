@@ -65,6 +65,7 @@
 | 框架 | Flutter 3.44 |
 | 语言 | Dart 3.12 |
 | 状态管理 | Provider |
+| 全文搜索计算 | Rust（CJK 二元分词、索引词频与查询排序） |
 | Markdown | `flutter_smooth_markdown`（带代码高亮、Mermaid） |
 | HTML | `webview_flutter` |
 | 文件选择 | `file_picker` |

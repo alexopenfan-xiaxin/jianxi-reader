@@ -38,6 +38,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Set up Rust Android target
+        uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Build Rust search library for Android
+        run: |
+          cargo install cargo-ndk --locked
+          cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path rust/Cargo.toml
+
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test
 
@@ -69,7 +79,11 @@ jobs:
 
       - name: Build release APK (ARM64)
         run: |
-          flutter build apk --release             --target-platform android-arm64             --android-skip-build-dependency-validation
+          flutter build apk --release --target-platform android-arm64 --android-skip-build-dependency-validation --dart-define=JIANXI_REQUIRE_RUST_SEARCH=true
+
+      - name: Verify APK contains Rust search library
+        run: |
+          unzip -l build/app/outputs/flutter-apk/app-release.apk | grep 'lib/arm64-v8a/libjianxi_search.so'
 
       - name: Prepare artifact
         run: |

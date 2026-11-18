@@ -30,6 +30,15 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
+
+      - name: Test Rust search core
+        run: cargo test --manifest-path rust/Cargo.toml
+
+      - name: Build Rust search library for CI tests
+        run: cargo build --manifest-path rust/Cargo.toml
+
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
@@ -55,7 +64,7 @@ jobs:
         run: flutter analyze --fatal-infos
 
       - name: Test
-        run: flutter test --reporter expanded
+        run: flutter test --reporter expanded --dart-define=JIANXI_REQUIRE_RUST_SEARCH=true
 
   android-build:
     name: Android release build and manifest assertions
@@ -75,6 +84,16 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Set up Rust Android target
+        uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Build Rust search library for Android
+        run: |
+          cargo install cargo-ndk --locked
+          cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path rust/Cargo.toml
 
       # Release builds refuse to fall back to the debug key, so CI signs with a
       # throwaway key of its own. This also proves the guard accepts a real
@@ -103,6 +122,7 @@ jobs:
         run: |
           set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libjianxi_search.so' || { echo "::error::APK does not contain the Rust search library"; exit 1; }
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           VERSION=$(grep -E '^version:' pubspec.yaml | head -1 | sed -E 's/^version:[[:space:]]*//')
           NAME=${VERSION%%+*}

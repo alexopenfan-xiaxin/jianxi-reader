@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/metadata_file_store.dart';
 import '../../features/library/document_entry.dart';
+import 'search_native.dart';
 import 'search_text.dart';
 
 /// One full-text result.
@@ -94,6 +95,17 @@ class LibrarySearchIndex {
 
     if (tokens.isEmpty) {
       return _substringSearch(trimmed, index.values.toList(), limit);
+    }
+
+    final native = NativeSearch.instance;
+    if (native != null) {
+      final hits = <SearchHit>[];
+      for (final hit in native.search(trimmed).take(limit)) {
+        final document = index[hit.path];
+        if (document == null) continue;
+        hits.add(await _toHit(document, tokens.toList(), hit.score.toDouble()));
+      }
+      return hits;
     }
 
     final matched = <_IndexedDocument>[];
@@ -256,11 +268,18 @@ class LibrarySearchIndex {
         }
       }
     }
-    return _cache = index;
+    _cache = index;
+    NativeSearch.instance?.replaceIndex(
+      index.values.map((document) => document.toJson()).toList(),
+    );
+    return index;
   }
 
   static Future<void> _write(Map<String, _IndexedDocument> index) async {
     _cache = index;
+    NativeSearch.instance?.replaceIndex(
+      index.values.map((document) => document.toJson()).toList(),
+    );
     await MetadataFileStore.writeJson(fileName, {
       'schema': schemaVersion,
       'documents': index.values.map((document) => document.toJson()).toList(),

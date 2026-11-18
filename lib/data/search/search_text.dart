@@ -6,6 +6,8 @@
 /// that path is rare and cheap because it only reads matched documents.
 library;
 
+import 'search_native.dart';
+
 const int _cjkStart = 0x4E00;
 const int _cjkEnd = 0x9FFF;
 const int _extAStart = 0x3400;
@@ -27,6 +29,12 @@ bool _isAsciiWordRune(int rune) {
 /// Splits [text] into index tokens. Order is preserved; duplicates are kept so
 /// callers can count them.
 List<String> tokenize(String text) {
+  final native = NativeSearch.instance;
+  if (native != null) return native.tokenize(text);
+  return _tokenizeDart(text);
+}
+
+List<String> _tokenizeDart(String text) {
   final tokens = <String>[];
   final runes = text.runes.toList();
   var index = 0;
@@ -59,8 +67,10 @@ List<String> tokenize(String text) {
 
 /// Token counts for one document.
 Map<String, int> countTokens(String text) {
+  final native = NativeSearch.instance;
+  if (native != null) return native.countTokens(text);
   final counts = <String, int>{};
-  for (final token in tokenize(text)) {
+  for (final token in _tokenizeDart(text)) {
     counts[token] = (counts[token] ?? 0) + 1;
   }
   return counts;

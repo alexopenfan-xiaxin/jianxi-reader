@@ -50,8 +50,18 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Set up Rust Android target
+        uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
+        with:
+          targets: aarch64-linux-android
+
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Build Rust search library for Android
+        run: |
+          cargo install cargo-ndk --locked
+          cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path rust/Cargo.toml
 
       - name: Read version info
         id: version
@@ -121,16 +131,19 @@ jobs:
 
       - name: Build release APK (arm64)
         run: |
-          flutter build apk --release \
-            --target-platform android-arm64 \
-            --android-skip-build-dependency-validation
+          flutter build apk --release --target-platform android-arm64 --android-skip-build-dependency-validation --dart-define=JIANXI_REQUIRE_RUST_SEARCH=true
+
+      - name: Verify APK contains Rust search library
+        run: |
+          unzip -l build/app/outputs/flutter-apk/app-release.apk | grep 'lib/arm64-v8a/libjianxi_search.so'
 
       - name: Rename APK to arm64-v8a convention
         run: |
           mkdir -p artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk \
-            artifacts/app-arm64-v8a-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk artifacts/app-arm64-v8a-release.apk
           ls -lh artifacts/
+
+      # Keep the build single-shot so signing, digest, release and server use the same bytes.
 
       # 发布可信的第二步：产物必须由正式签名证书签出，且指纹与 v2.9.9+199 一致。
       # 同时记录 APK SHA256，客户端更新链路与 Release 说明都会用到。

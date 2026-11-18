@@ -58,3 +58,5 @@ git推送指南.md
 # Python bytecode from tool/ helpers
 __pycache__/
 *.pyc
+rust/target/
+android/app/src/main/jniLibs/
