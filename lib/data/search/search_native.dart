@@ -8,18 +8,9 @@ typedef _AllocNative = Pointer<Uint8> Function(IntPtr);
 typedef _AllocDart = Pointer<Uint8> Function(int);
 typedef _DeallocNative = Void Function(Pointer<Uint8>, IntPtr);
 typedef _DeallocDart = void Function(Pointer<Uint8>, int);
-typedef _TransformNative = IntPtr Function(
-  Pointer<Uint8>,
-  IntPtr,
-  Pointer<Uint8>,
-  IntPtr,
-);
-typedef _TransformDart = int Function(
-  Pointer<Uint8>,
-  int,
-  Pointer<Uint8>,
-  int,
-);
+typedef _TransformNative =
+    IntPtr Function(Pointer<Uint8>, IntPtr, Pointer<Uint8>, IntPtr);
+typedef _TransformDart = int Function(Pointer<Uint8>, int, Pointer<Uint8>, int);
 typedef _MutateNative = Int32 Function(Pointer<Uint8>, IntPtr);
 typedef _MutateDart = int Function(Pointer<Uint8>, int);
 
@@ -48,10 +39,10 @@ class NativeSearch {
         .._tokenize = library.lookupFunction<_TransformNative, _TransformDart>(
           'jianxi_tokenize',
         )
-        .._countTokens = library.lookupFunction<
-          _TransformNative,
-          _TransformDart
-        >('jianxi_count_tokens')
+        .._countTokens = library
+            .lookupFunction<_TransformNative, _TransformDart>(
+              'jianxi_count_tokens',
+            )
         .._replaceIndex = library.lookupFunction<_MutateNative, _MutateDart>(
           'jianxi_replace_index',
         )
@@ -60,9 +51,9 @@ class NativeSearch {
         );
     } catch (error) {
       if (required) {
-      throw StateError(
-        'Rust search library is required but unavailable: $error',
-      );
+        throw StateError(
+          'Rust search library is required but unavailable: $error',
+        );
       }
       debugPrint(
         '[NativeSearch] Rust library unavailable; using Dart fallback: $error',
@@ -86,15 +77,14 @@ class NativeSearch {
   late final _MutateDart _replaceIndex;
   late final _TransformDart _search;
 
-  List<String> tokenize(String text) => (jsonDecode(
-    utf8.decode(_transform(_tokenize, utf8.encode(text))),
-  ) as List<dynamic>).cast<String>();
+  List<String> tokenize(String text) =>
+      (jsonDecode(utf8.decode(_transform(_tokenize, utf8.encode(text))))
+              as List<dynamic>)
+          .cast<String>();
 
   Map<String, int> countTokens(String text) {
     final decoded =
-        jsonDecode(
-              utf8.decode(_transform(_countTokens, utf8.encode(text))),
-            )
+        jsonDecode(utf8.decode(_transform(_countTokens, utf8.encode(text))))
             as Map<String, dynamic>;
     return decoded.map((key, value) => MapEntry(key, (value as num).toInt()));
   }
@@ -110,17 +100,17 @@ class NativeSearch {
     }
   }
 
-  List<NativeSearchHit> search(String query) => (jsonDecode(
-    utf8.decode(_transform(_search, utf8.encode(query))),
-  ) as List<dynamic>)
-      .cast<Map<String, dynamic>>()
-      .map(
-        (hit) => NativeSearchHit(
-          path: hit['path'] as String,
-          score: (hit['score'] as num).toInt(),
-        ),
-      )
-      .toList(growable: false);
+  List<NativeSearchHit> search(String query) =>
+      (jsonDecode(utf8.decode(_transform(_search, utf8.encode(query))))
+              as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map(
+            (hit) => NativeSearchHit(
+              path: hit['path'] as String,
+              score: (hit['score'] as num).toInt(),
+            ),
+          )
+          .toList(growable: false);
 
   List<int> _transform(_TransformDart operation, List<int> bytes) {
     final input = _copyIn(bytes);
