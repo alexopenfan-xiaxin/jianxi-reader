@@ -23,4 +23,5 @@
 ## Git and release
 
 - Commit only task changes and push to `origin/main` by default unless the user says otherwise. If the remote has advanced, integrate its changes before pushing; do not force-push.
+- End commit subjects with `(build N)`, using the current build number from `pubspec.yaml`; do not bump the version just to make a commit.
 - Ordinary changes and pushes do not imply a version bump or release. For publishing and signing, follow `docs/release.md` and `.github/workflows/publish.yml`.
