@@ -25,3 +25,4 @@
 - Commit only task changes and push to `origin/main` by default unless the user says otherwise. If the remote has advanced, integrate its changes before pushing; do not force-push.
 - End commit subjects with `(build N)`, using the current build number from `pubspec.yaml`; do not bump the version just to make a commit.
 - Ordinary changes and pushes do not imply a version bump or release. For publishing and signing, follow `docs/release.md` and `.github/workflows/publish.yml`.
+- Any APK handed to the user for installation/update must use the pinned official release certificate; never provide a temporary CI/debug/test-signed APK. CI-only temporary keys may be used only for non-installable manifest/build checks and must not be presented as an update package.

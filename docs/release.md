@@ -13,6 +13,7 @@ Release mechanics for 简兮阅读器. `main` is the only long-lived branch; nor
 - Treat the `RELEASE_KEYSTORE` Actions secret as the only managed copy of the release private key.
 - GitHub secrets are write-only: they cannot be read, exported, or copied to another repository. A repository transfer may not carry them.
 - Do **not** delete, overwrite, rotate, or transfer the repository without a user-migration plan. Losing the secret means existing installs cannot be updated.
+- Every APK handed to a user for installation or update must use this same official release key. Never distribute a CI/test/debug-signed APK as an installable update; temporary CI keys are only for internal manifest/build checks.
 - Every release must fail when the secret is missing, and must verify the APK certificate after signing:
   - `apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk`
   - expected SHA-256: `b76b05e93f2334aa0f8e7d756388e9d038b72db3315ccbd19b94dcd584beab5a`
