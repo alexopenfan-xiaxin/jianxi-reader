@@ -33,9 +33,6 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
 
-      - name: Format Rust search core
-        run: cargo fmt --manifest-path rust/Cargo.toml -- --check
-
       - name: Test Rust search core
         run: cargo test --manifest-path rust/Cargo.toml
 

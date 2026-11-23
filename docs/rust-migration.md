@@ -8,8 +8,7 @@ Markdown presentation in Dart. Rust owns the measured full-text search core in `
 - in-memory index replacement and search ranking.
 
 `lib/data/search/search_native.dart` calls the Rust `cdylib` through Dart FFI. If the library cannot
-be loaded, Dart uses the same algorithm as a fallback. CI runs Rust formatting and unit
-tests, Flutter tests with `JIANXI_REQUIRE_RUST_SEARCH=true`, and an Android APK assertion that the
+be loaded, Dart uses the same algorithm as a fallback. CI runs Rust unit tests, Flutter tests with `JIANXI_REQUIRE_RUST_SEARCH=true`, and an Android APK assertion that the
 Rust `.so` is packaged.
 
 The NativeScript app has a separate Android Rust bridge for deterministic document helpers. The two
