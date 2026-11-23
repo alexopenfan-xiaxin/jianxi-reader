@@ -1,0 +1,16 @@
+name: Build Android search library
+description: Compile the ARM64 library with the cached cargo-ndk tool.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      id: ndk-tool
+      with:
+        path: ~/.cargo/bin/cargo-ndk
+        key: cargo-ndk-4.1.2-${{ runner.os }}-${{ runner.arch }}
+    - if: steps.ndk-tool.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install cargo-ndk --version 4.1.2 --locked
+    - shell: bash
+      working-directory: rust
+      run: cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release

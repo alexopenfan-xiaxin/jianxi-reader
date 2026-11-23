@@ -97,10 +97,7 @@ jobs:
           targets: aarch64-linux-android
 
       - name: Build Rust search library for Android
-        run: |
-          cargo install cargo-ndk --locked
-          cd rust
-          cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release
+        uses: ./.github/actions/build-native-search
 
       # Release builds refuse to fall back to the debug key, so CI signs with a
       # throwaway key of its own. This also proves the guard accepts a real
@@ -129,16 +126,16 @@ jobs:
         run: |
           set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
-          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libjianxi_search.so' || { echo "::error::APK does not contain the Rust search library"; exit 1; }
+          unzip -tq "$APK" 'lib/arm64-v8a/libjianxi_search.so' || { echo "::error::APK does not contain the Rust search library"; exit 1; }
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           VERSION=$(grep -E '^version:' pubspec.yaml | head -1 | sed -E 's/^version:[[:space:]]*//')
           NAME=${VERSION%%+*}
           CODE=${VERSION##*+}
           BADGING=$("$BUILD_TOOLS/aapt2" dump badging "$APK")
           echo "$BADGING" | grep -E '^package:'
-          echo "$BADGING" | grep -q "versionCode='$CODE'" \
+          grep -Fq "versionCode='$CODE'" <<< "$BADGING" \
             || { echo "::error::APK versionCode does not match pubspec ($CODE)"; exit 1; }
-          echo "$BADGING" | grep -q "versionName='$NAME'" \
+          grep -Fq "versionName='$NAME'" <<< "$BADGING" \
             || { echo "::error::APK versionName does not match pubspec ($NAME)"; exit 1; }
           "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" > manifest.xml.txt
           grep -q 'allowBackup.*=false' manifest.xml.txt \

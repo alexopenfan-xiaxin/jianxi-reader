@@ -1,4 +1,4 @@
-import 'sha256.dart';
+import 'package:crypto/crypto.dart' as crypto;
 
 /// Verdict for one downloaded update package.
 enum UpdateDigestStatus {
@@ -25,12 +25,17 @@ enum UpdateDigestStatus {
 class UpdateDigest {
   UpdateDigest._();
 
+  static final _sha256Hex = RegExp(r'^[0-9a-f]{64}$');
+
+  static Future<String> hash(Stream<List<int>> chunks) async =>
+      (await crypto.sha256.bind(chunks).single).toString();
+
   static UpdateDigestStatus evaluate({
     required String? expected,
     required String actual,
   }) {
     final normalized = expected?.trim().toLowerCase();
-    if (normalized == null || normalized.isEmpty || !isSha256Hex(normalized)) {
+    if (normalized == null || !_sha256Hex.hasMatch(normalized)) {
       return UpdateDigestStatus.missingHeader;
     }
     return normalized == actual.trim().toLowerCase()

@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
   static const _updateEndpoint =
       'https://blog.openfan.dpdns.org/update/index.php';
   static const _updateHost = 'blog.openfan.dpdns.org';
-  static const _fallbackBuildNumber = '302';
+  static const _fallbackBuildNumber = '310';
   static const _apkContentType = 'application/vnd.android.package-archive';
   static const _maxApkBytes = 200 * 1024 * 1024;
   static final _communityUrl = Uri.parse('https://qm.qq.com/q/IcQIMYOaQg');
@@ -312,14 +312,13 @@ class _AboutPageState extends State<AboutPage> {
       }
       // The update host only emits x-apk-build / x-apk-version, so a digest is
       // verified when present and merely logged when absent (see UpdateDigest).
-      final expectedSha256 = _expectedApkSha256(response);
-      final digest = Sha256();
-      sink = partialFile.openWrite();
+      final expectedSha256 = response.headers.value('x-apk-sha256');
+      final output = partialFile.openWrite();
+      sink = output;
       var received = 0;
 
-      await for (final chunk in response) {
-        sink.add(chunk);
-        digest.add(chunk);
+      final chunks = response.map((chunk) {
+        output.add(chunk);
         received += chunk.length;
         if (received > _maxApkBytes) {
           throw const HttpException('更新包超过 200 MB 限制');
@@ -327,8 +326,10 @@ class _AboutPageState extends State<AboutPage> {
         if (total > 0) {
           progress.value = received / total;
         }
-      }
-      await sink.close();
+        return chunk;
+      });
+      final digest = await UpdateDigest.hash(chunks);
+      await output.close();
       sink = null;
       if (received == 0 || (total > 0 && received != total)) {
         if (mounted) {
@@ -341,7 +342,7 @@ class _AboutPageState extends State<AboutPage> {
       }
       final digestStatus = UpdateDigest.evaluate(
         expected: expectedSha256,
-        actual: digest.finish(),
+        actual: digest,
       );
       if (digestStatus == UpdateDigestStatus.mismatch) {
         if (mounted) {
@@ -568,15 +569,6 @@ class _AboutPageState extends State<AboutPage> {
 
   Uri _buildUpdateUri() {
     return Uri.parse('$_updateEndpoint?request&local=${_currentBuildNumber()}');
-  }
-
-  /// Reads the `x-apk-sha256` header, or null when it is missing/malformed.
-  String? _expectedApkSha256(HttpClientResponse response) {
-    final raw = response.headers.value('x-apk-sha256')?.trim().toLowerCase();
-    if (raw == null || !isSha256Hex(raw)) {
-      return null;
-    }
-    return raw;
   }
 
   bool _isApkResponse(HttpClientResponse response) {
